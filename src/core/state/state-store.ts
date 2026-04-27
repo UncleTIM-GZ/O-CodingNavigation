@@ -1,11 +1,19 @@
 import { promises as fs } from "node:fs";
-import { dirname } from "node:path";
+import { dirname, join } from "node:path";
 import { Paths } from "../paths.js";
 import { ProjectState } from "../../types/state.js";
+import { withLock } from "./lock.js";
 
-// Skeleton Spike: simple read/write WITHOUT lock + backup + atomic-rename.
-// Per CLAUDE.md §4.5 + plan §3.2 — Phase 2 will add the full safety wrapper.
-// Document this temporary simplification in implementation-notes.md.
+// PR #2 — State Safety Foundation. Resolves implementation-notes.md L1 + L10.
+// All `state.json` mutations now flow through `writeStateAtomic`:
+//   1. acquire `.ocoding/.lock`
+//   2. backup `state.json` → `state.json.bak` (if state.json exists)
+//   3. write `state.json.<pid>.<ts>.tmp`
+//   4. atomic rename tmp → state.json
+//   5. release lock (in finally)
+//
+// `writeStateUnlocked` is exposed for callers that already hold the outer lock
+// (e.g. `init.ts` which wraps several writes in a single critical section).
 
 export class StateNotFoundError extends Error {
   constructor(public readonly file: string) {
@@ -48,8 +56,84 @@ export async function readState(root: string): Promise<ProjectState> {
   return result.data;
 }
 
-export async function writeState(root: string, state: ProjectState): Promise<void> {
+async function pathExists(p: string): Promise<boolean> {
+  try {
+    await fs.stat(p);
+    return true;
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return false;
+    throw err;
+  }
+}
+
+/**
+ * Backup-then-temp-then-rename. Does NOT acquire the lock — callers must
+ * already hold `.ocoding/.lock`. Used by `writeStateAtomic` and by `init.ts`'s
+ * larger critical section.
+ *
+ * Failure semantics (plan §2.3):
+ *   - failure BEFORE rename → state.json untouched (we wrote to a temp file)
+ *   - failure AFTER rename  → state committed; audit will record in PR #3
+ */
+export async function writeStateUnlocked(
+  root: string,
+  state: ProjectState,
+): Promise<void> {
   const file = Paths.stateFile(root);
   await fs.mkdir(dirname(file), { recursive: true });
-  await fs.writeFile(file, JSON.stringify(state, null, 2) + "\n", "utf8");
+  if (await pathExists(file)) {
+    await fs.copyFile(file, `${file}.bak`);
+  }
+  const tmpFile = `${file}.${process.pid}.${Date.now()}.tmp`;
+  const payload = JSON.stringify(state, null, 2) + "\n";
+  try {
+    await fs.writeFile(tmpFile, payload, "utf8");
+    await fs.rename(tmpFile, file);
+  } catch (err) {
+    await fs.unlink(tmpFile).catch(() => undefined);
+    throw err;
+  }
+}
+
+export interface WriteStateOptions {
+  readonly command?: string;
+  readonly retryIntervalMs?: number;
+  readonly timeoutMs?: number;
+  readonly staleThresholdMs?: number;
+}
+
+/**
+ * Lock + backup + atomic write of `state.json`. The single safe path for any
+ * `state.json` mutation in OCN when the caller is NOT already inside another
+ * `.ocoding/.lock` critical section.
+ */
+export async function writeStateAtomic(
+  root: string,
+  state: ProjectState,
+  opts: WriteStateOptions = {},
+): Promise<void> {
+  const lockFile = join(Paths.ocodingDir(root), ".lock");
+  await fs.mkdir(Paths.ocodingDir(root), { recursive: true });
+  await withLock(
+    {
+      lockFile,
+      command: opts.command ?? "writeState",
+      projectRoot: root,
+      ...(opts.retryIntervalMs !== undefined ? { retryIntervalMs: opts.retryIntervalMs } : {}),
+      ...(opts.timeoutMs !== undefined ? { timeoutMs: opts.timeoutMs } : {}),
+      ...(opts.staleThresholdMs !== undefined ? { staleThresholdMs: opts.staleThresholdMs } : {}),
+    },
+    async () => {
+      await writeStateUnlocked(root, state);
+    },
+  );
+}
+
+/**
+ * Backwards-compatible alias retained during PR #2 to keep existing call sites
+ * (currently `init.ts` after this PR) working without churn. Phase 2 PR #4 may
+ * inline `writeStateAtomic` and remove this alias.
+ */
+export async function writeState(root: string, state: ProjectState): Promise<void> {
+  await writeStateAtomic(root, state);
 }

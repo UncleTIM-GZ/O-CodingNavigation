@@ -10,7 +10,7 @@
 
 | # | Simplification | Where | Removal trigger |
 |---|---|---|---|
-| L1 | `state.json` write does NOT use lock + backup + atomic temp/rename. Plain `fs.writeFile`. | `src/core/state/state-store.ts` `writeState()` | Phase 2 — implement per CLAUDE.md §4.5 + `.claude/rules.md` §2 |
+| L1 | ~~`state.json` write does NOT use lock + backup + atomic temp/rename. Plain `fs.writeFile`.~~ **RESOLVED by PR #2 (state-safety)** — `writeStateAtomic` now wraps every state write with `.ocoding/.lock` (5s timeout, 200ms retry, 30s stale threshold), `state.json.bak`, temp file + atomic rename. See `docs/plans/2026-04-28-feat-ocn-phase2-state-safety-plan.md` and `src/core/state/{lock,state-store}.ts`. | ~~`src/core/state/state-store.ts` `writeState()`~~ | ✅ Done |
 | L2 | Initial position after `ocn init` jumps directly to `state_spec` / `step_prd`, skipping discovery + scope steps. | `src/core/init.ts` lines 53-61 | Phase 2 — when full state machine + `ocn advance` lands |
 | L3 | No audit events are written anywhere. | All commands | Phase 2 — implement audit subsystem |
 | L4 | SOP profile content is bundled as TypeScript string constants (`src/sops/default-ai-coding-sop/0.1.0/{sop,gates,artifacts,config}.ts`) instead of YAML files copied at build time. The on-disk `.ocoding/sop.yaml` IS valid YAML; the in-process load is from the TS string. | `src/core/sop/loader.ts` | Phase 2 — once asset packaging strategy is decided |
@@ -19,7 +19,7 @@
 | L7 | `ocn check` only handles `step_prd`. Other steps blocked with `ERR_STATE_MACHINE`. | `src/core/check.ts` | Phase 2 — multi-artifact aggregation per current state |
 | L8 | `ArtifactStatus` union includes `"warning"` for forward compatibility, but `computeArtifactGateStatus` never returns it. Spike returns binary pass/blocked only. | `src/core/artifact/gate-status.ts` | Phase 2 — implement quality warnings |
 | L9 | Tier `production` and `full` are accepted by the `--tier` flag but their artifact sets are not enforced. Only `minimal` artifacts are wired. | `src/core/init.ts` | Phase 2 — Tier-aware gate behavior |
-| L10 | Concurrency: no lock means two simultaneous `ocn init` (or any state mutation) racing in the same project would result in undefined behavior. Acceptable for a single-human spike but documented. | repo-wide | Phase 2 — lock middleware |
+| L10 | ~~Concurrency: no lock means two simultaneous `ocn init` (or any state mutation) racing in the same project would result in undefined behavior. Acceptable for a single-human spike but documented.~~ **RESOLVED by PR #2 (state-safety)** — All state mutations now go through `withLock(...)`. `init.ts` uses lock-then-check (state.json existence) to fix the TOCTOU race. Layer 6 concurrency tests in `tests/lock/concurrent-writes.test.ts` verify N concurrent writers produce a single valid state.json. | ~~repo-wide~~ | ✅ Done |
 | L11 | The `data-default` for `latestGateResult` is unconstrained `unknown.nullable()` — Phase 2 should narrow this to `ArtifactGateStatus \| null` once gate aggregation lands. | `src/types/state.ts` | Phase 2 |
 | L12 | CommandResult error envelope duplicates the top-level `code` + `message`. Helps consumers that read either path; the duplication is intentional during the spike. Phase 2 may dedupe by removing top-level `code`/`message` on failures. | `src/types/result.ts` | Phase 2 — coordinate with Data Model Amendment |
 | L13 | Status renderer (`src/cli/render/text.ts`) uses heuristic "if data has X then it's a status block" — this is a render-layer simplification. The structured CommandResult is the source of truth; only the human-readable text rendering is heuristic. JSON mode is unaffected. | `src/cli/render/text.ts` | Phase 2 — type-tagged renderer |
@@ -31,7 +31,7 @@
 
 The following were noted during implementation but explicitly NOT done in the spike. Each becomes its own future PR/branch:
 
-- **OCN-2-LOCK** — Implement `.ocoding/.lock` + backup + temp/rename atomic write (see CLAUDE.md §4.5 + `.claude/rules.md` §2). Add Layer 6 concurrency tests.
+- ~~**OCN-2-LOCK** — Implement `.ocoding/.lock` + backup + temp/rename atomic write (see CLAUDE.md §4.5 + `.claude/rules.md` §2). Add Layer 6 concurrency tests.~~ ✅ **Done in PR #2 (state-safety).** Follow-up captured separately: audit hooks for `lock_released` and `lock_stale_recovered` lands in PR #3.
 - **OCN-2-AUDIT** — Implement audit subsystem (`.ocoding/audit/<yyyy-mm>.jsonl` + `docs/21-audit-trail.md`). Wire push events: state_transition_*, gate_*, baseline_created, sop_version_*, high_risk_action_blocked.
 - **OCN-2-FSM** — Full state machine: DISCOVERY → SPEC → DESIGN → PLAN → BUILD → VERIFY → SHIP → REFLECT, with `ocn advance` running `runGate` first and recording transitions.
 - **OCN-2-MCP** — Minimal MCP Server with 7 tools (`navigator.where_am_i`, `navigator.brief`, `navigator.run_gate`, `navigator.create_artifact`, `navigator.capture_log`, `navigator.detect_sop_version`, `navigator.generate_next_prompt`). Never expose `navigator.advance_phase` in v1.0.
@@ -119,6 +119,49 @@ None of these conflict with the plan; they are pure additions for coverage and t
 | ISO 8601 UTC ending Z | `tests/unit/time.test.ts` | ✅ |
 | Bilingual messages have non-empty en + zh | `tests/unit/schema-bilingual-message.test.ts` | ✅ |
 | Manual G2 demo transcript matches user §X verbatim | `dogfood-report-skeleton-spike.md` §3 | ✅ |
+
+---
+
+## 8. PR #2 Addendum — State Safety Foundation (2026-04-28)
+
+This addendum is appended after PR #2 merge. It documents the new state-safety
+surface and the audit-hook follow-up that PR #3 will pick up.
+
+### 8.1 What changed
+
+- **Lock**: `.ocoding/.lock` JSON file with `{pid, createdAt, command, client, projectRoot}`. Schema in `src/types/lock.ts`, behavior in `src/core/state/lock.ts`.
+- **Atomic write**: `writeStateAtomic` (with lock) and `writeStateUnlocked` (caller already holds the outer lock — used by `init.ts`).
+- **Backup**: state.json.bak written on second-and-subsequent writes; first init produces no .bak.
+- **Stale recovery**: lock with `age > 30s AND owner pid not alive (process.kill(pid, 0) → ESRCH)` is auto-reclaimed; the new lock indicates `reclaimed: true` on its handle.
+- **TOCTOU fix in init**: `mkdir → lock → check state.json exists → write` instead of the prior `check .ocoding/ exists → mkdir → write`. User-visible behavior preserved (same exit 4 + bilingual message).
+
+### 8.2 Audit-hook TODOs deferred to PR #3
+
+The following events are intentionally NOT yet recorded. PR #3 (Audit + Event Foundation) will wire them in:
+
+- `lock_acquired` (push) — every successful `acquireLock`.
+- `lock_released` (push) — every successful `releaseLock`.
+- `lock_timeout` (push) — `LockTimeoutError` thrown.
+- `lock_stale_recovered` (push) — `acquireLock` returned `reclaimed: true`.
+- `state_write_succeeded` / `state_write_failed` (push) — atomic write outcomes.
+
+Until PR #3 lands, these signals are observable only via the returned `CommandResult` and the lock handle's `reclaimed` field.
+
+### 8.3 New tests added in PR #2
+
+| File | Purpose | Count |
+|---|---|---|
+| `tests/unit/lock-state-schema.test.ts` | LockState zod validation | 8 |
+| `tests/unit/lock.test.ts` | Pure stale check + acquire/release/timeout/reclaim | 14 |
+| `tests/unit/state-store-atomic.test.ts` | Backup + temp+rename + lock cleanup | 9 |
+| `tests/lock/concurrent-writes.test.ts` | Layer 6 concurrency (5 + 10 + stale + corruption) | 4 |
+| **Total new** |  | **35** |
+
+### 8.4 Coverage after PR #2
+
+- `src/core/state/lock.ts` — 88% lines.
+- `src/core/state/state-store.ts` — 92% lines.
+- All-files — 76% lines (above 70% threshold).
 
 ---
 
