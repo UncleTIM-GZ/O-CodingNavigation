@@ -1,9 +1,13 @@
 import { spawn } from "node:child_process";
+import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const CLI_ENTRY = resolve(here, "..", "..", "src", "cli", "index.ts");
+const REPO_ROOT = resolve(here, "..", "..");
+const SRC_ENTRY = resolve(REPO_ROOT, "src", "cli", "index.ts");
+const DIST_ENTRY = resolve(REPO_ROOT, "dist", "cli", "index.js");
+const TSX_BIN = resolve(REPO_ROOT, "node_modules", ".bin", "tsx");
 
 export interface SpawnOcnResult {
   stdout: string;
@@ -17,7 +21,10 @@ export interface SpawnOcnOptions {
   timeoutMs?: number;
 }
 
-// Launches the OCN CLI in a child Node.js process via tsx.
+// Launches the OCN CLI in a child Node.js process.
+// Strategy:
+//   1. If dist/cli/index.js exists (built artifact) → run it with `node` directly.
+//   2. Otherwise fall back to local tsx via node_modules/.bin/tsx.
 // Arguments are passed as an array — no shell, no shell-string interpolation.
 // `shell: false` is the default and is intentionally NOT overridden.
 export async function spawnOcn(
@@ -25,15 +32,17 @@ export async function spawnOcn(
   opts: SpawnOcnOptions,
 ): Promise<SpawnOcnResult> {
   return new Promise<SpawnOcnResult>((resolvePromise, rejectPromise) => {
-    const child = spawn(
-      "npx",
-      ["--no-install", "tsx", CLI_ENTRY, ...args],
-      {
-        cwd: opts.cwd,
-        env: { ...process.env, ...opts.env, NODE_NO_WARNINGS: "1" },
-        stdio: ["ignore", "pipe", "pipe"],
-      },
-    );
+    const useDist = existsSync(DIST_ENTRY);
+    const command = useDist ? process.execPath : TSX_BIN;
+    const commandArgs = useDist
+      ? [DIST_ENTRY, ...args]
+      : [SRC_ENTRY, ...args];
+
+    const child = spawn(command, commandArgs, {
+      cwd: opts.cwd,
+      env: { ...process.env, ...opts.env, NODE_NO_WARNINGS: "1" },
+      stdio: ["ignore", "pipe", "pipe"],
+    });
 
     let stdout = "";
     let stderr = "";
