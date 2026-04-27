@@ -1,0 +1,7 @@
+export const defaultConfigYaml = `project:
+  tier: minimal
+  language: zh
+sopProfile:
+  id: default-ai-coding-sop
+  version: 0.1.0
+`;

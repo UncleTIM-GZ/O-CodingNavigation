@@ -1,0 +1,63 @@
+import { promises as fs } from "node:fs";
+import { join } from "node:path";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { generateBrief } from "../../src/core/brief.js";
+import { initProject } from "../../src/core/init.js";
+import { FixtureFiles } from "../helpers/fixtures.js";
+import { createTempProject, type TempProject } from "../helpers/temp-project.js";
+
+describe("core/brief.generateBrief", () => {
+  let project: TempProject;
+
+  beforeEach(async () => {
+    project = await createTempProject();
+    await initProject({ cwd: project.cwd, tier: "minimal" });
+  });
+
+  afterEach(async () => {
+    await project.cleanup();
+  });
+
+  it("includes state, step, AI Governance reminder and Uncertainty Policy", async () => {
+    const result = await generateBrief({ cwd: project.cwd });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.data?.currentStateId).toBe("state_spec");
+    expect(result.data?.currentStepId).toBe("step_prd");
+    expect(result.data?.aiGovernanceReminder).toMatch(/blocked artifact|advance/i);
+    expect(result.data?.uncertaintyPolicy).toMatch(/数据不足|insufficient/i);
+  });
+
+  it("reports artifact status 'missing' before PRD exists", async () => {
+    const result = await generateBrief({ cwd: project.cwd });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.data?.currentArtifactStatus).toBe("missing");
+      expect(result.data?.currentBlockers.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("reports artifact status 'blocked' when PRD missing Scenarios", async () => {
+    await fs.copyFile(
+      FixtureFiles.prdMissingScenarios(),
+      join(project.cwd, "docs", "02-prd.md"),
+    );
+    const result = await generateBrief({ cwd: project.cwd });
+    if (result.ok) {
+      expect(result.data?.currentArtifactStatus).toBe("blocked");
+      expect(result.data?.currentBlockers).toEqual(["section_scenarios"]);
+    }
+  });
+
+  it("reports artifact status 'pass' when PRD has Scenarios", async () => {
+    await fs.copyFile(
+      FixtureFiles.prdWithScenarios(),
+      join(project.cwd, "docs", "02-prd.md"),
+    );
+    const result = await generateBrief({ cwd: project.cwd });
+    if (result.ok) {
+      expect(result.data?.currentArtifactStatus).toBe("pass");
+      expect(result.data?.currentBlockers).toEqual([]);
+    }
+  });
+});
