@@ -1,0 +1,22 @@
+profile: default-ai-coding-sop
+version: 0.1.0
+schemaVersion: "1.0"
+states:
+  - id: state_spec
+    name: SPEC
+    purpose: Form structured PRD and acceptance criteria
+    steps:
+      - step_prd
+gates:
+  step_prd:
+    requiredSections:
+      - section_problem
+      - section_goals
+      - section_users
+      - section_scenarios
+      - section_requirements
+artifacts:
+  artifact_prd:
+    path: docs/02-prd.md
+    requiredForSteps:
+      - step_prd

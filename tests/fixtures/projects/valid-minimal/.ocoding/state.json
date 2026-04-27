@@ -1,0 +1,14 @@
+{
+  "schemaVersion": "1.0",
+  "project": {
+    "projectId": "fixture-valid-minimal",
+    "name": "Fixture Valid Minimal",
+    "tier": "minimal",
+    "sopProfileId": "default-ai-coding-sop",
+    "sopProfileVersion": "0.1.0"
+  },
+  "currentStateId": "state_spec",
+  "currentStepId": "step_prd",
+  "artifacts": {},
+  "latestGateResult": null
+}
