@@ -22,6 +22,7 @@ SOP Profile Version：`0.1.0`
 | # | Date | Decision | Status |
 |---|------|----------|--------|
 | DEC-001 | 2026-04-28 | Skeleton Spike PASS, Phase 2 entry approved | ✅ Approved |
+| DEC-002 | 2026-04-28 | Phase 2 Complete after MCP Safe Tools merge | ✅ Approved |
 
 ---
 
@@ -138,3 +139,93 @@ Each PR runs the same workflow as PR #1: branch → commit → PR → multi-agen
 ---
 
 <!-- Append future decisions below this line. Do NOT modify entries above. -->
+
+## DEC-002｜Phase 2 Complete after MCP Safe Tools
+
+**Date**: 2026-04-28
+**Status**: ✅ Approved
+**Captured by**: Project owner (manual capture — pull mode per CLAUDE.md §4.7)
+**Related artifact**: [`docs/reports/2026-04-28-phase2-completion-report.md`](./reports/2026-04-28-phase2-completion-report.md)
+
+---
+
+### Decision
+
+OCN Phase 2 is complete after PR #6 (MCP Safe Tools — logical PR #5 of the Phase plan) is merged into `main`.
+
+The next phase is **GA Prep Gap Review** — a documentation, packaging, and operational-readiness audit. GA Prep will not begin implementation work until its own scope decision is captured as a future DEC entry.
+
+### Evidence
+
+- **PR #1 (GitHub #1)** Skeleton Spike — merged `a93d5a3` at 2026-04-27T17:46:28Z.
+- **PR #2 (GitHub #3)** State Safety Foundation — merged `3e4568a` at 2026-04-27T18:15:49Z. Closes L1, L10.
+- **PR #3 (GitHub #4)** Audit + Event Foundation — merged `d6abc8b` at 2026-04-28T01:51:45Z. Closes L3.
+- **PR #4 (GitHub #5)** Full State Machine + Gate + Advance — merged `5469090` at 2026-04-28T11:33:54Z. Closes L2, L6, L7, todo 012, todo 013 (field + advance flow).
+- **PR #5 (GitHub #6)** MCP Safe Tools — merged `dbe3523` at 2026-04-28T15:58:09Z. Closes todo 011, OCN-PR5-001.
+- CI on PR #6 merge commit: SUCCESS.
+- Local re-verification on `main` after merge: lint clean, typecheck clean, **312 tests pass across 61 files**, **line coverage 83.88%**, branch coverage 84.61%, function coverage 90.40%.
+- The 4-PR ordering required by DEC-001 ("State Safety → Audit → Full FSM → MCP") was respected.
+
+### Completed Core Capabilities
+
+- Local project initialization (`ocn init [--tier minimal]`)
+- Status snapshot, next-step brief
+- Step Artifact Gate per current step (`ocn check`, `ocn gate`)
+- Forward-only state advancement (`ocn advance`) with gate-then-mutate semantics
+- State safety: `.ocoding/.lock` + `state.json.bak` + temp-file write + atomic rename
+- Audit dual persistence: `.ocoding/audit/audit-events.jsonl` + `docs/22-audit-trail.md`
+- `correlationId` threading across the entire `ocn advance` event chain (including lock events)
+- MCP safe surface — 7 read/prepare/create/log tools over stdio transport
+- 4 forbidden MCP tools never registered (registry test enforces)
+- MCP success path produces zero `process.stderr.write` calls
+
+### Still Not Included (deliberately out of Phase 2)
+
+- `ocn doctor`, `ocn reset`, `ocn baseline`
+- SOP versioning / upgrade tooling (`ocn sop {version,diff,upgrade --plan}`)
+- Tier `production` / `full` artifact-set enforcement
+- Mini-CRM dogfood (Tier 2 GA success criterion)
+- npm publish (package name negotiation, release lane, CI pipeline)
+- Remote MCP transport (HTTP / SSE), MCP auth, MCP session management
+- MCP `advance_phase`, MCP `capture_decision`, MCP `reset_project`, MCP `force_release_lock` — **never to be exposed**
+
+### Options Considered
+
+| # | Option | Rejected because |
+|---|--------|------------------|
+| A | Mark Phase 2 complete and enter GA Prep Gap Review | (chosen) |
+| B | Defer Phase 2 closure until mini-CRM dogfood is attempted | Mini-CRM is a GA success criterion (`docs/08-mvp-plan.md` §39.2), not a Phase 2 entry condition. Conflating the two would inflate Phase 2's exit bar. |
+| C | Defer Phase 2 closure until `doctor` / `reset` / `baseline` ship | DEC-001 explicitly scoped these out of Phase 2. Reopening would violate the locked PR ordering. |
+| D | Mark "Conditional Complete" pending an external MCP host smoke test | Local + CI verification + per-tool unit suites + the integration suite already cover the contract OCN owns. External-host validation belongs to GA Prep §8.10 / §8.12. |
+
+### Final Choice
+
+**Option A.** Phase 2 is complete; GA Prep Gap Review is the next planning artifact.
+
+### Background
+
+Phase 2 was scoped by DEC-001 with four ordered engineering PRs. Each PR's scope statement was honoured at merge time, and each PR's tests preserved the prior PR's invariants (notably the verbatim Skeleton Spike PRD blocked/pass invariant, which `tests/e2e/skeleton-spike-demo.test.ts` continues to verify after walking the state machine through three `ocn advance` calls).
+
+The completion report at `docs/reports/2026-04-28-phase2-completion-report.md` records the per-PR detail, the resolved L / todo items, the open simplifications (L4, L5, L8, L9, L11–L14) tracked for Phase 3, and the GA Prep gap matrix.
+
+### Risks
+
+| ID | Risk | Mitigation |
+|----|------|------------|
+| R5 | GA Prep ambiguity — unclear which gaps in §8 of the completion report are GA-blocking vs nice-to-have. | Open a GA Prep planning artifact that prioritizes §8 gaps before any implementation begins. |
+| R6 | Docs numbering divergence (OLD `docs/04-08` layout vs NEW SOP-profile expectation) silently breaks OCN-on-OCN dogfood. | GA Prep Gap Review must explicitly decide: renumber OCN's own docs OR ship a profile override. Track in `implementation-notes.md`. |
+| R7 | Mini-CRM dogfood pulls forward implementation work that is not GA-blocking. | Hold dogfood behind a future DEC entry; do not start it during Gap Review. |
+| R8 | Public expectation creep — Phase 2 closure is read as "ready to publish." | This DEC entry explicitly states GA Prep is the next phase, npm publish is not done, and external README polish is required. |
+
+### Follow-up Observations to Capture
+
+- During GA Prep, validate `docs/mcp-usage.md` against an external MCP host (e.g., Claude Desktop, Cursor, Cline). Record any host-specific friction.
+- During GA Prep, audit the `projectRoot` argument validation across all 7 MCP tools for path-traversal safety.
+- During GA Prep, decide whether to renumber OCN's own `docs/04-08` to match the new SOP profile or ship a profile override.
+
+### Related Artifacts
+
+- Phase 2 Completion Report: [`docs/reports/2026-04-28-phase2-completion-report.md`](./reports/2026-04-28-phase2-completion-report.md)
+- Implementation notes (full L / todo state): [`../implementation-notes.md`](../implementation-notes.md)
+- DEC-001 (Phase 2 entry): see above in this file.
+- PR #6 merge commit: `dbe3523`. PR URL: https://github.com/UncleTIM-GZ/O-CodingNavigation/pull/6.
