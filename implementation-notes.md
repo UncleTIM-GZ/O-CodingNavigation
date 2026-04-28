@@ -342,4 +342,74 @@ The user §X verbatim invariant — PRD missing Scenarios returns exit 2 + bilin
 
 ---
 
+## 11. PR #5 Addendum — MCP Safe Tools (2026-04-28)
+
+### 11.1 What changed
+
+- **Pre-PR §3 (todo 011) RESOLVED**: `safeAudit` no longer writes to `process.stderr` directly. New seam `src/core/audit/audit-logger.ts` defines `AuditFallbackLogger` (`{ warn, error }`) with two implementations: `stderrAuditFallbackLogger` (default — preserves PR #4 behaviour for the CLI) and `silentAuditFallbackLogger` (used by the MCP server to avoid corrupting stdio JSON-RPC framing). `setAuditFallbackLogger(...)` is the swap point. `safeAudit(...)` now calls `getAuditFallbackLogger().warn(...)` / `.error(...)`.
+- **Pre-PR §4 (`OCN-PR5-001-lock-correlation`) RESOLVED**: `LockAuditHookContext` accepts an optional `correlationId`. `makeLockAuditHook(...)` threads it into every lock event it emits. `advanceState(...)` passes its `correlationId` so a single `ocn advance` invocation now produces a fully-correlated event chain — `advance_started → lock_acquired → artifact_gate_* → state_transitioned → state_write_succeeded → lock_released → advance_succeeded`. Lock events without a correlationId still work for backwards compatibility (e.g. `ocn init`'s lock).
+- **MCP server (stdio transport)**: new `src/mcp/server.ts` + `src/mcp/index.ts` bin entry (`ocn-mcp`). Built on `@modelcontextprotocol/sdk@^1.29.0`. The server calls `setAuditFallbackLogger(silentAuditFallbackLogger)` at construction so audit fallback messages never reach stderr (which the JSON-RPC stdio framing reserves for protocol notifications). `package.json` adds `"ocn-mcp": "dist/mcp/index.js"` to `bin` and chmods both bin entries during build.
+- **MCPToolResult envelope** (`src/mcp/result.ts`): structured discriminated union `{ ok, code, message: { en, zh }, data? } | { ok: false, code, message, error: { code, en, zh } }` — never throws, never leaks raw exceptions across the MCP boundary. `mcpFromCommandResult(...)` lifts core `CommandResult<T>` into the envelope; `toCallToolResult(...)` produces the SDK's `CallToolResult` shape.
+- **7 allowed tools** (`src/mcp/tools/*.ts`):
+  - `navigator.where_am_i` — read-only state snapshot
+  - `navigator.brief` — read-only render of next-step brief
+  - `navigator.run_gate` — read-only gate aggregation (NO state mutation)
+  - `navigator.create_artifact` — writes one of 5 doc types from the template registry
+  - `navigator.capture_log` — appends to `docs/19-dev-log.md` (`type=dev`) or `docs/18-research-log.md` (`type=research`); **`type=decision` is hard-rejected with bilingual `ERR_GATE_FAILED`** ("MCP cannot capture decisions; use the OCN CLI." / "MCP 不能记录决策，请使用 OCN CLI 命令。")
+  - `navigator.detect_sop_version` — compares the project-locked SOP profile id/version against the bundled OCN SOP and reports drift
+  - `navigator.generate_next_prompt` — returns required sections + governance reminder + uncertainty policy + self-check rule for the current step
+- **4 forbidden tools NEVER exposed**: `navigator.advance_phase`, `navigator.capture_decision`, `navigator.reset_project`, `navigator.force_release_lock`. `tests/unit/mcp-tool-registry.test.ts` enforces that `ALLOWED_TOOL_NAMES ∩ FORBIDDEN_TOOL_NAMES = ∅`.
+
+### 11.2 Audit-event taxonomy after PR #5
+
+No new event types in PR #5 — but `lock_acquired` / `lock_released` / `lock_timeout` / `lock_stale_recovered` now carry `correlationId` when emitted from a correlated flow (the `ocn advance` lock chain). Total event types remain 16.
+
+### 11.3 New core fns introduced for the MCP surface
+
+| Fn | Path | Used by |
+|---|---|---|
+| `captureLog(opts)` | `src/core/log/capture-log.ts` | `navigator.capture_log` |
+| `detectSopVersion(opts)` | `src/core/sop/detect-version.ts` | `navigator.detect_sop_version` |
+| `generateNextPrompt(opts)` | `src/core/prompt/generate-next-prompt.ts` | `navigator.generate_next_prompt` |
+
+`captureLog` rejects `type=decision` BEFORE any audit event is emitted. `dev` and `research` paths emit `artifact_created` with `data.subType: log-dev` / `log-research` so the dual-track trail records them like any other artifact write.
+
+### 11.4 New tests added in PR #5
+
+| File | Purpose |
+|---|---|
+| `tests/unit/safe-audit-logger.test.ts` | Logger seam: happy path, JSONL-failure routing, silent logger drops, default stderr formatter, set/reset round-trip |
+| `tests/unit/lock-correlation.test.ts` | Lock hook threads correlationId, advance lock chain shares it, no-correlationId path stays backwards-compatible |
+| `tests/unit/mcp-result.test.ts` | Envelope helpers: ok / blocked / fromCommandResult / toCallToolResult |
+| `tests/unit/mcp-tool-registry.test.ts` | 7-tool list integrity + forbidden-tool absence |
+| `tests/unit/mcp-{where-am-i,brief,run-gate,create-artifact,capture-log,detect-sop-version,generate-next-prompt}.test.ts` | Per-tool handler contract |
+| `tests/unit/capture-log-core.test.ts` | Core fn — dev/research success, decision rejection, audit emission, error envelope |
+| `tests/mcp/mcp-tools.integration.test.ts` | Handler-level integration: every tool returns a parseable envelope, invalid input never throws, success path produces zero stderr writes, run_gate does NOT mutate state.json |
+
+Total new tests in PR #5: ~50 (full suite now at 312 tests / 61 files / 83.88% line coverage).
+
+### 11.5 Safety boundaries enforced by PR #5
+
+1. **No state advancement via MCP.** `navigator.advance_phase` is not registered. Only the human-driven CLI can move forward.
+2. **No decisions via MCP.** `navigator.capture_decision` is not registered, AND the `capture_log` tool that *is* exposed hard-rejects `type=decision` with a stable bilingual error code.
+3. **No reset via MCP.** `navigator.reset_project` is not registered.
+4. **No force-release via MCP.** `navigator.force_release_lock` is not registered.
+5. **No raw exceptions cross the boundary.** Every tool handler returns a `MCPToolResult` envelope with `ok` + `code` + `message` (or `error`). Invalid input → `ERR_VALIDATION` envelope, never an exception.
+6. **No stderr writes during MCP success path.** The server installs `silentAuditFallbackLogger` at boot, and `tests/mcp/mcp-tools.integration.test.ts` verifies a successful `where_am_i` call produces zero `process.stderr.write` calls.
+
+### 11.6 Deferred (do NOT close in PR #5)
+
+- HTTP / SSE transport — stdio is enough for IDE-side MCP hosts in this PR.
+- Streaming responses / progress notifications — not needed for the 7 read/create tools.
+- Auth / session management — MCP stdio runs in the user's process; trust boundary is the OS user.
+- Doctor, reset, baseline, SOP upgrade tooling — Phase 3.
+- `relatedPaths` relativization (todo 014) and `jsonlOk` removal (todo 015) — still deferred.
+- Public npm publish — held until a Phase 3 hardening pass.
+
+### 11.7 Phase 2 closure
+
+PR #5 closes Phase 2. Remaining open temporary simplifications: L4 (TS-string SOP loader), L5 (hand-rolled markdown parser), L8 (`warning` status unused), L9 (production/full tiers not enforced), L11 (`latestGateResult` typing), L13/L14 (cosmetic render). None block Phase 2 acceptance; all are tracked for Phase 3.
+
+---
+
 **END OF NOTES**

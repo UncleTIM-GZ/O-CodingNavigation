@@ -4,7 +4,8 @@
   "description": "O'CodingNavigator — local-first AI Coding workflow operating system",
   "type": "module",
   "bin": {
-    "ocn": "dist/cli/index.js"
+    "ocn": "dist/cli/index.js",
+    "ocn-mcp": "dist/mcp/index.js"
   },
   "exports": {
     ".": {
@@ -21,7 +22,7 @@
     "node": ">=20"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.build.json && chmod +x dist/cli/index.js",
+    "build": "tsc -p tsconfig.build.json && chmod +x dist/cli/index.js dist/mcp/index.js",
     "dev": "tsx src/cli/index.ts",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
@@ -33,6 +34,7 @@
     "prepare": "husky || true"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "commander": "^12.1.0",
     "js-yaml": "^4.1.0",
     "ulid": "^2.3.0",

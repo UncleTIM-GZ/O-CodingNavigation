@@ -29,9 +29,7 @@ type AdvanceEventType =
   | "state_transitioned"
   | "state_write_succeeded";
 
-export async function advanceState(
-  opts: AdvanceOptions,
-): Promise<CommandResult<AdvanceResult>> {
+export async function advanceState(opts: AdvanceOptions): Promise<CommandResult<AdvanceResult>> {
   const correlationId = newCorrelationId();
 
   // Read state once outside the lock to derive context for audit emission.
@@ -157,13 +155,15 @@ export async function advanceState(
     return blocked("ERR_STATE_MACHINE", failMessage, advanceData);
   }
 
-  // 4. Lock-protected state mutation.
+  // 4. Lock-protected state mutation. PR #5 §4: thread correlationId so
+  // lock events join the advance-flow JSONL trail.
   const lockFile = join(Paths.ocodingDir(opts.cwd), ".lock");
   const lockHook = makeLockAuditHook({
     projectRoot: opts.cwd,
     command: "advance",
     currentStateId: from.stateId,
     currentStepId: from.stepId,
+    correlationId,
   });
 
   try {
@@ -248,13 +248,7 @@ export async function advanceState(
   await safeAudit(
     opts.cwd,
     createAuditEvent(
-      buildAdvanceEvent(
-        "advance_succeeded",
-        "success",
-        successMessage,
-        { from, to: next },
-        next,
-      ),
+      buildAdvanceEvent("advance_succeeded", "success", successMessage, { from, to: next }, next),
     ),
   );
 
