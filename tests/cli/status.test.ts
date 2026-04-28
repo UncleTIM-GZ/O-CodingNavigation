@@ -18,8 +18,8 @@ describe("ocn status", () => {
     await spawnOcn(["init", "--tier", "minimal"], { cwd: project.cwd });
     const result = await spawnOcn(["status"], { cwd: project.cwd });
     expect(result.exitCode).toBe(0);
-    expect(result.stdout).toContain("state_spec");
-    expect(result.stdout).toContain("step_prd");
+    expect(result.stdout).toContain("state_discovery");
+    expect(result.stdout).toContain("step_project_brief");
     expect(result.stdout).toMatch(/Project:|项目/);
   }, 30_000);
 
@@ -29,8 +29,8 @@ describe("ocn status", () => {
     expect(result.exitCode).toBe(0);
     const parsed = JSON.parse(result.stdout);
     expect(parsed.ok).toBe(true);
-    expect(parsed.data.currentStateId).toBe("state_spec");
-    expect(parsed.data.currentStepId).toBe("step_prd");
+    expect(parsed.data.currentStateId).toBe("state_discovery");
+    expect(parsed.data.currentStepId).toBe("step_project_brief");
     expect(typeof parsed.data.nextAction).toBe("string");
   }, 30_000);
 

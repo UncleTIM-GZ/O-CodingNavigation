@@ -2,10 +2,12 @@ import { z } from "zod";
 import { BilingualMessage } from "./i18n.js";
 
 // PR #3 — Audit + Event Foundation. The verbatim event taxonomy from user §V.
+// PR #4 — extended with advance-flow events + optional correlationId.
 // Subset of the wider taxonomy in docs/05-data-model.md §12.15 — future PRs add
-// state_transition_*, advance_*, sop_version_*, etc.
+// sop_version_*, doctor_*, reset_*, etc.
 
 export const AuditEventType = z.enum([
+  // PR #3 base taxonomy
   "project_initialized",
   "state_write_started",
   "state_write_succeeded",
@@ -18,6 +20,11 @@ export const AuditEventType = z.enum([
   "artifact_gate_run",
   "artifact_gate_blocked",
   "artifact_gate_passed",
+  // PR #4 advance flow
+  "advance_started",
+  "advance_succeeded",
+  "advance_failed",
+  "state_transitioned",
 ]);
 export type AuditEventType = z.infer<typeof AuditEventType>;
 
@@ -55,6 +62,11 @@ export const AuditEvent = z
     relatedArtifactIds: z.array(z.string()).optional(),
     relatedPaths: z.array(z.string()).optional(),
     command: z.string().optional(),
+    // PR #4 — correlationId ties together every audit event emitted by a
+    // single `ocn advance` invocation (advance_started, gate_*,
+    // state_transitioned, state_write_succeeded, advance_succeeded|failed).
+    // ULID format same as eventId for downstream tooling consistency.
+    correlationId: z.string().regex(ULID_REGEX, "correlationId must be ULID").optional(),
     message: BilingualMessage,
     data: z.unknown().optional(),
   })

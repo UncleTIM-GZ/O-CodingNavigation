@@ -19,15 +19,15 @@ describe("core/init.initProject", () => {
     const result = await initProject({ cwd: project.cwd, tier: "minimal" });
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.data?.currentStateId).toBe("state_spec");
-    expect(result.data?.currentStepId).toBe("step_prd");
+    expect(result.data?.currentStateId).toBe("state_discovery");
+    expect(result.data?.currentStepId).toBe("step_project_brief");
 
     const stateRaw = await fs.readFile(join(project.cwd, ".ocoding/state.json"), "utf8");
     const state = JSON.parse(stateRaw);
     expect(state.schemaVersion).toBe("1.0");
     expect(state.project.tier).toBe("minimal");
-    expect(state.currentStateId).toBe("state_spec");
-    expect(state.currentStepId).toBe("step_prd");
+    expect(state.currentStateId).toBe("state_discovery");
+    expect(state.currentStepId).toBe("step_project_brief");
 
     const sopYaml = await fs.readFile(join(project.cwd, ".ocoding/sop.yaml"), "utf8");
     expect(sopYaml).toMatch(/profile: default-ai-coding-sop/);
@@ -59,9 +59,7 @@ describe("core/init.initProject", () => {
       projectName: "Custom Name",
     });
     expect(result.ok).toBe(true);
-    const state = JSON.parse(
-      await fs.readFile(join(project.cwd, ".ocoding/state.json"), "utf8"),
-    );
+    const state = JSON.parse(await fs.readFile(join(project.cwd, ".ocoding/state.json"), "utf8"));
     expect(state.project.projectId).toBe("custom-id");
     expect(state.project.name).toBe("Custom Name");
   });

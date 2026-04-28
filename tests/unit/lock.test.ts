@@ -235,4 +235,47 @@ describe("withLock", () => {
     ).rejects.toThrow("boom");
     await expect(fs.stat(lockPath(project))).rejects.toMatchObject({ code: "ENOENT" });
   });
+
+  // PR #4 §2.1 — onReleased must fire even when releaseLock throws.
+  it("calls onReleased even when fs.unlink throws a non-ENOENT error", async () => {
+    // Prepare: pre-acquire the lock so it exists, then sabotage fs.unlink so
+    // releaseLock throws on the first invocation.
+    const { vi } = await import("vitest");
+    const lockFile = lockPath(project);
+    let onReleasedCalled = false;
+
+    const originalUnlink = fs.unlink.bind(fs);
+    let unlinkCallCount = 0;
+    const unlinkSpy = vi.spyOn(fs, "unlink").mockImplementation(async (...args) => {
+      unlinkCallCount += 1;
+      if (unlinkCallCount === 1) {
+        throw Object.assign(new Error("perm denied"), { code: "EACCES" });
+      }
+      return originalUnlink(...(args as Parameters<typeof originalUnlink>));
+    });
+
+    try {
+      await expect(
+        withLock(
+          {
+            lockFile,
+            command: "test",
+            projectRoot: project.cwd,
+            lifecycle: {
+              onReleased: () => {
+                onReleasedCalled = true;
+              },
+            },
+          },
+          async () => undefined,
+        ),
+      ).rejects.toThrow();
+    } finally {
+      unlinkSpy.mockRestore();
+      // Cleanup: ensure no orphan lock blocks subsequent tests.
+      await fs.unlink(lockFile).catch(() => undefined);
+    }
+
+    expect(onReleasedCalled).toBe(true);
+  });
 });

@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { spawnOcn } from "../helpers/spawn-ocn.js";
 import { createTempProject, type TempProject } from "../helpers/temp-project.js";
 import { FixtureFiles } from "../helpers/fixtures.js";
+import { seedToStepPrd } from "../helpers/seed-state.js";
 import { AuditEvent } from "../../src/types/audit.js";
 
 const jsonl = (project: TempProject) =>
@@ -24,6 +25,8 @@ describe("ocn check — audit trail", () => {
   beforeEach(async () => {
     project = await createTempProject("ocn-audit-check-test-");
     await spawnOcn(["init", "--tier", "minimal"], { cwd: project.cwd });
+    // PR #4: PRD-specific assertions require the project to be at step_prd.
+    await seedToStepPrd(project.cwd);
   });
 
   afterEach(async () => {
@@ -31,10 +34,7 @@ describe("ocn check — audit trail", () => {
   });
 
   it("emits artifact_gate_run + artifact_gate_blocked when PRD missing Scenarios (in order)", async () => {
-    await fs.copyFile(
-      FixtureFiles.prdMissingScenarios(),
-      join(project.cwd, "docs", "02-prd.md"),
-    );
+    await fs.copyFile(FixtureFiles.prdMissingScenarios(), join(project.cwd, "docs", "02-prd.md"));
     const result = await spawnOcn(["check", "--json"], { cwd: project.cwd });
     expect(result.exitCode).toBe(2);
 
@@ -53,10 +53,7 @@ describe("ocn check — audit trail", () => {
   }, 30_000);
 
   it("emits artifact_gate_run + artifact_gate_passed when PRD has all required sections (in order)", async () => {
-    await fs.copyFile(
-      FixtureFiles.prdWithScenarios(),
-      join(project.cwd, "docs", "02-prd.md"),
-    );
+    await fs.copyFile(FixtureFiles.prdWithScenarios(), join(project.cwd, "docs", "02-prd.md"));
     const result = await spawnOcn(["check", "--json"], { cwd: project.cwd });
     expect(result.exitCode).toBe(0);
 
@@ -73,10 +70,7 @@ describe("ocn check — audit trail", () => {
   }, 30_000);
 
   it("two consecutive checks emit two gate_run events (no caching/squashing)", async () => {
-    await fs.copyFile(
-      FixtureFiles.prdWithScenarios(),
-      join(project.cwd, "docs", "02-prd.md"),
-    );
+    await fs.copyFile(FixtureFiles.prdWithScenarios(), join(project.cwd, "docs", "02-prd.md"));
     await spawnOcn(["check"], { cwd: project.cwd });
     await spawnOcn(["check"], { cwd: project.cwd });
     const events = await readEvents(project);

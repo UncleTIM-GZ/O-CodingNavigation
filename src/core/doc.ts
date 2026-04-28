@@ -1,12 +1,12 @@
+import { join } from "node:path";
 import type { CommandResult } from "../types/result.js";
-import { Paths } from "./paths.js";
 import { blocked, ok } from "./result.js";
 import { msg } from "./i18n.js";
 import { FileExistsError, writeArtifact } from "./artifact/template-writer.js";
-import { prdTemplate } from "./templates/prd.js";
+import { type DocType, DOC_TYPES, getTemplate, isDocType } from "./templates/index.js";
 import { createAuditEvent, safeAudit } from "./audit/index.js";
 
-export type DocType = "prd";
+export type { DocType } from "./templates/index.js";
 
 export interface CreateArtifactOptions {
   readonly cwd: string;
@@ -19,30 +19,36 @@ export interface CreateArtifactData {
   readonly type: DocType;
 }
 
+// PR #4 — `ocn doc create <type>` accepts 5 doc types via the template
+// registry. PR #1's `prd` path is preserved exactly (back-compat).
 export async function createArtifact(
   opts: CreateArtifactOptions,
 ): Promise<CommandResult<CreateArtifactData>> {
-  if (opts.type !== "prd") {
+  if (!isDocType(opts.type)) {
     return blocked(
       "ERR_ARTIFACT_INVALID",
       msg(
-        `Skeleton Spike supports only doc type 'prd'. Got: '${opts.type}'.`,
-        `Skeleton Spike 仅支持 doc 类型 'prd'，收到: '${opts.type}'。`,
+        `Unsupported doc type '${opts.type}'. Supported: ${DOC_TYPES.join(", ")}.`,
+        `不支持的 doc 类型 '${opts.type}'。支持：${DOC_TYPES.join("、")}。`,
       ),
+      { supportedTypes: [...DOC_TYPES] },
     );
   }
-  const artifactPath = Paths.prdFile(opts.cwd);
+
+  const entry = getTemplate(opts.type);
+  const artifactPath = join(opts.cwd, entry.relativePath);
+
   try {
-    await writeArtifact(artifactPath, prdTemplate, opts.overwrite ?? false);
+    await writeArtifact(artifactPath, entry.template, opts.overwrite ?? false);
   } catch (err) {
     if (err instanceof FileExistsError) {
       return blocked(
         "ERR_IO_OR_CONFIG",
         msg(
-          `PRD already exists at ${err.filePath}. Use --overwrite to replace it.`,
-          `PRD 已存在：${err.filePath}。使用 --overwrite 覆盖。`,
+          `${entry.type} already exists at ${err.filePath}. Use --overwrite to replace it.`,
+          `${entry.type} 已存在：${err.filePath}。使用 --overwrite 覆盖。`,
         ),
-        { artifactPath: err.filePath },
+        { artifactPath: err.filePath, type: entry.type },
       );
     }
     throw err;
@@ -59,20 +65,20 @@ export async function createArtifact(
       projectRoot: opts.cwd,
       command: "doc.create",
       message: msg(
-        `Created PRD template at ${artifactPath}.`,
-        `已创建 PRD 模板：${artifactPath}。`,
+        `Created ${entry.type} template at ${artifactPath}.`,
+        `已创建 ${entry.type} 模板：${artifactPath}。`,
       ),
-      relatedArtifactIds: ["artifact_prd"],
+      relatedArtifactIds: [entry.artifactId],
       relatedPaths: [artifactPath],
-      data: { artifactType: "prd", overwrite: opts.overwrite ?? false },
+      data: { artifactType: entry.type, overwrite: opts.overwrite ?? false },
     }),
   );
 
   return ok(
     msg(
-      `Created PRD template at ${artifactPath}.`,
-      `已创建 PRD 模板：${artifactPath}。`,
+      `Created ${entry.type} template at ${artifactPath}.`,
+      `已创建 ${entry.type} 模板：${artifactPath}。`,
     ),
-    { artifactPath, type: "prd" },
+    { artifactPath, type: entry.type },
   );
 }

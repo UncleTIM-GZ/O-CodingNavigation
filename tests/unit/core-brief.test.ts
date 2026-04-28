@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { generateBrief } from "../../src/core/brief.js";
 import { initProject } from "../../src/core/init.js";
 import { FixtureFiles } from "../helpers/fixtures.js";
+import { seedToStepPrd } from "../helpers/seed-state.js";
 import { createTempProject, type TempProject } from "../helpers/temp-project.js";
 
 describe("core/brief.generateBrief", () => {
@@ -22,13 +23,13 @@ describe("core/brief.generateBrief", () => {
     const result = await generateBrief({ cwd: project.cwd });
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.data?.currentStateId).toBe("state_spec");
-    expect(result.data?.currentStepId).toBe("step_prd");
+    expect(result.data?.currentStateId).toBe("state_discovery");
+    expect(result.data?.currentStepId).toBe("step_project_brief");
     expect(result.data?.aiGovernanceReminder).toMatch(/blocked artifact|advance/i);
     expect(result.data?.uncertaintyPolicy).toMatch(/数据不足|insufficient/i);
   });
 
-  it("reports artifact status 'missing' before PRD exists", async () => {
+  it("reports artifact status 'missing' before the project-brief is created", async () => {
     const result = await generateBrief({ cwd: project.cwd });
     expect(result.ok).toBe(true);
     if (result.ok) {
@@ -37,7 +38,8 @@ describe("core/brief.generateBrief", () => {
     }
   });
 
-  it("reports artifact status 'blocked' when PRD missing Scenarios", async () => {
+  it("reports artifact status 'blocked' when PRD missing Scenarios (after seeding to step_prd)", async () => {
+    await seedToStepPrd(project.cwd);
     await fs.copyFile(
       FixtureFiles.prdMissingScenarios(),
       join(project.cwd, "docs", "02-prd.md"),
@@ -49,7 +51,8 @@ describe("core/brief.generateBrief", () => {
     }
   });
 
-  it("reports artifact status 'pass' when PRD has Scenarios", async () => {
+  it("reports artifact status 'pass' when PRD has Scenarios (after seeding to step_prd)", async () => {
+    await seedToStepPrd(project.cwd);
     await fs.copyFile(
       FixtureFiles.prdWithScenarios(),
       join(project.cwd, "docs", "02-prd.md"),

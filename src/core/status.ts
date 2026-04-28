@@ -1,8 +1,9 @@
+import { join } from "node:path";
 import type { CommandResult } from "../types/result.js";
 import type { ProjectState } from "../types/state.js";
-import { Paths } from "./paths.js";
 import { blocked, ok } from "./result.js";
 import { msg } from "./i18n.js";
+import { loadSopProfile } from "./sop/loader.js";
 import {
   StateInvalidError,
   StateNotFoundError,
@@ -21,6 +22,8 @@ export interface StatusData {
   readonly nextAction: string;
 }
 
+// PR #4 — status uses SOP map for artifact path + next action, replacing the
+// PR #1 PRD hardcode.
 export async function getStatus(opts: StatusOptions): Promise<CommandResult<StatusData>> {
   let state: ProjectState;
   try {
@@ -46,7 +49,16 @@ export async function getStatus(opts: StatusOptions): Promise<CommandResult<Stat
     throw err;
   }
 
-  const currentArtifactPath = Paths.prdFile(opts.cwd);
+  const profile = loadSopProfile();
+  const relativeArtifactPath = profile.artifactPathForStep(state.currentStepId);
+  const currentArtifactPath =
+    relativeArtifactPath === null ? "" : join(opts.cwd, relativeArtifactPath);
+
+  const nextAction =
+    relativeArtifactPath === null
+      ? `Step ${state.currentStepId} has no required artifact. Run \`ocn advance\` to proceed.`
+      : `Edit ${relativeArtifactPath}, run \`ocn gate\` to verify, then \`ocn advance\` once it passes.`;
+
   return ok(
     msg(
       `OCN ${state.project.name} — ${state.currentStateId} / ${state.currentStepId}`,
@@ -57,8 +69,7 @@ export async function getStatus(opts: StatusOptions): Promise<CommandResult<Stat
       currentStateId: state.currentStateId,
       currentStepId: state.currentStepId,
       currentArtifactPath,
-      nextAction:
-        "Edit docs/02-prd.md, then run `ocn check`.",
+      nextAction,
     },
   );
 }
