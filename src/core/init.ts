@@ -8,6 +8,7 @@ import { msg } from "./i18n.js";
 import { LockTimeoutError, withLock } from "./state/lock.js";
 import { writeStateUnlocked } from "./state/state-store.js";
 import { loadSopProfile } from "./sop/loader.js";
+import { createAuditEvent, makeLockAuditHook, safeAudit } from "./audit/index.js";
 
 export interface InitOptions {
   readonly cwd: string;
@@ -72,12 +73,21 @@ export async function initProject(opts: InitOptions): Promise<CommandResult<Init
   };
 
   let alreadyInitialized = false;
+  let stateWritten = false;
+  const lockHook = makeLockAuditHook({
+    projectRoot: opts.cwd,
+    command: "init",
+    currentStateId: state.currentStateId,
+    currentStepId: state.currentStepId,
+  });
+
   try {
     await withLock(
       {
         lockFile,
         command: "init",
         projectRoot: opts.cwd,
+        lifecycle: lockHook,
       },
       async () => {
         if (await pathExists(stateFile)) {
@@ -91,6 +101,7 @@ export async function initProject(opts: InitOptions): Promise<CommandResult<Init
         // We already hold the outer lock; use the unlocked variant to avoid
         // a self-acquire deadlock.
         await writeStateUnlocked(opts.cwd, state);
+        stateWritten = true;
       },
     );
   } catch (err) {
@@ -110,11 +121,54 @@ export async function initProject(opts: InitOptions): Promise<CommandResult<Init
   if (alreadyInitialized) {
     return blocked(
       "ERR_IO_OR_CONFIG",
-      msg(
-        "OCN is already initialized in this directory.",
-        "当前目录已经初始化过 OCN。",
-      ),
+      msg("OCN is already initialized in this directory.", "当前目录已经初始化过 OCN。"),
       { ocodingDir, stateFile },
+    );
+  }
+
+  // Audit emission AFTER lock release (plan §3.2): never inside the critical
+  // section. Best-effort — never affects command success (CLAUDE.md §10).
+  if (stateWritten) {
+    const createdPaths = [
+      stateFile,
+      Paths.sopFile(opts.cwd),
+      Paths.gatesFile(opts.cwd),
+      Paths.configFile(opts.cwd),
+    ];
+    await safeAudit(
+      opts.cwd,
+      createAuditEvent({
+        eventType: "state_write_succeeded",
+        result: "success",
+        actor: "system",
+        source: "core",
+        projectRoot: opts.cwd,
+        currentStateId: state.currentStateId,
+        currentStepId: state.currentStepId,
+        command: "init.write-state",
+        message: msg(`state.json written at ${stateFile}.`, `已写入 state.json：${stateFile}。`),
+        relatedPaths: [stateFile],
+      }),
+    );
+    await safeAudit(
+      opts.cwd,
+      createAuditEvent({
+        eventType: "project_initialized",
+        result: "success",
+        actor: "user",
+        source: "cli",
+        projectRoot: opts.cwd,
+        currentStateId: state.currentStateId,
+        currentStepId: state.currentStepId,
+        command: "init",
+        message: msg("OCN project initialized.", "OCN 项目已初始化。"),
+        relatedPaths: createdPaths,
+        data: {
+          tier,
+          sopProfileId: state.project.sopProfileId,
+          sopProfileVersion: state.project.sopProfileVersion,
+        },
+      }),
     );
   }
 

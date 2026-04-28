@@ -12,7 +12,7 @@
 |---|---|---|---|
 | L1 | ~~`state.json` write does NOT use lock + backup + atomic temp/rename. Plain `fs.writeFile`.~~ **RESOLVED by PR #2 (state-safety)** — `writeStateAtomic` now wraps every state write with `.ocoding/.lock` (5s timeout, 200ms retry, 30s stale threshold), `state.json.bak`, temp file + atomic rename. See `docs/plans/2026-04-28-feat-ocn-phase2-state-safety-plan.md` and `src/core/state/{lock,state-store}.ts`. | ~~`src/core/state/state-store.ts` `writeState()`~~ | ✅ Done |
 | L2 | Initial position after `ocn init` jumps directly to `state_spec` / `step_prd`, skipping discovery + scope steps. | `src/core/init.ts` lines 53-61 | Phase 2 — when full state machine + `ocn advance` lands |
-| L3 | No audit events are written anywhere. | All commands | Phase 2 — implement audit subsystem |
+| L3 | ~~No audit events are written anywhere.~~ **RESOLVED by PR #3 (audit-event-foundation)** — `AuditEvent` schema + dual-track persistence (`.ocoding/audit/audit-events.jsonl` + `docs/22-audit-trail.md`). Wired into `ocn init` (project_initialized + state_write_succeeded + lock_acquired/released), `ocn doc create prd` (artifact_created), and `ocn check` (artifact_gate_run + artifact_gate_blocked\|passed). See `docs/plans/2026-04-28-feat-ocn-phase2-audit-event-foundation-plan.md`. | ~~All commands~~ | ✅ Done |
 | L4 | SOP profile content is bundled as TypeScript string constants (`src/sops/default-ai-coding-sop/0.1.0/{sop,gates,artifacts,config}.ts`) instead of YAML files copied at build time. The on-disk `.ocoding/sop.yaml` IS valid YAML; the in-process load is from the TS string. | `src/core/sop/loader.ts` | Phase 2 — once asset packaging strategy is decided |
 | L5 | Markdown heading parser is a hand-rolled regex (no `marked`/`remark` dep). Detects ATX headings only — no setext, no inline-code edge cases beyond fenced blocks. | `src/core/artifact/markdown-parser.ts` | Phase 2 — switch to `remark` when section-body parsing is required |
 | L6 | `ocn doc create` only accepts `prd`. Other types blocked with `ERR_ARTIFACT_INVALID`. | `src/core/doc.ts` | Phase 2 — extend to other artifact types per Tier |
@@ -162,6 +162,110 @@ Until PR #3 lands, these signals are observable only via the returned `CommandRe
 - `src/core/state/lock.ts` — 88% lines.
 - `src/core/state/state-store.ts` — 92% lines.
 - All-files — 76% lines (above 70% threshold).
+
+---
+
+## 9. PR #3 Addendum — Audit + Event Foundation (2026-04-28)
+
+This addendum is appended after PR #3 merge. It documents the audit subsystem and
+the follow-ups deferred to PR #4+.
+
+### 9.1 What changed
+
+- **Schema**: `AuditEvent` zod schema (`src/types/audit.ts`) — 12 event types ×
+  7 result types, with strict ULID + ISO 8601 UTC + bilingual message validation.
+- **Storage**: append-only dual track:
+  - JSONL (machine source-of-truth): `.ocoding/audit/audit-events.jsonl`
+  - Markdown (human narrative): `docs/22-audit-trail.md`
+- **Atomicity**: `fs.appendFile` with default `'a'` flag relies on POSIX
+  `O_APPEND` / Windows `FILE_APPEND_DATA` for per-call atomicity. JSONL lines
+  are capped at 3500 bytes to stay well under the 4096-byte page boundary.
+- **First-write race**: markdown header creation uses `fs.open(path, 'wx')`
+  exclusive create — concurrent first-writes produce exactly ONE `# Audit Trail`
+  header.
+- **Lock lifecycle**: `withLock` accepts an optional `LockLifecycleHook`
+  (`onAcquired` / `onReleased` / `onTimeout` / `onStaleRecovered`). Hook errors
+  are silently swallowed inside the lock module; the audit-emitting hook
+  (`makeLockAuditHook`) routes through `safeAudit` which logs to stderr on
+  failure but never throws.
+- **Wired sites**: `ocn init`, `ocn doc create prd`, `ocn check`. Audit emission
+  happens at the command boundary, AFTER any held lock is released. The audit
+  writer never acquires the state lock and never calls `writeState` — no
+  recursive deadlock is possible.
+
+### 9.2 Closed PR #3 verification (verbatim user §XIII)
+
+- [x] L3 closed
+- [x] `audit-events.jsonl` writable + appendable + parseable
+- [x] `docs/22-audit-trail.md` auto-created
+- [x] `ocn init` writes `project_initialized`
+- [x] `ocn doc create prd` writes `artifact_created`
+- [x] `ocn check` blocked path writes `artifact_gate_run` + `artifact_gate_blocked`
+- [x] `ocn check` pass path writes `artifact_gate_run` + `artifact_gate_passed`
+- [x] Audit writer does NOT acquire `.ocoding/.lock`
+- [x] No `lock → audit → lock` recursive path exists
+- [x] All 152 prior tests still pass
+- [x] 52 new audit tests pass (43 unit + 9 CLI)
+- [x] `npm run lint && typecheck && build && test:coverage` green
+
+### 9.3 Deferred to PR #4+ (do NOT close in PR #3)
+
+- `state_write_started` events — explicitly skipped per user §VIII §2
+  alternative ("only state_write_succeeded / state_write_failed").
+- `state_write_*` emission INSIDE `writeStateAtomic` — currently emitted at the
+  init-command level only. PR #4 will move emission into `writeStateAtomic`
+  when `advance` lands and uses it directly.
+- Event replay / audit rebuild from JSONL.
+- `ocn doctor` integration (read JSONL to detect anomalies).
+- Markdown rotation policy (when `docs/22-audit-trail.md` grows large).
+- Log subsystem (`ocn log [--type dev|decision]`) — separate from audit per
+  CLAUDE.md §4.7 (push vs pull).
+- MCP exposure of audit read-only tools — per DEC-001, MCP lands in PR #5.
+
+### 9.4 Audit storage path discrepancy (Amendment Needed flag)
+
+`docs/05-data-model.md` and `docs/06-api-contract.md` reference:
+
+- `.ocoding/events/audit-events.jsonl`
+- `docs/21-audit-trail.md`
+
+PR #3 follows the user spec verbatim and uses:
+
+- `.ocoding/audit/audit-events.jsonl`
+- `docs/22-audit-trail.md`
+
+The user explicit instruction overrides the design in this PR (user spec §IV).
+The discrepancy is a structural one — both directory name (`audit/` vs
+`events/`) and file index (`22-` vs `21-`) differ.
+
+**Amendment proposal**: Either reconcile the design docs to match PR #3's
+implementation, or open a follow-up PR that migrates the implementation to
+match the design. Decision deferred to project owner; PR #3 does not modify
+`docs/00-08`.
+
+### 9.5 New tests added in PR #3
+
+| File | Purpose | Count |
+|---|---|---|
+| `tests/unit/audit-event-schema.test.ts` | AuditEvent zod parse + reject paths | 11 |
+| `tests/unit/audit-event-factory.test.ts` | createAuditEvent ULID + timestamp + DI | 8 |
+| `tests/unit/audit-writer-jsonl.test.ts` | Append + parseable + size cap | 5 |
+| `tests/unit/audit-writer-markdown.test.ts` | Header + sections + concurrent first-write | 7 |
+| `tests/unit/audit-writer-failure.test.ts` | JSONL fail / markdown fail / safeAudit | 5 |
+| `tests/unit/lock-audit-hook.test.ts` | Hook lifecycle + error swallowing + wiring | 7 |
+| `tests/cli/audit-init.test.ts` | init audit trail end-to-end | 4 |
+| `tests/cli/audit-doc-create.test.ts` | doc create audit emission | 2 |
+| `tests/cli/audit-check.test.ts` | check audit emission (blocked + pass) | 3 |
+| **Total new** |  | **52** |
+
+### 9.6 Coverage after PR #3
+
+- `src/core/audit/*` — 99.16% lines (well above 85% target).
+- `src/core/audit/audit-event.ts` — 100%.
+- `src/core/audit/audit-jsonl.ts` — 100%.
+- `src/core/audit/audit-paths.ts` — 100%.
+- `src/core/audit/audit-writer.ts` — 93.1%.
+- All-files — 83.03% lines (up from 76.34% post-PR #2).
 
 ---
 

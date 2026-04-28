@@ -4,6 +4,7 @@ import { blocked, ok } from "./result.js";
 import { msg } from "./i18n.js";
 import { FileExistsError, writeArtifact } from "./artifact/template-writer.js";
 import { prdTemplate } from "./templates/prd.js";
+import { createAuditEvent, safeAudit } from "./audit/index.js";
 
 export type DocType = "prd";
 
@@ -46,6 +47,27 @@ export async function createArtifact(
     }
     throw err;
   }
+
+  // Audit emission — best-effort, never fails the command.
+  await safeAudit(
+    opts.cwd,
+    createAuditEvent({
+      eventType: "artifact_created",
+      result: "success",
+      actor: "user",
+      source: "cli",
+      projectRoot: opts.cwd,
+      command: "doc.create",
+      message: msg(
+        `Created PRD template at ${artifactPath}.`,
+        `已创建 PRD 模板：${artifactPath}。`,
+      ),
+      relatedArtifactIds: ["artifact_prd"],
+      relatedPaths: [artifactPath],
+      data: { artifactType: "prd", overwrite: opts.overwrite ?? false },
+    }),
+  );
+
   return ok(
     msg(
       `Created PRD template at ${artifactPath}.`,

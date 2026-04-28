@@ -9,6 +9,13 @@ export const DEFAULT_RETRY_INTERVAL_MS = 200;
 export const DEFAULT_TIMEOUT_MS = 5_000;
 export const DEFAULT_STALE_THRESHOLD_MS = 30_000;
 
+export interface LockLifecycleHook {
+  readonly onAcquired?: (handle: LockHandle) => void | Promise<void>;
+  readonly onReleased?: (handle: LockHandle) => void | Promise<void>;
+  readonly onTimeout?: (err: LockTimeoutError) => void | Promise<void>;
+  readonly onStaleRecovered?: (handle: LockHandle) => void | Promise<void>;
+}
+
 export interface AcquireLockOptions {
   readonly lockFile: string;
   readonly command: string;
@@ -17,6 +24,7 @@ export interface AcquireLockOptions {
   readonly timeoutMs?: number;
   readonly staleThresholdMs?: number;
   readonly now?: () => Date;
+  readonly lifecycle?: LockLifecycleHook;
 }
 
 export interface LockHandle {
@@ -113,6 +121,21 @@ async function tryWriteLock(lockFile: string, state: LockState): Promise<boolean
   }
 }
 
+async function runHook(
+  hook: ((arg: never) => void | Promise<void>) | undefined,
+  arg: unknown,
+): Promise<void> {
+  if (!hook) return;
+  // Hook errors must never break the lock contract — silently swallow.
+  // The hook implementation is responsible for its own error logging
+  // (e.g. `safeAudit` writes to stderr).
+  try {
+    await (hook as (a: unknown) => void | Promise<void>)(arg);
+  } catch {
+    /* deliberately swallow */
+  }
+}
+
 export async function acquireLock(opts: AcquireLockOptions): Promise<LockHandle> {
   const retryIntervalMs = opts.retryIntervalMs ?? DEFAULT_RETRY_INTERVAL_MS;
   const timeoutMs = opts.timeoutMs ?? DEFAULT_TIMEOUT_MS;
@@ -131,7 +154,12 @@ export async function acquireLock(opts: AcquireLockOptions): Promise<LockHandle>
     };
 
     if (await tryWriteLock(opts.lockFile, lockState)) {
-      return { lockFile: opts.lockFile, lockState, reclaimed };
+      const handle: LockHandle = { lockFile: opts.lockFile, lockState, reclaimed };
+      if (reclaimed) {
+        await runHook(opts.lifecycle?.onStaleRecovered, handle);
+      }
+      await runHook(opts.lifecycle?.onAcquired, handle);
+      return handle;
     }
 
     const existing = await readLockFile(opts.lockFile);
@@ -153,7 +181,9 @@ export async function acquireLock(opts: AcquireLockOptions): Promise<LockHandle>
     }
 
     if (Date.now() - start >= timeoutMs) {
-      throw new LockTimeoutError(opts.lockFile, Date.now() - start);
+      const err = new LockTimeoutError(opts.lockFile, Date.now() - start);
+      await runHook(opts.lifecycle?.onTimeout, err);
+      throw err;
     }
     await sleep(retryIntervalMs);
   }
@@ -186,5 +216,6 @@ export async function withLock<T>(
     return await op(handle);
   } finally {
     await releaseLock(handle);
+    await runHook(opts.lifecycle?.onReleased, handle);
   }
 }
