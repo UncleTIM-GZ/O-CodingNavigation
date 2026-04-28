@@ -3,7 +3,7 @@
 > Date: 2026-04-28
 > Author: Phase 2 Completion Review
 > Scope: Phase 2 of the O'CodingNavigator (OCN) Phase plan, ending at PR #6 (MCP Safe Tools).
-> Companion documents: `implementation-notes.md`, `docs/19-decision-log.md`, `docs/plans/`, `docs/amendments/`.
+> Companion documents: `implementation-notes.md`, `docs/20-decision-log.md`, `docs/plans/`, `docs/amendments/`.
 
 ---
 
@@ -220,7 +220,7 @@ These are the gates a reasonable observer would expect OCN to clear before taggi
 | 3 | Is CLI `--help` clear and actionable? | `tests/cli/help.test.ts` confirms `--help` runs and exits 0; copy quality has not been audited. |
 | 4 | Is `docs/mcp-usage.md` adequate? | Created by PR #5. Has start command, tool list, forbidden list, audit description, troubleshooting. Not yet validated against a non-author reader. |
 | 5 | Are example projects bundled? | Not present. No `examples/` directory. |
-| 6 | Is `docs/amendments/` consolidated? | One amendment file exists (`2026-04-28-audit-storage-path-amendment.md`). No top-level index. Expected to grow. |
+| 6 | Is `docs/amendments/` consolidated? | One amendment file exists (`2026-04-28-audit-storage-path-amendment.md`). No top-level index. The decision-log path move (`19 → 20`) introduced in this report cycle is a second pending amendment — frozen design docs (`docs/00-08`), plan files, `CLAUDE.md`, and `.claude/rules.md` still reference `docs/19-decision-log.md` and need an amendment file (next `AM-XXX`) to record the new canonical path before GA. |
 | 7 | Is the SOP v1.1 (technical-architecture step) reflected in the bundled OCN profile? | The PR #4 plan §4 note records that OCN's own `docs/04-08` follow the OLD layout while the new SOP profile expects the NEW layout. This divergence has not been reconciled. |
 | 8 | Is the npm package ready to publish? | Package name `ocn` may be taken; not investigated. No `prepublishOnly` hook; no release lane (`v1.0-alpha`, `v1.0-beta`, `v1.0`); no `.npmignore` audit. |
 | 9 | Is CI stable across the recent PR set? | All 5 Phase-2 engineering PRs (and the docs PR) reported CI SUCCESS at merge. CI configuration audit (caching, matrix, flake rate over time) has not been done. |
@@ -236,4 +236,6 @@ These are the gates a reasonable observer would expect OCN to clear before taggi
 >
 > **Next phase: GA Prep Gap Review.**
 
-This report does not resolve any of the items in §7 or §8; it records the boundary between Phase 2 (complete) and GA Prep (not started). The decision-log entry recording this verdict is in `docs/19-decision-log.md` as DEC-002.
+This report does not resolve any of the items in §7 or §8; it records the boundary between Phase 2 (complete) and GA Prep (not started). The decision-log entry recording this verdict is in `docs/20-decision-log.md` as DEC-002.
+
+> **Path note**: the canonical decision-log file was renamed from `docs/19-decision-log.md` to `docs/20-decision-log.md` as part of this report cycle, so DEC-001 and DEC-002 remain in a single append-only file at the new slot. Frozen design docs (`docs/00-08`), plan files, `CLAUDE.md`, and `.claude/rules.md` still refer to the old path; reconciling those is a GA Prep amendments-consolidation task (§8 row 6).

@@ -1,6 +1,6 @@
 # O'CodingNavigator Decision Log
 
-文档路径：`docs/19-decision-log.md`
+文档路径：`docs/20-decision-log.md`
 产品名称：`O'CodingNavigator`
 产品简称：`OCN`
 CLI 命令：`ocn`
@@ -222,6 +222,7 @@ The completion report at `docs/reports/2026-04-28-phase2-completion-report.md` r
 - During GA Prep, validate `docs/mcp-usage.md` against an external MCP host (e.g., Claude Desktop, Cursor, Cline). Record any host-specific friction.
 - During GA Prep, audit the `projectRoot` argument validation across all 7 MCP tools for path-traversal safety.
 - During GA Prep, decide whether to renumber OCN's own `docs/04-08` to match the new SOP profile or ship a profile override.
+- During GA Prep, reconcile design-doc references to `docs/19-decision-log.md` (frozen `docs/00-08`, plans, `CLAUDE.md`, `.claude/rules.md`, `.claude/anti-patterns.md`, `implementation-notes.md`) with the new canonical path `docs/20-decision-log.md` adopted in this DEC. The single decision-log file was renamed `19 → 20` so DEC-001 and DEC-002 stay in one append-only source. Frozen design docs are not amended in this report; reconcile via a future amendment file (next AM-XXX in `docs/amendments/`).
 
 ### Related Artifacts
 
