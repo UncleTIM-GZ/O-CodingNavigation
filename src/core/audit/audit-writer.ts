@@ -1,5 +1,6 @@
 import type { AuditEvent } from "../../types/audit.js";
 import { appendAuditJsonl } from "./audit-jsonl.js";
+import { getAuditFallbackLogger } from "./audit-logger.js";
 import { appendAuditMarkdown } from "./audit-markdown.js";
 
 export interface WriteAuditEventResult {
@@ -35,18 +36,23 @@ export async function writeAuditEvent(
 
 /**
  * Best-effort audit emission used by core commands. Never throws; never
- * affects the command's CommandResult. On failure, writes a `audit:` prefixed
- * warning to stderr and returns silently.
+ * affects the command's CommandResult. On failure, routes the warning
+ * through the configured `AuditFallbackLogger` (stderr by default; silent
+ * under MCP — see PR #5 §3.1).
  */
 export async function safeAudit(root: string, event: AuditEvent): Promise<void> {
   try {
     const result = await writeAuditEvent(root, event);
     if (result.warning !== undefined) {
-      process.stderr.write(`audit: ${result.warning}\n`);
+      getAuditFallbackLogger().warn(result.warning, {
+        eventType: event.eventType,
+        eventId: event.eventId,
+      });
     }
   } catch (err) {
-    process.stderr.write(
-      `audit: failed to record ${event.eventType}: ${(err as Error).message}\n`,
+    getAuditFallbackLogger().error(
+      `failed to record ${event.eventType}: ${(err as Error).message}`,
+      { eventType: event.eventType },
     );
   }
 }

@@ -14,6 +14,10 @@ export interface LockAuditHookContext {
   readonly command: string;
   readonly currentStateId?: string;
   readonly currentStepId?: string;
+  /** PR #5 §4 — when present, every lock event emitted by this hook carries
+   *  this correlationId, threading lock events with the calling advance flow
+   *  or MCP tool invocation. */
+  readonly correlationId?: string;
 }
 
 export function makeLockAuditHook(ctx: LockAuditHookContext): LockLifecycleHook {
@@ -39,6 +43,7 @@ export function makeLockAuditHook(ctx: LockAuditHookContext): LockLifecycleHook 
       command: ctx.command,
       ...(ctx.currentStateId !== undefined ? { currentStateId: ctx.currentStateId } : {}),
       ...(ctx.currentStepId !== undefined ? { currentStepId: ctx.currentStepId } : {}),
+      ...(ctx.correlationId !== undefined ? { correlationId: ctx.correlationId } : {}),
       message,
       data,
     });
@@ -51,10 +56,7 @@ export function makeLockAuditHook(ctx: LockAuditHookContext): LockLifecycleHook 
         baseEvent(
           "lock_acquired",
           "success",
-          msg(
-            `Lock acquired at ${handle.lockFile}.`,
-            `已获取锁：${handle.lockFile}。`,
-          ),
+          msg(`Lock acquired at ${handle.lockFile}.`, `已获取锁：${handle.lockFile}。`),
           { handle },
         ),
       );
@@ -65,10 +67,7 @@ export function makeLockAuditHook(ctx: LockAuditHookContext): LockLifecycleHook 
         baseEvent(
           "lock_released",
           "success",
-          msg(
-            `Lock released at ${handle.lockFile}.`,
-            `已释放锁：${handle.lockFile}。`,
-          ),
+          msg(`Lock released at ${handle.lockFile}.`, `已释放锁：${handle.lockFile}。`),
           { handle },
         ),
       );
@@ -98,10 +97,7 @@ export function makeLockAuditHook(ctx: LockAuditHookContext): LockLifecycleHook 
         baseEvent(
           "lock_stale_recovered",
           "detected",
-          msg(
-            `Stale lock recovered at ${handle.lockFile}.`,
-            `已回收陈旧锁：${handle.lockFile}。`,
-          ),
+          msg(`Stale lock recovered at ${handle.lockFile}.`, `已回收陈旧锁：${handle.lockFile}。`),
           { handle },
         ),
       );
