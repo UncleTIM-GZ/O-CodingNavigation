@@ -52,8 +52,8 @@ describe("ocn init — audit trail", () => {
     const events = await readEvents(project);
     const projectInit = events.find((e) => e.eventType === "project_initialized");
     expect(projectInit).toBeDefined();
-    expect(projectInit?.currentStateId).toBe("state_spec");
-    expect(projectInit?.currentStepId).toBe("step_prd");
+    expect(projectInit?.currentStateId).toBe("state_discovery");
+    expect(projectInit?.currentStepId).toBe("step_project_brief");
     const data = projectInit?.data as Record<string, unknown> | undefined;
     expect(data?.["tier"]).toBe("minimal");
     expect(data?.["sopProfileId"]).toBe("default-ai-coding-sop");
@@ -71,9 +71,7 @@ describe("ocn init — audit trail", () => {
     const second = await spawnOcn(["init", "--tier", "minimal"], { cwd: project.cwd });
     expect(second.exitCode).toBe(4);
     const eventsAfter = await readEvents(project);
-    const initCountAfter = eventsAfter.filter(
-      (e) => e.eventType === "project_initialized",
-    ).length;
+    const initCountAfter = eventsAfter.filter((e) => e.eventType === "project_initialized").length;
     expect(initCountAfter).toBe(1); // unchanged
   }, 30_000);
 });

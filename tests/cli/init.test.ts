@@ -20,14 +20,11 @@ describe("ocn init", () => {
     const result = await spawnOcn(["init", "--tier", "minimal"], { cwd: project.cwd });
     expect(result.exitCode).toBe(0);
 
-    const stateRaw = await fs.readFile(
-      join(project.cwd, ".ocoding", "state.json"),
-      "utf8",
-    );
+    const stateRaw = await fs.readFile(join(project.cwd, ".ocoding", "state.json"), "utf8");
     const state = JSON.parse(stateRaw);
     expect(state.schemaVersion).toBe("1.0");
-    expect(state.currentStateId).toBe("state_spec");
-    expect(state.currentStepId).toBe("step_prd");
+    expect(state.currentStateId).toBe("state_discovery");
+    expect(state.currentStepId).toBe("step_project_brief");
     expect(state.project.tier).toBe("minimal");
     expect(state.project.sopProfileId).toBe("default-ai-coding-sop");
     expect(state.project.sopProfileVersion).toBe("0.1.0");
@@ -64,7 +61,7 @@ describe("ocn init", () => {
     const parsed = JSON.parse(result.stdout);
     expect(parsed.ok).toBe(true);
     expect(parsed.code).toBe("OK");
-    expect(parsed.data.currentStateId).toBe("state_spec");
-    expect(parsed.data.currentStepId).toBe("step_prd");
+    expect(parsed.data.currentStateId).toBe("state_discovery");
+    expect(parsed.data.currentStepId).toBe("step_project_brief");
   }, 30_000);
 });

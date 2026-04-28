@@ -11,7 +11,7 @@
 | # | Simplification | Where | Removal trigger |
 |---|---|---|---|
 | L1 | ~~`state.json` write does NOT use lock + backup + atomic temp/rename. Plain `fs.writeFile`.~~ **RESOLVED by PR #2 (state-safety)** — `writeStateAtomic` now wraps every state write with `.ocoding/.lock` (5s timeout, 200ms retry, 30s stale threshold), `state.json.bak`, temp file + atomic rename. See `docs/plans/2026-04-28-feat-ocn-phase2-state-safety-plan.md` and `src/core/state/{lock,state-store}.ts`. | ~~`src/core/state/state-store.ts` `writeState()`~~ | ✅ Done |
-| L2 | Initial position after `ocn init` jumps directly to `state_spec` / `step_prd`, skipping discovery + scope steps. | `src/core/init.ts` lines 53-61 | Phase 2 — when full state machine + `ocn advance` lands |
+| L2 | ~~Initial position after `ocn init` jumps directly to `state_spec` / `step_prd`, skipping discovery + scope steps.~~ **RESOLVED by PR #4 (full-state-machine-gate-advance)** — `ocn init` now lands at `state_discovery / step_project_brief`, the true beginning of the state machine. `ocn advance` runs gate then mutates state through the lock+audit pipeline. See `docs/plans/2026-04-28-feat-ocn-phase2-full-state-machine-gate-advance-plan.md`. | ~~`src/core/init.ts` lines 53-61~~ | ✅ Done |
 | L3 | ~~No audit events are written anywhere.~~ **RESOLVED by PR #3 (audit-event-foundation)** — `AuditEvent` schema + dual-track persistence (`.ocoding/audit/audit-events.jsonl` + `docs/22-audit-trail.md`). Wired into `ocn init` (project_initialized + state_write_succeeded + lock_acquired/released), `ocn doc create prd` (artifact_created), and `ocn check` (artifact_gate_run + artifact_gate_blocked\|passed). See `docs/plans/2026-04-28-feat-ocn-phase2-audit-event-foundation-plan.md`. | ~~All commands~~ | ✅ Done |
 | L4 | SOP profile content is bundled as TypeScript string constants (`src/sops/default-ai-coding-sop/0.1.0/{sop,gates,artifacts,config}.ts`) instead of YAML files copied at build time. The on-disk `.ocoding/sop.yaml` IS valid YAML; the in-process load is from the TS string. | `src/core/sop/loader.ts` | Phase 2 — once asset packaging strategy is decided |
 | L5 | Markdown heading parser is a hand-rolled regex (no `marked`/`remark` dep). Detects ATX headings only — no setext, no inline-code edge cases beyond fenced blocks. | `src/core/artifact/markdown-parser.ts` | Phase 2 — switch to `remark` when section-body parsing is required |
@@ -266,6 +266,79 @@ match the design. Decision deferred to project owner; PR #3 does not modify
 - `src/core/audit/audit-paths.ts` — 100%.
 - `src/core/audit/audit-writer.ts` — 93.1%.
 - All-files — 83.03% lines (up from 76.34% post-PR #2).
+
+---
+
+## 10. PR #4 Addendum — Full State Machine + Gate + Advance (2026-04-28)
+
+### 10.1 What changed
+
+- **Pre-PR fix (todo 012)**: `withLock` finally block now ALWAYS runs `onReleased`, even when `releaseLock` throws. Original error still propagates. New test in `tests/unit/lock.test.ts:223+`.
+- **Audit storage path Amendment AM-001**: `docs/amendments/2026-04-28-audit-storage-path-amendment.md` declares `.ocoding/audit/audit-events.jsonl` + `docs/22-audit-trail.md` as canonical (supersedes the older `events/` + `21-` references in design docs). Establishes the `docs/amendments/` convention.
+- **`SopProfile` extension**: `stateOrder`, `stepsForState`, `nextStep`, `artifactPathForStep` plus expanded `requiredSectionsForStep` for 5 step IDs (project_brief / scope / prd / acceptance_criteria / technical_architecture).
+- **State machine**: 8 states (discovery, spec, design, plan, build, verify, ship, reflect) with forward-only transitions. PR #4 wires steps for DISCOVERY → PLAN (10 steps total). BUILD/VERIFY/SHIP/REFLECT are state stubs (no steps yet — future PR).
+- **`ocn gate`**: read-only artifact gate aggregation with `--json` support. Emits `artifact_gate_run` + `artifact_gate_passed` | `artifact_gate_blocked`.
+- **`ocn advance`**: gate-then-mutate. On pass: `withLock` + `writeStateUnlocked` + emit `state_transitioned` + `state_write_succeeded` + `advance_succeeded`. On block: emit `advance_failed` (no state mutation).
+- **`AuditEvent.correlationId`** (optional ULID): threaded through every event in a single advance flow. New event types: `advance_started`, `advance_succeeded`, `advance_failed`, `state_transitioned`.
+- **Init position**: now `state_discovery / step_project_brief` (PR #4 §6).
+- **`ocn check`**: dispatches by current step via SOP profile, removing the PR #1 hardcoded `step_prd` branch. Skeleton Spike PRD blocked/pass verbatim invariant preserved (when at step_prd).
+- **`ocn doc create`**: 5 supported types via template registry (project-brief, scope, prd, acceptance-criteria, technical-architecture).
+- **`ocn brief`** + **`ocn status`**: now SOP-driven. Resolve current artifact path + required sections from the SOP profile.
+
+### 10.2 Audit-event taxonomy after PR #4
+
+PR #4 brings the total event-type count to 16:
+
+```
+project_initialized
+state_write_started, state_write_succeeded, state_write_failed
+lock_acquired, lock_released, lock_timeout, lock_stale_recovered
+artifact_created
+artifact_gate_run, artifact_gate_blocked, artifact_gate_passed
+advance_started, advance_succeeded, advance_failed     ← NEW
+state_transitioned                                     ← NEW
+```
+
+`correlationId` (optional ULID) threads `advance_*` + `artifact_gate_*` + `state_transitioned` + `state_write_succeeded`. Lock events do NOT yet carry `correlationId` (`OCN-PR5-001-lock-correlation` follow-up).
+
+### 10.3 New tests added in PR #4
+
+| File | Purpose | Count |
+|---|---|---|
+| `tests/unit/lock.test.ts` (+1) | `onReleased` fires on `releaseLock` error (todo 012) | 1 |
+| `tests/unit/state-machine.test.ts` | SopProfile state-machine API + nextStepFor + transitions | 19 |
+| `tests/unit/gate-runner.test.ts` | runGate pass/blocked + correlationId threading | 7 |
+| `tests/unit/advance-state.test.ts` | advanceState success/failure/terminal + audit events | 7 |
+| `tests/unit/advance-correlation.test.ts` | All advance-flow events share correlationId | 4 |
+| `tests/cli/gate.test.ts` | `ocn gate` integration | 5 |
+| `tests/cli/advance.test.ts` | `ocn advance` integration + state mutation + audit | 6 |
+| `tests/cli/doc-create-expanded.test.ts` | 5 doc types create the right files + audit | 7 |
+| **Total new** |  | **56** |
+
+Plus updated existing tests for the new init position (init / status / brief / check / audit-init / audit-check / e2e demo / core-init / core-status / core-check / core-brief).
+
+### 10.4 Coverage after PR #4
+
+- `src/core/state-machine/*` — 100% lines
+- `src/core/audit/*` — 99.17%
+- `src/core/state/*` — 94.28% (improved by §2.1 fix coverage)
+- `src/core/advance/advance-state.ts` — 81% lines (above 70% threshold)
+- `src/core/gate/gate-runner.ts` — 80% lines
+- All-files — 84% lines (up from 83.03% post-PR #3)
+
+### 10.5 Skeleton Spike acceptance preserved
+
+The user §X verbatim invariant — PRD missing Scenarios returns exit 2 + bilingual `"PRD is missing required section: Scenarios."` / `"PRD 缺少必填章节：Scenarios｜使用场景。"`, fixed PRD returns exit 0 + bilingual `"PRD passed Skeleton Spike artifact check."` / `"PRD 已通过 Skeleton Spike 产物检查。"` — is preserved AFTER walking the state machine via 3 `ocn advance` calls (project_brief → scope → prd). See `tests/e2e/skeleton-spike-demo.test.ts`.
+
+### 10.6 Deferred to PR #5+ (do NOT close in PR #4)
+
+- **Lock event correlationId** — new follow-up todo `OCN-PR5-001-lock-correlation`. Lock events fire from inside the lock module which doesn't know the calling advance flow's correlationId. PR #5 will plumb it through the lifecycle hook context.
+- BUILD/VERIFY/SHIP/REFLECT step IDs — state IDs only.
+- Rollback transitions, doctor, reset, baseline, MCP server, SOP versioning, production/full tier.
+- todo 011 (decouple `safeAudit` from `process.stderr`) — required before MCP lands (PR #5 prep).
+- todo 014 (relativize `relatedPaths`) — defer.
+- todo 015 (drop `jsonlOk`) — defer.
+- OCN-on-OCN dogfood with the new SOP profile (existing OCN docs at OLD layout).
 
 ---
 

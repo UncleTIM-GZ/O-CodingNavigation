@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { checkCurrentArtifact } from "../../src/core/check.js";
 import { initProject } from "../../src/core/init.js";
 import { FixtureFiles } from "../helpers/fixtures.js";
+import { seedToStepPrd } from "../helpers/seed-state.js";
 import { createTempProject, type TempProject } from "../helpers/temp-project.js";
 
 describe("core/check.checkCurrentArtifact", () => {
@@ -12,6 +13,9 @@ describe("core/check.checkCurrentArtifact", () => {
   beforeEach(async () => {
     project = await createTempProject();
     await initProject({ cwd: project.cwd, tier: "minimal" });
+    // PR #4 — seed to step_prd; the PRD-specific assertions below mirror the
+    // Skeleton Spike acceptance contract.
+    await seedToStepPrd(project.cwd);
   });
 
   afterEach(async () => {
@@ -20,10 +24,7 @@ describe("core/check.checkCurrentArtifact", () => {
 
   // @ac AC-SAG-001 — blocks PRD missing Scenarios
   it("returns blocked + section_scenarios when PRD missing Scenarios", async () => {
-    await fs.copyFile(
-      FixtureFiles.prdMissingScenarios(),
-      join(project.cwd, "docs", "02-prd.md"),
-    );
+    await fs.copyFile(FixtureFiles.prdMissingScenarios(), join(project.cwd, "docs", "02-prd.md"));
     const result = await checkCurrentArtifact({ cwd: project.cwd });
     expect(result.ok).toBe(false);
     if (!result.ok) {
@@ -37,10 +38,7 @@ describe("core/check.checkCurrentArtifact", () => {
 
   // @ac AC-SAG-004 — passes PRD with Scenarios
   it("returns pass + OK when PRD has Scenarios", async () => {
-    await fs.copyFile(
-      FixtureFiles.prdWithScenarios(),
-      join(project.cwd, "docs", "02-prd.md"),
-    );
+    await fs.copyFile(FixtureFiles.prdWithScenarios(), join(project.cwd, "docs", "02-prd.md"));
     const result = await checkCurrentArtifact({ cwd: project.cwd });
     expect(result.ok).toBe(true);
     if (result.ok) {

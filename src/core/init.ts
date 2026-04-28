@@ -64,10 +64,10 @@ export async function initProject(opts: InitOptions): Promise<CommandResult<Init
       sopProfileId: "default-ai-coding-sop",
       sopProfileVersion: "0.1.0",
     },
-    // Skeleton Spike simplification (plan §3.2): jump straight to state_spec / step_prd.
-    // Phase 2 PR #4 will introduce the full DISCOVERY → SPEC progression.
-    currentStateId: "state_spec",
-    currentStepId: "step_prd",
+    // PR #4: init starts at the true beginning of the state machine.
+    // Replaces the Skeleton Spike simplification of jumping to state_spec / step_prd.
+    currentStateId: "state_discovery",
+    currentStepId: "step_project_brief",
     artifacts: {},
     latestGateResult: null,
   };

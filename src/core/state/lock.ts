@@ -215,7 +215,17 @@ export async function withLock<T>(
   try {
     return await op(handle);
   } finally {
-    await releaseLock(handle);
+    // PR #4 §2.1 — onReleased must fire even when releaseLock throws.
+    // We capture the release error, run the hook unconditionally (errors
+    // swallowed by runHook), then re-throw so the caller sees the original
+    // failure. This closes audit gaps on the unhappy path.
+    let releaseError: unknown;
+    try {
+      await releaseLock(handle);
+    } catch (err) {
+      releaseError = err;
+    }
     await runHook(opts.lifecycle?.onReleased, handle);
+    if (releaseError) throw releaseError;
   }
 }

@@ -18,6 +18,7 @@ export interface CreateAuditEventInput {
   readonly relatedArtifactIds?: readonly string[];
   readonly relatedPaths?: readonly string[];
   readonly command?: string;
+  readonly correlationId?: string;
   readonly data?: unknown;
   readonly now?: () => Date;
   readonly generateId?: () => string;
@@ -49,6 +50,7 @@ export function createAuditEvent(input: CreateAuditEventInput): AuditEvent {
     event.relatedPaths = [...input.relatedPaths];
   }
   if (input.command !== undefined) event.command = input.command;
+  if (input.correlationId !== undefined) event.correlationId = input.correlationId;
   if (input.data !== undefined) event.data = input.data;
 
   return event;

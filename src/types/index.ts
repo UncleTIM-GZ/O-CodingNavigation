@@ -5,3 +5,4 @@ export * from "./artifact.js";
 export * from "./sop.js";
 export * from "./lock.js";
 export * from "./audit.js";
+export * from "./state-machine.js";

@@ -19,9 +19,9 @@ describe("core/status.getStatus", () => {
     const result = await getStatus({ cwd: project.cwd });
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.data?.currentStateId).toBe("state_spec");
-    expect(result.data?.currentStepId).toBe("step_prd");
-    expect(result.data?.currentArtifactPath).toMatch(/02-prd\.md$/);
+    expect(result.data?.currentStateId).toBe("state_discovery");
+    expect(result.data?.currentStepId).toBe("step_project_brief");
+    expect(result.data?.currentArtifactPath).toMatch(/00-project-brief\.md$/);
     expect(typeof result.data?.nextAction).toBe("string");
   });
 

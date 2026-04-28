@@ -20,9 +20,9 @@ describe("ocn brief", () => {
     expect(result.exitCode).toBe(0);
     const parsed = JSON.parse(result.stdout);
     expect(parsed.ok).toBe(true);
-    expect(parsed.data.currentStateId).toBe("state_spec");
-    expect(parsed.data.currentStepId).toBe("step_prd");
-    expect(parsed.data.currentArtifactPath).toMatch(/02-prd\.md$/);
+    expect(parsed.data.currentStateId).toBe("state_discovery");
+    expect(parsed.data.currentStepId).toBe("step_project_brief");
+    expect(parsed.data.currentArtifactPath).toMatch(/00-project-brief\.md$/);
   }, 30_000);
 
   // @ac AC-BRIEF-002 — brief includes AI Governance Reminder
@@ -49,11 +49,14 @@ describe("ocn brief", () => {
     expect(result.stdout).toMatch(/Uncertainty Policy/);
   }, 30_000);
 
-  it("reports current artifact status as 'missing' before doc create prd", async () => {
+  it("reports current artifact status as 'missing' before the project-brief is created", async () => {
     await spawnOcn(["init", "--tier", "minimal"], { cwd: project.cwd });
     const result = await spawnOcn(["brief", "--json"], { cwd: project.cwd });
     const parsed = JSON.parse(result.stdout);
     expect(parsed.data.currentArtifactStatus).toBe("missing");
-    expect(parsed.data.currentBlockers).toContain("section_scenarios");
+    // After PR #4, init lands at step_project_brief whose required sections
+    // are problem/goal/users/success_criteria.
+    expect(parsed.data.currentBlockers).toContain("section_problem");
+    expect(parsed.data.currentBlockers).toContain("section_goal");
   }, 30_000);
 });
