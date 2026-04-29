@@ -1,7 +1,7 @@
 {
-  "name": "ocn",
-  "version": "0.0.1-alpha.0",
-  "description": "O'CodingNavigator — local-first AI Coding workflow operating system",
+  "name": "o-coding-navigation",
+  "version": "0.1.0-alpha.0",
+  "description": "Local-first AI coding navigation CLI and MCP server with step gates, audit trail, and SOP-aware project state.",
   "type": "module",
   "bin": {
     "ocn": "dist/cli/index.js",
@@ -16,7 +16,9 @@
   "files": [
     "dist",
     "LICENSE",
-    "README.md"
+    "README.md",
+    "docs/quickstart.md",
+    "docs/mcp-usage.md"
   ],
   "engines": {
     "node": ">=20"
@@ -31,8 +33,27 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "prepare": "husky || true"
+    "prepare": "husky || true",
+    "prepublishOnly": "npm run lint && npm run typecheck && npm run test:coverage && npm run build"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/UncleTIM-GZ/O-CodingNavigation.git"
+  },
+  "bugs": {
+    "url": "https://github.com/UncleTIM-GZ/O-CodingNavigation/issues"
+  },
+  "homepage": "https://github.com/UncleTIM-GZ/O-CodingNavigation#readme",
+  "keywords": [
+    "ai-coding",
+    "mcp",
+    "cli",
+    "sop",
+    "project-management",
+    "developer-tools",
+    "audit-trail"
+  ],
+  "license": "Apache-2.0",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
     "commander": "^12.1.0",
@@ -53,6 +74,5 @@
     "typescript": "^5.6.0",
     "typescript-eslint": "^8.7.0",
     "vitest": "^2.1.1"
-  },
-  "license": "Apache-2.0"
+  }
 }
