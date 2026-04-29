@@ -26,6 +26,11 @@ SOP Profile Version：`0.1.0`
 | DEC-003 | 2026-04-28 | Documentation numbering policy after SOP v1.1 (profile override, no historical renumber) | ✅ Approved |
 | DEC-004 | 2026-04-28 | Frozen design docs amendment policy (pragmatic amendment) | ✅ Approved |
 | DEC-005 | 2026-04-29 | Defer External MCP Host Validation until a real host is available | ✅ Approved |
+| DEC-006 | 2026-04-29 | npm package name decision workflow (availability check first) | ✅ Approved |
+| DEC-007 | 2026-04-29 | First semver lane: `0.1.0-alpha.0` if publishing proceeds | ✅ Approved |
+| DEC-008 | 2026-04-29 | Alpha publish may be planned before PR D, with mandatory caveat | ✅ Approved |
+| DEC-009 | 2026-04-29 | Package contents policy: `package.json` `files` allowlist | ✅ Approved |
+| DEC-010 | 2026-04-29 | CI matrix policy: single-cell `ubuntu-latest` + Node 20 for alpha; expand at beta | ✅ Approved |
 
 ---
 
@@ -531,3 +536,321 @@ Do **NOT** create:
 - GA Prep plan: [`docs/plans/2026-04-28-ga-prep-gap-review-plan.md`](./plans/2026-04-28-ga-prep-gap-review-plan.md) §3.3
 - PR E plan: [`docs/plans/2026-04-29-ga-prep-pr-e-npm-publish-ci-stability-plan.md`](./plans/2026-04-29-ga-prep-pr-e-npm-publish-ci-stability-plan.md)
 - Phase 2 Completion Report §6 + §8 row 4: [`docs/reports/2026-04-28-phase2-completion-report.md`](./reports/2026-04-28-phase2-completion-report.md)
+
+---
+
+## DEC-006｜npm Package Name Decision Workflow
+
+**Date**: 2026-04-29
+**Status**: ✅ Approved
+**Captured by**: Project owner (manual capture — pull mode per CLAUDE.md §4.7)
+**Captured during**: GA Prep DEC-006..010 capture PR
+**Related artifacts**: [`docs/plans/2026-04-29-ga-prep-pr-e-npm-publish-ci-stability-plan.md`](./plans/2026-04-29-ga-prep-pr-e-npm-publish-ci-stability-plan.md) §4.1
+
+---
+
+### Purpose
+
+Define the *workflow* by which OCN's published npm package name is decided. **This DEC does NOT pick a name. It does NOT modify `package.json`.** The eventual choice is captured in a future amendment / DEC entry once the workflow has been executed.
+
+### Context
+
+`package.json` currently declares `name: "ocn"`. Whether `ocn` is available on the public npm registry is unknown; common short names are often taken. Choosing without checking risks (a) failing at publish time, or (b) discovering typo-squatting collisions after the fact.
+
+The PR E plan §4.1 enumerated four candidate names (`ocn`, `o-coding-navigator`, `ocn-cli`, `@ocn/cli`) but explicitly deferred the choice. This DEC formalises the *order of operations*.
+
+### Options Considered
+
+| # | Option | Rejected because |
+|---|---|---|
+| A | Decide the package name **now**, without checking npm availability. | Risks publish-time failure or post-hoc collision with an existing package. |
+| **B** | **Run availability check first, then decide.** (chosen) | — |
+| C | Default to a scoped package (`@ocn/cli` or similar). | Premature; an unscoped name may still be available. Scoping is a fallback if step B reveals collisions. |
+| D | Defer all package naming until immediately before publish. | Combines all decisions into the publish PR; raises blast radius and hides the risk early. |
+
+### Decision
+
+**Adopt Option B — Availability-first workflow.**
+
+1. **Do not mutate `package.json` in this PR.**
+2. Before any package name is finalised, run npm availability checks in a future dedicated PR or local validation step. The check must use a safe read-only command (e.g. `npm view <name> name version` — does not modify state).
+3. Candidate names must be evaluated against:
+   - **npm availability** (does the name exist?)
+   - **typo-squatting risk** (is there a near-identical package that could be confused?)
+   - **clarity** (does the name communicate what the tool does?)
+   - **alignment with the repo name** (`O-CodingNavigation` → does the package name read as a logical short form?)
+   - **command/bin expectations** (the CLI is `ocn`; the package name should make `npm install -g <pkg>` produce the `ocn` and `ocn-mcp` bins without surprise).
+4. If the preferred name is unavailable, choose a scoped package (`@ocn/cli`) or an alternate name (`o-coding-navigator`, `ocn-cli`, etc.) through a follow-up DEC amendment.
+
+### Consequences
+
+- **Slower than immediate `package.json` edit.** Acceptable — alpha is not on a deadline.
+- **Avoids planning a publish around an unavailable name.**
+- **Keeps current repo untouched** until a focused package-metadata PR.
+- The result of the availability check (raw `npm view` output, date, candidate evaluations) must be recorded in the future package-metadata PR description so the choice is auditable.
+
+### Follow-up
+
+- Future PR runs `npm view <candidate> name version` (or equivalent) for each candidate; records output verbatim in the PR description.
+- Future PR may create a DEC amendment if name availability changes after publish.
+- The choice does NOT block any other GA Prep work — DEC-007 (semver lane) can land independently.
+
+---
+
+## DEC-007｜First Semver Lane
+
+**Date**: 2026-04-29
+**Status**: ✅ Approved
+**Captured by**: Project owner (manual capture — pull mode per CLAUDE.md §4.7)
+**Captured during**: GA Prep DEC-006..010 capture PR
+**Related artifacts**: [`docs/plans/2026-04-29-ga-prep-pr-e-npm-publish-ci-stability-plan.md`](./plans/2026-04-29-ga-prep-pr-e-npm-publish-ci-stability-plan.md) §4.2; [DEC-005](#dec-005defer-external-mcp-host-validation-until-a-real-host-is-available)
+
+---
+
+### Purpose
+
+Decide the first release lane (semver tag) for OCN if and when publishing proceeds. **This DEC does NOT publish, does NOT modify `package.json`, and does NOT modify `version`.**
+
+### Context
+
+`package.json` currently declares `version: "0.0.1-alpha.0"` — a pre-spike placeholder. Phase 2 closure (DEC-002) and the GA Prep work to date are a meaningful milestone but not GA. The PR E plan §4.2 enumerated three candidate lanes: stay at `0.0.1-alpha.x`, jump to `0.1.0-alpha.0`, or `1.0.0-alpha.0`. This DEC chooses among them.
+
+### Options Considered
+
+| # | Option | Rejected because |
+|---|---|---|
+| A | `1.0.0-alpha.0` | Implies GA-quality core; raises expectations the project cannot honour while PR D is deferred. |
+| **B** | `0.1.0-alpha.0` (chosen) | — |
+| C | `0.1.0-beta.0` | Beta requires PR D + cross-platform CI matrix + mini-CRM dogfood per the GA Prep plan. None of those are ready. |
+| D | No version decision (stay at `0.0.1-alpha.0`) | Allows publishing under a number that disagrees with the maturity claim ("Phase 2 complete" is bigger than "0.0.1"). |
+
+### Decision
+
+**Adopt Option B.**
+
+- The first published OCN package, if publishing proceeds, uses **`0.1.0-alpha.0`**.
+- **Do NOT use `1.0.0`** before PR D, examples execution (PR F3), and npm package gating (DEC-009 + `prepublishOnly`) are all complete.
+- Alpha release notes MUST include the verbatim line:
+
+  > External MCP Host Validation pending.
+
+- Alpha release notes MUST NOT claim verified Claude Desktop / Cursor / Cline compatibility (per [DEC-005](#dec-005defer-external-mcp-host-validation-until-a-real-host-is-available)).
+
+### Consequences
+
+- **Honest maturity signal.** `0.1.0-alpha.0` says "this is real, not a spike, but pre-1.0".
+- **Allows early package smoke** without over-claiming GA readiness.
+- **Requires a clear README and npm metadata caveat** to keep the maturity statement consistent across surfaces.
+- The version bump from `0.0.1-alpha.0` to `0.1.0-alpha.0` is a `package.json` edit; that edit lands in the future package-metadata PR, not here.
+
+### Follow-up
+
+- Future package-metadata PR sets `version` to `0.1.0-alpha.0`.
+- Beta transition requires PR D completion or an explicit DEC amendment that reduces the beta gate.
+- GA (`1.0.0`) requires: PR D complete, cross-platform CI matrix per a future DEC amending DEC-010, examples PR F3 complete, mini-CRM dogfood (or its replacement) decided.
+
+---
+
+## DEC-008｜Publish Alpha Before PR D Completion?
+
+**Date**: 2026-04-29
+**Status**: ✅ Approved
+**Captured by**: Project owner (manual capture — pull mode per CLAUDE.md §4.7)
+**Captured during**: GA Prep DEC-006..010 capture PR
+**Related artifacts**: [`docs/plans/2026-04-29-ga-prep-pr-e-npm-publish-ci-stability-plan.md`](./plans/2026-04-29-ga-prep-pr-e-npm-publish-ci-stability-plan.md) §4.3; [DEC-005](#dec-005defer-external-mcp-host-validation-until-a-real-host-is-available); [DEC-007](#dec-007first-semver-lane)
+
+---
+
+### Purpose
+
+Decide whether an npm alpha can be **planned** while External MCP Host Validation (PR D) remains deferred.
+
+### Context
+
+DEC-005 deferred PR D until a real MCP host is available. The PR E plan §4.3 enumerated two paths: yes-with-caveat, or no-block-until-PR-D. This DEC chooses among them.
+
+The choice has a propagation effect: if alpha can proceed, every release-related document (release notes, README, npm description, blog post, tweet) must carry a host-compatibility caveat until PR D lands.
+
+### Options Considered
+
+| # | Option | Rejected because |
+|---|---|---|
+| A | Block all npm planning until PR D completes. | Creates an indefinite hold on GA Prep that's tied to host availability — a non-engineering blocker. The 394-test suite + projectRoot validator + threat model are a defensible alpha bar without host validation. |
+| **B** | Allow alpha planning, but forbid host-compatibility claims. (chosen) | — |
+| C | Allow alpha publish AND host-compatibility claims based on tests alone. | Forbidden — this is exactly the fabrication that DEC-005 prohibits. |
+| D | Defer npm entirely. | Same drawback as A; also closes off the package-readiness work that DEC-006/009 are about to enable. |
+
+### Decision
+
+**Adopt Option B.**
+
+- **Alpha publish *planning* may continue before PR D completes.**
+- **Actual `npm publish` still requires a focused package-gating PR + explicit maintainer approval.** This DEC does not authorise a publish.
+- Any alpha release MUST clearly include the verbatim line:
+
+  > External MCP Host Validation pending.
+
+- Alpha may describe the OCN MCP server as *implemented*, but must NOT claim *verified host compatibility* until PR D completes.
+- Beta and GA host-compatibility claims require PR D completion. No exceptions.
+
+### Consequences
+
+- **Keeps GA Prep moving** despite the host-availability blocker.
+- **Maintains honesty** about which guarantees are tested vs unverified.
+- **Requires caveat propagation** across README, `docs/mcp-usage.md`, npm metadata (`description`, `keywords`), and any future release notes. Reviewers must reject release-related changes that drop the caveat before PR D lands.
+
+### Follow-up
+
+- Any future release-notes PR must include the DEC-005 caveat verbatim.
+- PR D remains required before any compatibility claim is added.
+- After PR D merges, a follow-up doc-edit revisits each instance of the caveat and removes it where the evidence now exists.
+
+---
+
+## DEC-009｜Package Contents Policy
+
+**Date**: 2026-04-29
+**Status**: ✅ Approved
+**Captured by**: Project owner (manual capture — pull mode per CLAUDE.md §4.7)
+**Captured during**: GA Prep DEC-006..010 capture PR
+**Related artifacts**: [`docs/plans/2026-04-29-ga-prep-pr-e-npm-publish-ci-stability-plan.md`](./plans/2026-04-29-ga-prep-pr-e-npm-publish-ci-stability-plan.md) §4.4 + §5.2; [`docs/reports/2026-04-29-ci-stability-audit.md`](./reports/2026-04-29-ci-stability-audit.md) §10 finding F-6
+
+---
+
+### Purpose
+
+Define the npm package contents policy that a future package-metadata PR must implement. **This DEC does NOT mutate `package.json` and does NOT run `npm pack`.**
+
+### Context
+
+`package.json` currently declares `files: ["dist", "LICENSE", "README.md"]`. The CI Stability Audit §10 (finding F-6) flagged this allowlist as narrow — the published tarball would not include user-facing docs (`docs/quickstart.md`, `docs/mcp-usage.md`) that the README references. The PR E plan §4.4 left the choice between an allowlist (`files`) and a blocklist (`.npmignore`) for this DEC.
+
+### Options Considered
+
+| # | Option | Rejected because |
+|---|---|---|
+| A | Publish everything by default (no `files`, no `.npmignore`). | Default-allow leaks `tests/`, `todos/`, `coverage/`, `.github/` etc. into the tarball. Unsafe. |
+| B | Use `.npmignore` (blocklist). | Default-allow with opt-out. New files default to "shipped"; one missed entry leaks. Worse for audit. |
+| **C** | **Use `package.json` `files` field (allowlist).** (chosen) | — |
+| D | Defer contents policy. | Blocks DEC-007's path to publish; not viable. |
+
+### Decision
+
+**Adopt Option C — explicit `files` allowlist.**
+
+The future package-metadata PR sets `package.json` `files` such that the tarball includes (provisionally — exact list refined when `npm pack --dry-run` is run):
+
+| Include | Reason |
+|---|---|
+| `dist/` | The built CLI + MCP — the runtime users install. |
+| `README.md` | First-touch documentation; npm pages render this. |
+| `LICENSE` | Required for redistribution. |
+| `package.json` | npm includes this automatically; listed for completeness. |
+| `docs/quickstart.md` | The README links to it; users following install steps need it. |
+| `docs/mcp-usage.md` | Defines the MCP safety boundary; users wiring `ocn-mcp` need it. |
+
+| Exclude | Reason |
+|---|---|
+| `tests/` | Internal test code; not a runtime artifact. |
+| `todos/` | Internal task tracker. |
+| `docs/plans/` | Internal planning artifacts; large; not user-facing. |
+| `docs/reports/` | Internal audit reports; large; not user-facing. |
+| `docs/amendments/` | Internal governance; not user-facing. *Decision: ship the index README only if a future amendment specifically asks for it.* |
+| `docs/20-decision-log.md` | Internal governance. *Decision: do not ship in alpha; revisit at beta.* |
+| `docs/00-08*.md` | Frozen design docs; large; primarily a project archive. |
+| `docs/security/` | Internal threat model + checklist; not a user dependency. |
+| Local `.ocoding/` | Per-project state; should never be in the package. |
+| `.env`, secrets, private keys | Forbidden categorically. |
+| Source `src/`, configs (`tsconfig*.json`, `eslint.config.*`, `.husky/`) | Not needed at runtime. |
+| Coverage outputs, build cache | Not needed at runtime. |
+
+The exact list is **not** implemented in this PR. The eventual `files` value MUST be reconciled against `npm pack --dry-run` output before any publish.
+
+### Consequences
+
+- **Safer publish surface** — default-deny.
+- **Requires `npm pack --dry-run` review** before any actual publish.
+- **May need explicit inclusion** of additional user-facing docs as the project grows.
+- The `files` list is itself a versioned decision; any future change to ship additional artifacts requires a doc note (commit message is sufficient — no DEC unless it's a structural shift).
+
+### Follow-up
+
+- Future package-metadata PR runs `npm pack --dry-run` and records the tarball contents in the PR description.
+- Future package-metadata PR decides whether `docs/amendments/README.md` ships in alpha (recommendation: ship the README only, not individual amendment files).
+- Future package-metadata PR decides whether `examples/` ships in alpha (per [DEC-012 in PR F plan](./plans/2026-04-29-ga-prep-pr-f-examples-directory-plan.md) — currently deferred).
+
+---
+
+## DEC-010｜CI Matrix Policy
+
+**Date**: 2026-04-29
+**Status**: ✅ Approved
+**Captured by**: Project owner (manual capture — pull mode per CLAUDE.md §4.7)
+**Captured during**: GA Prep DEC-006..010 capture PR
+**Related artifacts**: [`docs/reports/2026-04-29-ci-stability-audit.md`](./reports/2026-04-29-ci-stability-audit.md) §8 + §12; [`docs/plans/2026-04-29-ga-prep-pr-e-npm-publish-ci-stability-plan.md`](./plans/2026-04-29-ga-prep-pr-e-npm-publish-ci-stability-plan.md) §4.5
+
+---
+
+### Purpose
+
+Decide the CI matrix policy for v0.1.0-alpha based on the CI Stability Audit. **This DEC does NOT modify `.github/workflows/ci.yml`.**
+
+### Context
+
+The current CI workflow runs a single cell: `ubuntu-latest` + Node 20 + `npm ci`. The CI Stability Audit (`docs/reports/2026-04-29-ci-stability-audit.md`) reports:
+
+- 18/20 recent runs SUCCESS (90% overall pass rate).
+- PR-runs: 10/10 SUCCESS (100%).
+- Push-to-`main` runs: 8/10 SUCCESS (80%) — two flakes at `Test with coverage`, both on commits that had passed in their PR runs (PR #8 merge `598b63c`, PR #10 merge `114db5e`).
+- CI runtime: ~1 minute end-to-end. Well under the 10-minute timeout.
+- The cross-platform path code (`src/core/security/project-root.ts`, PR C) is exercised by the test suite on Linux; no surface today is platform-specific.
+
+The audit recommended **Option A — keep single-cell for alpha; expand at beta.**
+
+### Options Considered
+
+| # | Option | Rejected because |
+|---|---|---|
+| **A** | **Keep `ubuntu-latest` + Node 20 only for alpha. Expand the matrix at beta.** (chosen) | — |
+| B | Add `ubuntu` + `macOS` + `Windows` × Node 20/22 (and possibly 24) before alpha. | ~6× CI minutes per PR. Premature; no signal that other cells are needed. Adding `engines.node` coverage commits the project to fix Node-22-only failures, which is harder to justify when there are zero today. |
+| C | Add Node 20 + 22 (Ubuntu only) now; OS matrix at beta. | Modest middle path; reasonable but not justified by current evidence. Available as a quick amendment later. |
+| D | Do nothing and avoid deciding. | Leaves DEC-010 open; blocks closing the GA Prep audit loop. |
+
+### Decision
+
+**Adopt Option A.**
+
+- Keep the current CI cell (`ubuntu-latest` + Node 20) for v0.1.0-alpha.
+- **Do NOT change the workflow** in this DEC-only PR. (Workflow edits, if any, land in a focused future PR.)
+- Add a broader matrix **before beta**:
+  - Add Node 22 cell (Ubuntu only).
+  - Consider adding macOS-latest + Windows-latest cells before beta or before GA.
+- **Flake response**: if a third push-to-main `Test with coverage` flake appears in the next 5–10 merges, investigate via `gh run view <id> --log`, identify the failing test, quarantine it, and capture the diagnosis as an addendum to this DEC.
+
+### Evidence
+
+- [`docs/reports/2026-04-29-ci-stability-audit.md`](./reports/2026-04-29-ci-stability-audit.md) — full audit.
+- PR-runs were stable across PR #8 → PR #14 (10/10 SUCCESS).
+- Push-to-main had 2 coverage-step flakes (PR #8, PR #10 merge commits), but the immediate-next push-to-main run on a different commit ran green.
+- The current `main` push run (`25088357806`) is green at `2026-04-29T02:45:32Z`.
+- CI is fast enough (~1 minute) for alpha iteration; expansion has measurable cost.
+
+### Consequences
+
+- **Faster alpha iteration.** No matrix tax.
+- **Less cross-platform assurance** before alpha. Honestly disclosed in README via the DEC-008 caveat path.
+- **Beta becomes the cross-platform hardening gate.** This is consistent with DEC-007's gating: 1.0.0 requires DEC-010 amendment + matrix expansion + PR D + examples + dogfood.
+
+### Follow-up
+
+- Future CI PR may add Node 22 cell (no DEC required if scope is "add Node 22"; just a workflow edit).
+- Future beta PR adds OS matrix; that change ships alongside an amendment to this DEC if scope expands beyond Node-version coverage.
+- If the F-2 flake recurs, investigate before adding more matrix cells. **Do not mask flake by widening the matrix.**
+
+---
+
+## Cross-cutting note: scope of DEC-006..010
+
+These five DECs together formalise the publishing and CI policy stack that PR E §4 + the CI Stability Audit identified. **None of them publishes, mutates `package.json`, modifies `.github/workflows/`, or alters runtime behaviour.** Every implementation step gated by these DECs lands in its own focused PR after this DEC capture merges.
+
+The DEC-005 caveat ("External MCP Host Validation pending") propagates into DEC-007 and DEC-008 by design. Until PR D completes, every release-related artifact must carry that caveat.
