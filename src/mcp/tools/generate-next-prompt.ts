@@ -1,9 +1,7 @@
 import { z } from "zod";
-import {
-  generateNextPrompt,
-  type NextPromptData,
-} from "../../core/prompt/generate-next-prompt.js";
+import { generateNextPrompt, type NextPromptData } from "../../core/prompt/generate-next-prompt.js";
 import { msg } from "../../core/i18n.js";
+import { validateProjectRoot } from "../../core/security/project-root.js";
 import { mcpBlocked, mcpFromCommandResult, type MCPToolResult } from "../result.js";
 
 export const generateNextPromptInputShape = {
@@ -19,7 +17,11 @@ export const generateNextPromptTool = {
   async handler(args: unknown): Promise<MCPToolResult<NextPromptData>> {
     try {
       const parsed = generateNextPromptSchema.parse(args);
-      const result = await generateNextPrompt({ cwd: parsed.projectRoot });
+      const validation = await validateProjectRoot(parsed.projectRoot);
+      if (!validation.ok) {
+        return mcpBlocked(validation.error.code, validation.error.message);
+      }
+      const result = await generateNextPrompt({ cwd: validation.projectRoot });
       return mcpFromCommandResult(result);
     } catch (err) {
       return mcpBlocked(

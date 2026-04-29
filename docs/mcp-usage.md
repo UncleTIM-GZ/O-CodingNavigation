@@ -114,6 +114,25 @@ If you need to surface audit-fallback warnings in your MCP host, set a custom lo
 3. **No tool ever advances state.** `navigator.advance_phase` is not registered; `navigator.run_gate` is read-only by construction.
 4. **Bilingual messages everywhere.** Every `code` carries an `en` + `zh` string.
 5. **Stable IDs.** Every state, step, section, and artifact ID is a stable string (`state_*`, `step_*`, `section_*`, `artifact_*`) — no numeric pointer leakage.
+6. **`projectRoot` is validated at the boundary** (PR C). The validator rejects non-strings, empty strings, null bytes, relative paths, missing paths, and non-directories before any core fn runs. Symlinks are resolved to canonical realpath, and downstream file operations are anchored to that realpath. See [`docs/security/mcp-threat-model.md`](./security/mcp-threat-model.md) §4 for the full threat list.
+
+---
+
+## 5a. Safety boundaries and operating rules
+
+Read this before wiring `ocn-mcp` into any host:
+
+- **`projectRoot` must be an absolute path to a local project directory.** Relative paths, empty strings, and paths that resolve to a regular file are rejected with `ERR_IO_OR_CONFIG` and a bilingual message. The validator returns the canonical realpath; subsequent core fns operate on that, not on the user-supplied alias.
+- **OCN MCP tools only ever operate inside `<projectRoot>/.ocoding/` and `<projectRoot>/docs/`.** No tool accepts a free-form path argument from the agent. Path-influencing inputs (`artifactType`, `type`) are constrained to small enums.
+- **Do NOT expose `ocn-mcp` to a remote, untrusted host.** Today's transport is local stdio only. There is no auth, no rate limiting, no sandbox. The trust boundary is the OS user account.
+- **The 4 forbidden tools do not exist on this server**: `navigator.advance_phase`, `navigator.capture_decision`, `navigator.reset_project`, `navigator.force_release_lock`. Attempting to call them returns a host-level "tool not found" error. State advancement, decision capture, project reset, and force-release-lock remain CLI-only and human-driven.
+- **An MCP agent CANNOT** advance state, capture decisions, reset the project, or force-release the lock. It CAN read state, render the next-step brief, prepare artifacts, run the read-only gate, create from the 5-type template registry, and capture `dev` / `research` logs.
+- **No authentication** is performed on the local stdio channel. Whatever process the OS user has launched as the MCP host has full access to the 7 allowed tools.
+- **No rate limiting**. Repeated tool calls are allowed; each is cheap and idempotent for the read-only tools.
+- **No sandboxing**. `ocn-mcp` runs with the user's OS permissions. Files outside the validated `projectRoot` are off-limits by construction (no tool has a path argument to escape via), but a compromised host could still call legitimate tools many times.
+- **stdio cleanliness**: `ocn-mcp` installs `silentAuditFallbackLogger` at boot. The stdout/stderr channels stay reserved for the JSON-RPC protocol; tests verify that `where_am_i` produces zero `process.stderr.write` calls on the success path.
+
+For the full threat model (in-scope assets, threats T-1 through T-11, mitigations, residual risks, future work), see [`docs/security/mcp-threat-model.md`](./security/mcp-threat-model.md).
 
 ---
 
@@ -121,11 +140,14 @@ If you need to surface audit-fallback warnings in your MCP host, set a custom lo
 
 | Symptom | Likely cause | Fix |
 |---------|--------------|-----|
-| `ERR_IO_OR_CONFIG` from every tool | Project not initialized at `projectRoot` | Run `ocn init` in that directory first |
-| `ERR_VALIDATION: projectRoot must be an absolute path` | Relative path supplied | Pass an absolute path |
-| `ERR_GATE_FAILED` from `capture_log` with `type=decision` | This is **expected behaviour** — decisions are CLI-only | Use `ocn log decision <message>` from the terminal |
-| `ERR_STATE_MACHINE: no template for current step` | Tool called before SOP profile knows the current step | Run `ocn advance` from the CLI to land at a supported step |
-| MCP host complains about JSON parse errors on stderr | Audit fallback was misconfigured | Verify `silentAuditFallbackLogger` is installed (default in `createMcpServer`) |
+| `ERR_IO_OR_CONFIG: projectRoot must be an absolute path` | Relative path supplied | Pass an absolute path. |
+| `ERR_IO_OR_CONFIG: projectRoot does not exist` | Path is missing or typo'd | Verify the path exists on disk. |
+| `ERR_IO_OR_CONFIG: projectRoot is not a directory` | Path points to a file | Pass a directory. |
+| `ERR_IO_OR_CONFIG: projectRoot must not contain null bytes` | Null-byte injection rejected | Sanitise the input on the host side. |
+| `ERR_IO_OR_CONFIG: ENOENT .ocoding/state.json` | Project not initialised at `projectRoot` | Run `ocn init` in that directory first. |
+| `ERR_GATE_FAILED` from `capture_log` with `type=decision` | This is **expected behaviour** — decisions are CLI-only | Use the OCN CLI to capture decisions. |
+| `ERR_STATE_MACHINE: no template for current step` | Tool called before SOP profile knows the current step | Run `ocn advance` from the CLI to land at a supported step. |
+| MCP host complains about JSON parse errors on stderr | Audit fallback was misconfigured | Verify `silentAuditFallbackLogger` is installed (default in `createMcpServer`). |
 
 ---
 

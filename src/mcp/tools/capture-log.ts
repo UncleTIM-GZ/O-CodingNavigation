@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { captureLog, type CaptureLogData } from "../../core/log/capture-log.js";
 import { msg } from "../../core/i18n.js";
+import { validateProjectRoot } from "../../core/security/project-root.js";
 import { mcpBlocked, mcpFromCommandResult, type MCPToolResult } from "../result.js";
 
 // MCP rejects type=decision unconditionally per CLAUDE.md §4.7 and PR #5 §V item 5.
@@ -19,8 +20,12 @@ export const captureLogTool = {
   async handler(args: unknown): Promise<MCPToolResult<CaptureLogData>> {
     try {
       const parsed = captureLogSchema.parse(args);
+      const validation = await validateProjectRoot(parsed.projectRoot);
+      if (!validation.ok) {
+        return mcpBlocked(validation.error.code, validation.error.message);
+      }
       const result = await captureLog({
-        cwd: parsed.projectRoot,
+        cwd: validation.projectRoot,
         type: parsed.type,
         message: parsed.message,
         actor: "ai_agent",
