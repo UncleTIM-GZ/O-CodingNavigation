@@ -23,6 +23,8 @@ SOP Profile Version：`0.1.0`
 |---|------|----------|--------|
 | DEC-001 | 2026-04-28 | Skeleton Spike PASS, Phase 2 entry approved | ✅ Approved |
 | DEC-002 | 2026-04-28 | Phase 2 Complete after MCP Safe Tools merge | ✅ Approved |
+| DEC-003 | 2026-04-28 | Documentation numbering policy after SOP v1.1 (profile override, no historical renumber) | ✅ Approved |
+| DEC-004 | 2026-04-28 | Frozen design docs amendment policy (pragmatic amendment) | ✅ Approved |
 
 ---
 
@@ -230,3 +232,186 @@ The completion report at `docs/reports/2026-04-28-phase2-completion-report.md` r
 - Implementation notes (full L / todo state): [`../implementation-notes.md`](../implementation-notes.md)
 - DEC-001 (Phase 2 entry): see above in this file.
 - PR #6 merge commit: `dbe3523`. PR URL: https://github.com/UncleTIM-GZ/O-CodingNavigation/pull/6.
+
+---
+
+## DEC-003｜Documentation Numbering Policy after SOP v1.1 Technical-Architecture Insertion
+
+**Date**: 2026-04-28
+**Status**: ✅ Approved
+**Captured by**: Project owner (manual capture — pull mode per CLAUDE.md §4.7)
+**Captured during**: GA Prep PR A — docs numbering reconciliation + amendments index
+**Related artifacts**: [`docs/plans/2026-04-28-ga-prep-gap-review-plan.md`](./plans/2026-04-28-ga-prep-gap-review-plan.md) §3.2 + §6.1, [`docs/amendments/`](./amendments/)
+
+---
+
+### Context
+
+SOP v1.1 inserts a new step — **Technical Architecture & Stack Decision** — between *Acceptance Criteria* and *Information Architecture*. Under SOP v1.1 the canonical 10-step DISCOVERY → PLAN doc map is therefore:
+
+| # | Slot | Doc filename |
+|---|------|---|
+| 0 | Project Brief | `docs/00-project-brief.md` |
+| 1 | Scope | `docs/01-scope.md` |
+| 2 | PRD | `docs/02-prd.md` |
+| 3 | Acceptance Criteria | `docs/03-acceptance-criteria.md` |
+| **4** | **Technical Architecture & Stack Decision** | **`docs/04-technical-architecture.md`** |
+| 5 | Information Architecture | `docs/05-information-architecture.md` |
+| 6 | Data Model | `docs/06-data-model.md` |
+| 7 | API Contract | `docs/07-api-contract.md` |
+| 8 | Test Strategy | `docs/08-test-strategy.md` |
+| 9 | MVP Plan | `docs/09-mvp-plan.md` |
+
+OCN's own Phase 2 design documents predate SOP v1.1. They are committed to `main` under the *old* layout that has no Technical Architecture step:
+
+| Path on `main` | Slot under OCN's historical layout |
+|---|---|
+| `docs/04-information-architecture.md` | IA |
+| `docs/05-data-model.md` | Data Model |
+| `docs/06-api-contract.md` | API Contract |
+| `docs/07-test-strategy.md` | Test Strategy |
+| `docs/08-mvp-plan.md` | MVP Plan |
+
+The Phase 2 default OCN SOP profile (`sops/default-ai-coding-sop/0.1.0/`) ships the SOP v1.1 step map for *new* projects, so a freshly initialised project sees the new doc paths. Running `ocn check` inside the OCN repository itself today reports the v1.1 docs as missing, because OCN's own docs are at the old slots.
+
+### Options Considered
+
+| # | Option | Rejected because |
+|---|---|---|
+| **A** | Renumber OCN's historical `docs/04-08` to match SOP v1.1 (everything shifts by one). | High blast radius. Would invalidate every cross-reference in the historical PR descriptions, plan files, `CLAUDE.md`, `.claude/rules.md`, `.claude/anti-patterns.md`, `implementation-notes.md`, the four amendments-style follow-ups already queued, and the Skeleton Spike e2e test's docstrings. Loses the historical authenticity of the dogfood record. |
+| **B** | Keep OCN's historical `docs/04-08` as-is and ship a **project-level profile override** (e.g. `.ocoding/sop-overrides.yaml` or equivalent) so the OCN project — and only the OCN project — runs against a profile that maps SOP v1.1 step IDs back to OCN's historical slot numbers. (chosen) | — |
+| C | Defer the decision until later. | Leaves OCN-on-OCN dogfood broken indefinitely and blocks PR F (`examples/`) which depends on a coherent profile story. |
+
+### Decision
+
+**Adopt Option B — keep historical `docs/04-08` unchanged and use a profile override for the OCN repository.**
+
+OCN's bundled default SOP profile continues to express the SOP v1.1 step map for *new* projects (i.e. external users get the new layout). The OCN repository itself is treated as a historical Phase-2 dogfood artifact and runs against an override that points step IDs at the historical slot paths.
+
+This DEC is a **policy decision**, not an implementation decision. The override file format, location, and loader changes are deferred to a separate implementation PR after PR A merges. PR A only records the policy and the amendments-index entry; no `src/` change.
+
+### Rationale
+
+- Avoids large-scale historical reference drift across PRs, plans, frozen docs, and code comments.
+- Preserves the authenticity of OCN's Phase-2 dogfood record (the docs were written under the old layout — that's history, not a defect).
+- Restricts the divergence to a single override file confined to OCN's `.ocoding/` directory; new projects see the SOP v1.1 layout untouched.
+- Lowest risk for GA Prep: the override touches one config surface, not the historical document tree.
+
+### Consequences
+
+- `docs/00-08` remain frozen at the old layout. They are *historical artifacts*, not the canonical SOP v1.1 doc map.
+- New OCN projects (initialised via `ocn init`) get the SOP v1.1 doc layout from the bundled profile.
+- The OCN repository itself ships a profile override (implementation deferred — out of scope for PR A) so `ocn check` inside the OCN repo reports against historical slots.
+- `docs/amendments/README.md` — created in PR A — must list this divergence so future readers know the historical layout is intentional.
+- A future PR (let's call it PR-A1) implements the override loader. It is **not** in scope for PR A; PR A is documentation-only.
+- The README rewrite (PR B) must mention this divergence so external readers don't mistake the OCN repo's historical layout for the canonical SOP v1.1 layout.
+
+### Risks
+
+| ID | Risk | Mitigation |
+|----|------|------------|
+| R9 | Future maintainers forget the override exists and assume OCN's historical docs *are* the canonical layout. | `docs/amendments/README.md` indexes this DEC + the AM that records it. README (PR B) explains the override.  |
+| R10 | The override file format diverges from the broader profile-versioning design. | Profile override format will be designed in a dedicated implementation PR after PR A; that PR is gated on its own DEC entry (deferred). |
+| R11 | External users find an old example (e.g. an old plan file) referencing the historical layout and get confused about what their freshly-initialised project should look like. | Examples PR (PR F) builds against the SOP v1.1 layout; historical references are framed as historical. |
+
+### Follow-up Observations
+
+- Implementation PR for the override loader should be drafted only after PR A merges and PR B (README) clarifies the divergence to external readers.
+- If the override mechanism turns out to be useful beyond OCN's own dogfood, it may become a general SOP-versioning feature later.
+
+---
+
+## DEC-004｜Frozen Design Docs Amendment Policy
+
+**Date**: 2026-04-28
+**Status**: ✅ Approved
+**Captured by**: Project owner (manual capture — pull mode per CLAUDE.md §4.7)
+**Captured during**: GA Prep PR A — docs numbering reconciliation + amendments index
+**Related artifacts**: [`docs/plans/2026-04-28-ga-prep-gap-review-plan.md`](./plans/2026-04-28-ga-prep-gap-review-plan.md) §3.6 + §6.2, [`docs/amendments/`](./amendments/)
+
+---
+
+### Context
+
+OCN's `docs/00-project-brief.md` through `docs/08-mvp-plan.md` were written during Phase 2 and treated as *frozen design contracts*. CLAUDE.md §10 explicitly says "do NOT edit `docs/00-08` once they are locked design contracts." But Phase 2 surfaced — and Phase 3 will surface more — places where the implementation reality diverges from the frozen design.
+
+`docs/amendments/` was created in PR #4 (with AM-001, the audit storage path amendment) to reconcile such divergences without rewriting the frozen docs. The convention worked. But there is no codified rule for *when* to write an amendment vs *when* to fix the frozen doc directly.
+
+### Options Considered
+
+| # | Option | Rejected because |
+|---|---|---|
+| A | **Strict freeze**: `docs/00-08` are read-only. Every divergence — including typos and broken links — requires a new amendment file. | High friction for trivial fixes. Makes maintenance noisy and low-signal. Would generate dozens of single-line amendment files for typos. |
+| **B** | **Pragmatic amendment**: small fixes (typos, broken links, obvious errors that don't change historical semantics) may edit the frozen doc directly. Anything that changes meaning, paths, schemas, or scope requires an amendment file. (chosen) | — |
+| C | **Free edit**: anyone can rewrite frozen docs at any time. | Loses historical record. The dogfood narrative becomes unreviewable. Defeats the point of having a "design baseline". |
+
+### Decision
+
+**Adopt Option B — Pragmatic amendment.**
+
+Small, semantically-neutral fixes may edit `docs/00-08` directly. Anything that changes the meaning, paths, contracts, or scope of a frozen doc requires a new amendment file in `docs/amendments/`.
+
+### Allowed direct edits to `docs/00-08`
+
+The following may be edited in-place without an amendment, provided the historical decision and its context are preserved:
+
+- Typos / spelling corrections.
+- Broken internal links (e.g. file moved, anchor renamed) that point to the new canonical location of the *same* artifact.
+- Markdown formatting fixes (table alignment, fenced-code language tags, heading levels) that do not change the rendered meaning.
+- Pure copy-edit improvements that don't alter what a section means (e.g. clarifying a sentence whose intent is already unambiguous from context).
+
+### Required-amendment changes
+
+The following **must** be recorded as a new amendment file under `docs/amendments/` rather than edited inline:
+
+- Document slot numbering changes (e.g. PR #7's `19-` → `20-` decision-log path move).
+- Canonical path changes (e.g. AM-001's `events/` → `audit/` move).
+- Data model / schema changes — adding, renaming, or removing fields, enums, types.
+- API contract changes — new commands, new exit codes, renamed flags, changed envelope shapes.
+- SOP profile changes — new states, new steps, changed step ordering, new required sections.
+- Storage layout changes — file paths, directory structure, lock semantics.
+- Scope changes — adding or removing items from `docs/01-scope.md` § "must / must-not".
+- Decisions that supersede earlier decisions in `docs/00-08` even if the path / schema is unchanged.
+
+### Forbidden edits (regardless of size)
+
+The following are **never** permitted, even as "small fixes":
+
+- Large-scale rewrites of frozen design docs to make them appear as if they were always correct (i.e. rewriting history).
+- Deletion of historical decision context (e.g. removing the rejected options from `docs/05-data-model.md` §3.2).
+- Overwriting evidence of dogfood-period failures or constraints.
+- Bulk find-and-replace operations across `docs/00-08` solely for cosmetic consistency (path moves are the canonical example — these go into amendments).
+
+### Procedure for an amendment
+
+1. Create `docs/amendments/<YYYY-MM-DD>-<short-slug>-amendment.md` following the format documented in `docs/amendments/README.md`.
+2. The amendment file declares: ID (`AM-XXX`), Date, Status, Supersedes, Applies to, Decision, Impact, Migration note, References.
+3. Update `docs/amendments/README.md` "Current amendments" index.
+4. If the amendment requires a corresponding DEC entry (e.g. it implements a policy choice), capture the DEC in `docs/20-decision-log.md` first.
+5. Frozen docs are NOT modified to add a "see amendment AM-XXX" pointer. The amendment index in `docs/amendments/README.md` is the single source of truth for active divergences.
+
+### Rationale
+
+- Strict freeze (Option A) makes typo fixes high-friction and noisy — the cure is worse than the disease.
+- Free edit (Option C) destroys the historical record that makes OCN's dogfood credible.
+- Pragmatic amendment (Option B) preserves history *where history matters* (semantic / structural decisions) and lets trivial fixes flow through normal commits.
+
+### Consequences
+
+- `docs/amendments/` becomes a long-term governance directory, not a one-off.
+- `docs/amendments/README.md` is the live index of active divergences from `docs/00-08`.
+- A reviewer evaluating any change to `docs/00-08` must apply the rule: *does this change the meaning, paths, schemas, or scope?* If yes → amendment. If no → direct edit OK.
+- GA Prep PRs that touch frozen docs must include a self-check in their PR description: which edits are inline (with rationale) and which are amendments.
+
+### Risks
+
+| ID | Risk | Mitigation |
+|----|------|------------|
+| R12 | "Pragmatic" gets stretched into "free edit" over time. | Reviewers reject any inline edit to frozen docs that would qualify under "Required-amendment changes". The amendment list is short enough to be exhaustive. |
+| R13 | Amendments accumulate without ever being consolidated, eventually obscuring the design intent. | A future re-baseline PR (post-GA, deliberate) may consolidate amendments back into a new edition of `docs/00-08`. Until then, `docs/amendments/` is canonical for divergences. |
+| R14 | Two amendments contradict each other and the frozen docs. | The `Supersedes:` field of each amendment chains the divergence history. The amendments index must show the latest supersedes-each amendment. |
+
+### Follow-up Observations
+
+- During PR B (README), describe the amendment convention briefly so external readers know to look in `docs/amendments/` for active divergences.
+- During PR E (npm publish gating), include `docs/amendments/` in the published package — it's part of the design baseline.
