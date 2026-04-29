@@ -31,6 +31,7 @@ SOP Profile Version：`0.1.0`
 | DEC-008 | 2026-04-29 | Alpha publish may be planned before PR D, with mandatory caveat | ✅ Approved |
 | DEC-009 | 2026-04-29 | Package contents policy: `package.json` `files` allowlist | ✅ Approved |
 | DEC-010 | 2026-04-29 | CI matrix policy: single-cell `ubuntu-latest` + Node 20 for alpha; expand at beta | ✅ Approved |
+| DEC-011 | 2026-04-29 | Lock npm package name to `o-coding-navigation` | ✅ Approved |
 
 ---
 
@@ -854,3 +855,125 @@ The audit recommended **Option A — keep single-cell for alpha; expand at beta.
 These five DECs together formalise the publishing and CI policy stack that PR E §4 + the CI Stability Audit identified. **None of them publishes, mutates `package.json`, modifies `.github/workflows/`, or alters runtime behaviour.** Every implementation step gated by these DECs lands in its own focused PR after this DEC capture merges.
 
 The DEC-005 caveat ("External MCP Host Validation pending") propagates into DEC-007 and DEC-008 by design. Until PR D completes, every release-related artifact must carry that caveat.
+
+---
+
+## DEC-011｜Lock npm Package Name to `o-coding-navigation`
+
+**Date**: 2026-04-29
+**Status**: ✅ Approved
+**Captured by**: Project owner (manual capture — pull mode per CLAUDE.md §4.7)
+**Captured during**: GA Prep package-name-lock DEC-only PR
+**Related artifacts**:
+- [DEC-006 — npm package name decision workflow](#dec-006npm-package-name-decision-workflow)
+- [`docs/reports/2026-04-29-npm-name-availability-audit.md`](./reports/2026-04-29-npm-name-availability-audit.md) — npm CLI evidence underlying this lock
+- [DEC-005 — External MCP Host Validation pending](#dec-005defer-external-mcp-host-validation-until-a-real-host-is-available)
+- [DEC-007 — First semver lane `0.1.0-alpha.0`](#dec-007first-semver-lane)
+- [DEC-009 — Package contents policy (`files` allowlist)](#dec-009package-contents-policy)
+
+---
+
+### Context
+
+[DEC-006](#dec-006npm-package-name-decision-workflow) established an availability-first workflow for choosing the npm package name. The npm name availability audit at [`docs/reports/2026-04-29-npm-name-availability-audit.md`](./reports/2026-04-29-npm-name-availability-audit.md) checked ten candidate names with real `npm view` commands on 2026-04-29.
+
+Audit findings:
+
+- **`ocn`** — already exists on the public npm registry. Belongs to an unrelated project: "Server for flexible communication over the Open Charging Network" (electric-vehicle charging infrastructure). Cannot be reused.
+- **`o-coding-navigation`** — returned `not_found` (E404). Potentially available at audit time.
+- **`@uncletim/ocn`**, **`@uncletim/o-coding-navigation`**, **`@uncletim/ocoding-navigation`** — returned `not_found` for the package itself, but **scope ownership was not verified** in the audit. An E404 on a scoped lookup proves only that no package exists at the exact scoped path; it does NOT prove the maintainer can publish under `@uncletim`.
+- The remaining unscoped candidates (`ocoding-navigation`, `ocodingnavigator`, `o-codingnavigator`, `ocn-cli`, `ocn-tools`) all returned `not_found`.
+
+The maintainer chooses the **unscoped primary recommendation** to avoid scope-ownership uncertainty and to keep the package name aligned with the repository name `O-CodingNavigation`.
+
+### Decision
+
+Lock the npm package name to:
+
+```
+o-coding-navigation
+```
+
+This decision authorises future package-metadata planning to use `o-coding-navigation` as the intended package name.
+
+This decision **does NOT**:
+
+- mutate `package.json` (the `name` field stays at `"ocn"` until a separate package-metadata PR);
+- publish to npm;
+- reserve the package name on npm (no `npm publish` is run; no name reservation API exists for unscoped packages);
+- alter the CLI bin names (`ocn` and `ocn-mcp` remain the binary names exposed by `bin` once the package metadata is updated).
+
+The future package-metadata PR must still:
+
+- update `package.json` explicitly (under its own commit, separate from this DEC);
+- run `npm pack --dry-run` and record the tarball contents in the PR description;
+- verify that no package with the same name appeared on npm between the audit date and that PR's publish step (re-run the `npm view` check immediately before any actual publish);
+- preserve the [DEC-005](#dec-005defer-external-mcp-host-validation-until-a-real-host-is-available) caveat in any release notes drafted under PR E gating;
+- avoid external MCP host compatibility claims until PR D completes.
+
+### Options Considered
+
+#### Option A — `ocn`
+
+**Rejected.** The audit found an existing unrelated npm package named `ocn`. Reusing the name would conflict with that package and is not technically possible without the existing maintainer transferring ownership.
+
+#### Option B — `o-coding-navigation` *(adopted)*
+
+**Accepted.** It is potentially available according to the audit (E404). It matches the repository name `O-CodingNavigation` (lower-cased, hyphenated). It avoids scope ownership uncertainty. It is clearer than abbreviated alternatives such as `ocn-cli` or `ocodingnavigator`.
+
+#### Option C — `@uncletim/ocn`
+
+**Rejected for now.** The name may be cleaner aesthetically and would isolate from the unrelated `ocn` package, but scope ownership and publish permission for `@uncletim` were not verified in the audit. Adopting this option would require the maintainer to first run `npm whoami` + `npm org ls @uncletim` and confirm publish access — a step that has not happened. Re-considering this option later (under a future DEC amendment) is allowed if the maintainer chooses to verify the scope; this DEC does not foreclose that path.
+
+#### Option D — Defer the decision again
+
+**Rejected.** Package-metadata planning needs a concrete package-name target before any future `package.json` mutation. Continuing to defer would block PR E §5.1 follow-ups (the `package.json` field audit), `prepublishOnly` work, and any clean-machine smoke planning.
+
+### Consequences
+
+**Positive:**
+
+- Package-metadata PR can proceed with a concrete target (`o-coding-navigation`).
+- Avoids the unrelated existing `ocn` package and the user confusion that would follow.
+- Avoids scoped-publish permission uncertainty.
+- Keeps the package name aligned with repository branding (`O-CodingNavigation` → `o-coding-navigation`).
+- The CLI command `ocn` is unaffected — `npm install -g o-coding-navigation` still produces `/usr/local/bin/ocn` (and `/usr/local/bin/ocn-mcp`) because the `bin` field in `package.json` controls binary names, not the package name.
+
+**Negative:**
+
+- Longer package name than `ocn` — more typing in `npm install` commands.
+- Users may still expect the CLI command to be `ocn`. Documentation must clearly distinguish package name (`o-coding-navigation`) from CLI command name (`ocn`). README §4 should make this distinction explicit when the package-metadata PR lands.
+- The package name is **not reserved** until actual `npm publish`. Between this DEC and the first publish, someone else could claim `o-coding-navigation` on npm. The mitigation is to re-run `npm view o-coding-navigation` immediately before any future publish; if it has been claimed, this DEC is amended and a new name is chosen via the same workflow.
+
+### Follow-up
+
+Future package-metadata PR may update `package.json` to:
+
+- `name: "o-coding-navigation"` (per this DEC).
+- `version: "0.1.0-alpha.0"` (per [DEC-007](#dec-007first-semver-lane)).
+- `bin` entries preserved, likely as `{ "ocn": "dist/cli/index.js", "ocn-mcp": "dist/mcp/index.js" }`. The bin keys are independent of the package name.
+- `files` allowlist refined per [DEC-009](#dec-009package-contents-policy) — at minimum: `dist`, `README.md`, `LICENSE`, `package.json`, `docs/quickstart.md`, `docs/mcp-usage.md`. Final list verified against `npm pack --dry-run`.
+- `prepublishOnly` script per PR E plan §5.5: `npm run lint && npm run typecheck && npm run test:coverage && npm run build`.
+- `repository`, `homepage`, `bugs`, `keywords` fields per PR E plan §5.6.
+
+Before any actual `npm publish`:
+
+- Re-run `npm view o-coding-navigation` to confirm the name is still available immediately before publish; if it has been claimed, amend this DEC and pick a new name via the DEC-006 workflow.
+- Run `npm pack --dry-run` and record the tarball contents.
+- Confirm `npm whoami` returns the expected publishing identity.
+- Confirm release notes include the verbatim line: **"External MCP Host Validation pending."** (per DEC-005 / DEC-008).
+- Confirm no claim of verified Claude Desktop / Cursor / Cline compatibility appears anywhere in the published tarball or in the release notes (per DEC-005).
+
+### Risks
+
+| ID | Risk | Mitigation |
+|----|------|------------|
+| R18 | Name is claimed by someone else between this DEC and the first publish. | Re-run `npm view o-coding-navigation` immediately before any publish. If claimed, amend this DEC; pick a new name via DEC-006 workflow; restart the package-metadata PR. |
+| R19 | Users type `npm install -g ocn` from memory and end up with the unrelated EV-charging package. | The README's install section (PR B) and any future package-metadata PR must show `npm install -g o-coding-navigation` prominently. Quickstart already uses absolute paths via `git clone + npm link`, so this risk only applies after npm publish. |
+| R20 | The longer package name is mistaken for a typo by a casual reader. | The README and the npm `description` field can include both forms ("OCN — local-first AI coding workflow OS, published as `o-coding-navigation`") to bridge brand vs package-name. |
+
+---
+
+### Cross-cutting note: scope of DEC-011
+
+DEC-011 locks the *target* name. It is a precondition for the future package-metadata PR but is **not** that PR. The package-metadata PR is the first time `package.json` is mutated under GA Prep and requires its own explicit authorisation; this DEC is necessary but not sufficient for that PR to proceed.
