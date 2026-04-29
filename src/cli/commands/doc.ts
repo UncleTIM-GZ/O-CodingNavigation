@@ -7,7 +7,10 @@ export function registerDocCommand(program: Command): void {
   doc
     .command("create")
     .description("Create an artifact from its bundled template")
-    .argument("<type>", "Artifact type (Skeleton Spike: only 'prd' is supported)")
+    .argument(
+      "<type>",
+      "Artifact type: project-brief | scope | prd | acceptance-criteria | technical-architecture",
+    )
     .option("--overwrite", "Overwrite an existing file", false)
     .option("--json", "Emit machine-readable JSON CommandResult", false)
     .action(async (type: string, rawOpts: { overwrite: boolean; json: boolean }) => {

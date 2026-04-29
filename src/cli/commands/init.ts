@@ -9,7 +9,7 @@ export function registerInitCommand(program: Command): void {
     .description("Initialize an OCN project in the current directory")
     .option(
       "-t, --tier <tier>",
-      "Project tier: minimal | production | full",
+      "Project tier: minimal | production | full (only 'minimal' is enforced today; production/full are accepted but not yet differentiated)",
       "minimal",
     )
     .option("--json", "Emit machine-readable JSON CommandResult", false)
