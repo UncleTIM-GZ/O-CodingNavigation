@@ -412,4 +412,44 @@ PR #5 closes Phase 2. Remaining open temporary simplifications: L4 (TS-string SO
 
 ---
 
+## 12. GA Prep — PR B Note (2026-04-29)
+
+PR B is the second GA Prep PR. It is **documentation + CLI copy only**; no core engine, state machine, audit, or MCP behaviour change.
+
+### 12.1 What landed
+
+- **`README.md` rewrite**: replaces the Skeleton-Spike-era README with a Phase-2-Complete README. New structure: What → Why → Status → Install → First-5-minutes → CLI commands → MCP tools → Documentation map → Development → Roadmap → License. Honest about what's not implemented (`doctor` / `reset` / `baseline` / SOP upgrade / npm publish / mini-CRM / tier production-full / HTTP MCP).
+- **`docs/quickstart.md`** (NEW): step-by-step DISCOVERY → SPEC walkthrough, expected file tree, common errors, MCP host wiring snippet.
+- **CLI `--help` copy fixes** (no behaviour change):
+  - `ocn doc create <type>` argument description was stale ("Skeleton Spike: only 'prd' is supported"). Now lists the 5 supported types.
+  - `ocn init --tier` clarified that only `minimal` is enforced today (production / full are accepted but not yet differentiated — closes a hidden mismatch with L9).
+  - `ocn brief` description de-jargoned ("hot-memory brief" → "the current-step brief (state, step, required sections, AI governance reminders) for an AI coding session").
+- **`tests/cli/help.test.ts`** extended: now asserts all 7 implemented top-level commands appear in `--help`, asserts `doctor` / `reset` / `baseline` / "sop upgrade" do NOT appear (regression guard against advertising unimplemented commands), and asserts the 5 doc types appear in `doc create --help`.
+
+### 12.2 What did NOT change
+
+- No `src/core/*` change.
+- No `src/mcp/*` change.
+- No state machine / audit / SOP profile / template change.
+- No `package.json` change.
+- No frozen `docs/00-08` change.
+- No DEC-003 / DEC-004 revision.
+- No bulk path rewrite across frozen docs (forbidden by DEC-004 + AM-002).
+- No new MCP tool, no HTTP transport, no `npm publish`.
+
+### 12.3 GA Prep status after PR B
+
+PR sequence per [`docs/plans/2026-04-28-ga-prep-gap-review-plan.md`](./docs/plans/2026-04-28-ga-prep-gap-review-plan.md) §5:
+
+- ✅ PR A — docs numbering reconciliation + amendments index (merged).
+- ✅ PR B — README + CLI help audit (this PR).
+- ⬜ PR C — MCP `projectRoot` path-traversal audit + threat-model doc.
+- ⬜ PR D — External MCP host validation.
+- ⬜ PR E — npm publish gating + CI stability audit.
+- ⬜ PR F — `examples/` directory plan.
+
+The profile-override implementation announced in DEC-003 is still deferred — out of scope for any PR up through PR F unless explicitly authorised.
+
+---
+
 **END OF NOTES**
