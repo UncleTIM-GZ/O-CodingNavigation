@@ -25,6 +25,7 @@ SOP Profile Version：`0.1.0`
 | DEC-002 | 2026-04-28 | Phase 2 Complete after MCP Safe Tools merge | ✅ Approved |
 | DEC-003 | 2026-04-28 | Documentation numbering policy after SOP v1.1 (profile override, no historical renumber) | ✅ Approved |
 | DEC-004 | 2026-04-28 | Frozen design docs amendment policy (pragmatic amendment) | ✅ Approved |
+| DEC-005 | 2026-04-29 | Defer External MCP Host Validation until a real host is available | ✅ Approved |
 
 ---
 
@@ -415,3 +416,118 @@ The following are **never** permitted, even as "small fixes":
 
 - During PR B (README), describe the amendment convention briefly so external readers know to look in `docs/amendments/` for active divergences.
 - During PR E (npm publish gating), include `docs/amendments/` in the published package — it's part of the design baseline.
+
+---
+
+## DEC-005｜Defer External MCP Host Validation until a Real Host is Available
+
+**Date**: 2026-04-29
+**Status**: ✅ Approved
+**Captured by**: Project owner (manual capture — pull mode per CLAUDE.md §4.7)
+**Captured during**: GA Prep PR E — npm publish gating + CI stability audit (the same PR that records this deferral)
+**Related artifacts**: [`docs/security/mcp-host-validation-checklist.md`](./security/mcp-host-validation-checklist.md), [`docs/plans/2026-04-28-ga-prep-gap-review-plan.md`](./plans/2026-04-28-ga-prep-gap-review-plan.md) §3.3, [`docs/plans/2026-04-29-ga-prep-pr-e-npm-publish-ci-stability-plan.md`](./plans/2026-04-29-ga-prep-pr-e-npm-publish-ci-stability-plan.md)
+
+---
+
+### Context
+
+GA Prep PR D was planned to validate the OCN MCP server against a real MCP host — Claude Desktop, Cursor, or Cline — and to produce `docs/reports/<DATE>-mcp-external-host-validation-report.md` based on raw host evidence.
+
+PR C already delivered the prerequisite security work:
+
+- MCP `projectRoot` validator (`src/core/security/project-root.ts`) — wired into all 7 allowed tool handlers.
+- Path-containment helpers (`assertPathInsideRoot`, `assertResolvedPathInsideRoot`).
+- First OCN threat model: [`docs/security/mcp-threat-model.md`](./security/mcp-threat-model.md).
+- `docs/mcp-usage.md` safety boundaries section (§5a).
+
+However, real host validation cannot be completed in the current session:
+
+- **Claude Desktop is temporarily unavailable** on the maintainer's machine.
+- **Cursor and Cline** have not been used to validate the OCN MCP server in this session.
+- The maintainer's primary development environment is **WSL2 Linux**, where Claude Desktop has no official build.
+
+Per the safety stance established when PR C merged, the project will not accept fabricated host validation, and will not relabel SDK self-smoke or CLI self-smoke as external host validation.
+
+### Options Considered
+
+| # | Option | Rejected because |
+|---|---|---|
+| A | Block all GA Prep work until a real host is available | Stalls progress on packaging and CI hygiene that does not depend on host validation. Penalises the project for a temporary host-availability issue. |
+| **B** | Defer PR D explicitly; continue with PR E (npm publish gating + CI stability audit) under a clearly-recorded host-compatibility caveat. (chosen) | — |
+| C | Replace PR D with an SDK self-smoke or CLI self-smoke labelled as external host validation | Forbidden by the project's anti-fabrication rule. SDK self-smoke is useful but is not external host validation. |
+| D | Skip host validation entirely and proceed to npm publish | Unacceptable. The project would ship with unverified host-compatibility claims. |
+
+### Decision
+
+**Adopt Option B.** PR D is deferred until at least one real MCP host is available for validation. PR D remains required before claiming external MCP host compatibility.
+
+GA Prep continues to **PR E** — the npm publish gating + CI stability audit — under an explicit host-compatibility caveat that is reflected in:
+
+1. The PR E planning artifact (`docs/plans/2026-04-29-ga-prep-pr-e-npm-publish-ci-stability-plan.md` §6).
+2. Any future release notes drafted before PR D completes.
+3. README / `docs/mcp-usage.md` if those documents need to make any host-compatibility statement before PR D completes.
+
+### Non-goals
+
+This decision does **NOT**:
+
+- Mark PR D as complete.
+- Replace external host validation with SDK self-smoke.
+- Allow fabricated validation evidence.
+- Allow release notes to claim Claude Desktop / Cursor / Cline compatibility.
+- Modify the 7 allowed / 4 forbidden MCP tool surfaces.
+- Modify any `src/` runtime behaviour.
+
+### Constraints (active until PR D is completed)
+
+- README / npm package metadata must **not** claim verified external MCP host compatibility.
+- `docs/mcp-usage.md` may describe configuration as *intended usage*, but must clearly distinguish *verified* vs *not verified in PR D*.
+- Any release checklist (alpha or otherwise) must include the line **"External MCP Host Validation pending."**
+- PR D must be completed before any beta or GA claim of host compatibility.
+- The MCP host validation checklist (`docs/security/mcp-host-validation-checklist.md`) is preserved on `main`. It is **not** a validation report.
+
+### Follow-up
+
+Create or preserve:
+
+- ✅ `docs/security/mcp-host-validation-checklist.md` — preserved on `main` in the same PR that records this DEC.
+
+Do **NOT** create:
+
+- ❌ `docs/reports/<DATE>-mcp-external-host-validation-report.md` — only created from real host evidence, never from this DEC alone.
+
+### Consequences
+
+**Positive:**
+
+- GA Prep can continue without fabricating evidence.
+- npm publish planning can proceed with an honest compatibility caveat.
+- The maintainer can complete PR D opportunistically when a host becomes available, without re-doing PR E.
+
+**Negative:**
+
+- MCP host compatibility remains unverified in tree.
+- PR E must include a release-gating caveat that holds host-compatibility claims back until PR D completes.
+- Any external user reading the README will see an explicit "host compatibility not verified" note until PR D lands.
+
+### Risks
+
+| ID | Risk | Mitigation |
+|----|------|------------|
+| R15 | PR D is forgotten as time passes; the caveat in README / mcp-usage.md becomes stale and is silently dropped during a later edit. | The PR E planning artifact records a "release checklist must include 'External MCP Host Validation pending'" rule. Reviewers reject any release PR that lacks the pending entry. |
+| R16 | A future contributor reads the checklist and assumes it is the validation. | The checklist file's first line states explicitly that it is **not** a validation report and links back to this DEC. |
+| R17 | An npm alpha publish proceeds without a clear caveat. | Forbidden by §6 of the PR E plan; the gating checklist requires an explicit "host validation pending" line in any release notes drafted before PR D completes. |
+
+### Follow-up Observations
+
+- When a real MCP host becomes available, run the checklist, paste the §9 evidence into the chat, and CC will produce `docs/reports/<DATE>-mcp-external-host-validation-report.md` and open PR D.
+- After PR D merges, the host-compatibility caveats added in PR E should be revisited and removed where they're no longer accurate (this is a follow-up doc-edit, not a code change).
+- If multiple hosts are validated, each gets its own evidence section in the same report; verdicts are per-host, never extrapolated.
+
+### Related Artifacts
+
+- Checklist: [`docs/security/mcp-host-validation-checklist.md`](./security/mcp-host-validation-checklist.md)
+- Threat model: [`docs/security/mcp-threat-model.md`](./security/mcp-threat-model.md)
+- GA Prep plan: [`docs/plans/2026-04-28-ga-prep-gap-review-plan.md`](./plans/2026-04-28-ga-prep-gap-review-plan.md) §3.3
+- PR E plan: [`docs/plans/2026-04-29-ga-prep-pr-e-npm-publish-ci-stability-plan.md`](./plans/2026-04-29-ga-prep-pr-e-npm-publish-ci-stability-plan.md)
+- Phase 2 Completion Report §6 + §8 row 4: [`docs/reports/2026-04-28-phase2-completion-report.md`](./reports/2026-04-28-phase2-completion-report.md)
