@@ -32,6 +32,7 @@ SOP Profile Version：`0.1.0`
 | DEC-009 | 2026-04-29 | Package contents policy: `package.json` `files` allowlist | ✅ Approved |
 | DEC-010 | 2026-04-29 | CI matrix policy: single-cell `ubuntu-latest` + Node 20 for alpha; expand at beta | ✅ Approved |
 | DEC-011 | 2026-04-29 | Lock npm package name to `o-coding-navigation` | ✅ Approved |
+| DEC-012 | 2026-04-29 | Authorise separate npm alpha publish PR (with mandatory pre-publish checks) | ✅ Approved |
 
 ---
 
@@ -977,3 +978,194 @@ Before any actual `npm publish`:
 ### Cross-cutting note: scope of DEC-011
 
 DEC-011 locks the *target* name. It is a precondition for the future package-metadata PR but is **not** that PR. The package-metadata PR is the first time `package.json` is mutated under GA Prep and requires its own explicit authorisation; this DEC is necessary but not sufficient for that PR to proceed.
+
+---
+
+## DEC-012｜Authorise Separate npm Alpha Publish PR
+
+**Date**: 2026-04-29
+**Status**: ✅ Approved
+**Captured by**: Project owner (manual capture — pull mode per CLAUDE.md §4.7)
+**Captured during**: GA Prep npm-publish-authorisation DEC-only PR
+**Related artifacts**:
+- [DEC-005 — External MCP Host Validation pending](#dec-005defer-external-mcp-host-validation-until-a-real-host-is-available)
+- [DEC-007 — First semver lane (`0.1.0-alpha.0`)](#dec-007first-semver-lane)
+- [DEC-008 — Alpha publish may be planned before PR D](#dec-008publish-alpha-before-pr-d-completion)
+- [DEC-009 — Package contents policy](#dec-009package-contents-policy)
+- [DEC-011 — Lock npm package name](#dec-011lock-npm-package-name-to-o-coding-navigation)
+- [`docs/reports/2026-04-29-package-metadata-audit.md`](./reports/2026-04-29-package-metadata-audit.md)
+
+---
+
+### Context
+
+[DEC-007](#dec-007first-semver-lane) selected `0.1.0-alpha.0` as the first semver lane. [DEC-008](#dec-008publish-alpha-before-pr-d-completion) allowed alpha *publish planning* before PR D completes, but forbids any external MCP host compatibility claim until PR D is completed. [DEC-009](#dec-009package-contents-policy) selected an explicit package `files` allowlist. [DEC-011](#dec-011lock-npm-package-name-to-o-coding-navigation) locked the npm package name to `o-coding-navigation`.
+
+The package-metadata PR (PR #18, merged) prepared `package.json` for alpha publishing:
+
+- `name: "o-coding-navigation"`
+- `version: "0.1.0-alpha.0"`
+- `bin: { "ocn", "ocn-mcp" }`
+- `prepublishOnly: "npm run lint && npm run typecheck && npm run test:coverage && npm run build"`
+- `files: ["dist", "LICENSE", "README.md", "docs/quickstart.md", "docs/mcp-usage.md"]`
+- `repository`, `bugs`, `homepage`, `keywords`
+
+The package-metadata audit ([`docs/reports/2026-04-29-package-metadata-audit.md`](./reports/2026-04-29-package-metadata-audit.md)) recorded `npm pack --dry-run` evidence and confirmed the tarball excludes `tests/`, `todos/`, `.ocoding/`, secrets, `docs/plans/`, `docs/reports/`, `docs/amendments/`, `docs/00-08*`, `docs/security/`, `docs/20-decision-log.md`, `src/`, `node_modules/`, and configuration files.
+
+External MCP Host Validation is still pending (DEC-005). DEC-008 permits an alpha publish under that condition only with the verbatim caveat propagated.
+
+### Decision
+
+**Authorise a future, separate npm alpha publish PR.**
+
+The future publish PR may execute:
+
+```bash
+npm publish --tag alpha
+```
+
+…**only if all pre-publish checks below pass immediately before the publish command runs**.
+
+This DEC explicitly does **NOT**:
+
+- execute `npm publish`;
+- create a git tag;
+- create a GitHub release;
+- mutate `package.json` or `package-lock.json`;
+- modify the README install command;
+- allow any claim of verified Claude Desktop / Cursor / Cline compatibility (DEC-005 caveat persists).
+
+Any release-related output drafted under this authorisation **MUST** include the verbatim line:
+
+> External MCP Host Validation pending.
+
+### Required pre-publish checks for the future publish PR
+
+The future publish PR is required to perform and record each of the following, in order, before invoking `npm publish`:
+
+1. **Working-tree clean.**
+   ```bash
+   git status
+   ```
+2. **Sync to latest main.**
+   ```bash
+   git checkout main && git pull
+   ```
+3. **Confirm package name** (must equal `o-coding-navigation`):
+   ```bash
+   node -p "require('./package.json').name"
+   ```
+4. **Confirm package version** (must equal `0.1.0-alpha.0`):
+   ```bash
+   node -p "require('./package.json').version"
+   ```
+5. **Re-run npm name availability check** (defends against R18 — name claimed since DEC-011):
+   ```bash
+   npm view o-coding-navigation name version description repository --json
+   ```
+6. **Stop if step 5 returns package metadata** (i.e. the name now exists). Do NOT publish. Open a name-conflict resolution PR (amendment to DEC-011, new candidate via DEC-006 workflow).
+7. **Run the full local gate stack:**
+   ```bash
+   npm run lint
+   npm run typecheck
+   npm run test
+   npm run test:coverage
+   npm run build
+   ```
+   Any failure halts the publish.
+8. **Confirm tarball shape:**
+   ```bash
+   npm pack --dry-run
+   ```
+   The output must match the DEC-009 allowlist (verified by file-by-file comparison against the known-good list in [`docs/reports/2026-04-29-package-metadata-audit.md`](./reports/2026-04-29-package-metadata-audit.md) §7).
+9. **Confirm tarball does NOT contain forbidden paths** (per DEC-009 + audit §8): `tests/`, `todos/`, `.ocoding/`, secrets, `.env`, `docs/plans/`, `docs/reports/`, `docs/amendments/`, `docs/00-08*`, `docs/security/`, `docs/20-decision-log.md`, `src/`, `node_modules/`, `.git/`, `.github/`, `.husky/`, `coverage/`, `tsconfig*.json`, `eslint.config.*`, `vitest.config.*`.
+10. **Confirm npm identity** (must be the maintainer's account):
+    ```bash
+    npm whoami
+    ```
+11. **Confirm registry URL** (must be the public npm registry):
+    ```bash
+    npm config get registry
+    ```
+    Expected: `https://registry.npmjs.org/`. If a private registry is configured, abort.
+12. **Execute publish** (only after every check above passes):
+    ```bash
+    npm publish --tag alpha
+    ```
+    The `--tag alpha` flag prevents `npm install <package>` from defaulting to this version; users must explicitly opt in via `npm install <package>@alpha`. This is the safe default for pre-1.0 publishes.
+
+The publish PR's body must include the verbatim output of the `npm publish` command, the npm-registry URL of the published package, and the pre-publish check results.
+
+### Options Considered
+
+| # | Option | Rejected because |
+|---|---|---|
+| A | Do not authorise publish until PR D completes | DEC-008 already allowed alpha planning to proceed before PR D completes, on the condition that caveats are explicit and host-compatibility claims are forbidden. Re-deferring publish indefinitely would contradict that decision and stall the package-distribution validation that alpha publish exists to support. |
+| **B** | Authorise a separate alpha publish PR with hard caveats (chosen) | — |
+| C | Publish directly from this DEC PR | A decision PR should not also perform an irreversible package registry mutation. Once published, names and versions cannot be reused. Coupling the decision and the action concentrates blast radius. |
+| D | Wait for beta | Alpha publish is useful precisely for validating package installation, bin wiring (`ocn`, `ocn-mcp`), `files` allowlist correctness, and tarball contents in a real `npm install -g` flow. Delaying to beta loses this validation step. |
+
+### Decision
+
+**Adopt Option B.** A future, separate npm alpha publish PR is authorised, subject to the pre-publish checks above and the DEC-005 caveat.
+
+### Consequences
+
+**Positive:**
+
+- Publish becomes a separate, auditable unit — easy to review, easy to revert (within npm's 72-hour unpublish window for new versions, anyway).
+- The npm registry mutation is isolated from the package-metadata preparation.
+- Alpha users can `npm install -g o-coding-navigation@alpha` once the publish PR completes — testing the real install path, the bin wiring, and the tarball contents in a clean machine context.
+- The project validates package distribution without over-claiming host compatibility.
+- The `--tag alpha` flag means users on `npm install -g o-coding-navigation` (no `@alpha`) do **not** install this version. Only opt-in users do. This is the right gate for a pre-1.0 publish.
+
+**Negative:**
+
+- The npm package becomes public the moment the publish PR runs `npm publish`. Once published, the version cannot be republished (npm forbids re-publishing the same version after unpublish in most cases).
+- Package name reservation only happens at the publish moment. R18 from DEC-011 (name claimed by someone else between DEC and publish) is mitigated by the step-5 re-check above; not eliminated.
+- Any mistake in package metadata at publish time requires a follow-up version (e.g. `0.1.0-alpha.1`) or, in serious cases, a deprecation notice.
+- PR D remains required before any host-compatibility claim. The alpha is honest about this; downstream documentation must remain so.
+
+### Risks
+
+| ID | Risk | Mitigation |
+|----|------|------------|
+| R21 | Step-5 re-check passes, but the name is claimed in the seconds between the check and `npm publish`. | The window is narrow (seconds) and the npm registry's first-write-wins semantics mean the worst case is a clean `npm publish` failure with a 403; the publish PR captures that error and amends DEC-011. |
+| R22 | The future publish PR forgets the `--tag alpha` flag and publishes as `latest`, surfacing the alpha to all users. | The publish PR's pre-publish checklist must verify the exact `npm publish` command before running. Reviewers reject any publish PR that lacks `--tag alpha` until DEC-007 is amended to authorise a non-tagged publish. |
+| R23 | Maintainer's npm account is configured against a non-public registry (corporate, self-hosted), causing the publish to land somewhere unintended. | Step 11's `npm config get registry` check catches this. The publish PR aborts if the registry is not `https://registry.npmjs.org/`. |
+| R24 | Forgetting the DEC-005 caveat in release-related text. | Step 12's PR body requirement (verbatim publish output + caveat) is a checklist line; reviewers reject any publish PR that omits the caveat. |
+
+### Follow-up
+
+The future npm publish PR must:
+
+- Record all required pre-publish checks (steps 1–11 above).
+- Include the verbatim `npm publish --tag alpha` output in the PR description.
+- Include the published package's npm-registry URL.
+- Include the verbatim caveat: *External MCP Host Validation pending.*
+- Avoid creating a GitHub release unless separately authorised (a release is a separate decision; current DEC does not authorise it).
+- Avoid creating a git tag unless separately authorised (tags are a separate decision; current DEC does not authorise them).
+
+After the publish succeeds, a separate documentation PR may:
+
+- Update the README install instructions from `git clone … && npm link` to `npm install -g o-coding-navigation@alpha` (for alpha users) and add a sentence explaining `--tag alpha`.
+- Update `docs/quickstart.md` to reference the published install path.
+- Add an npm package badge (`https://img.shields.io/npm/v/o-coding-navigation?label=npm`) to the README header if desired.
+- This documentation PR is **NOT** authorised by DEC-012. It requires its own review (no DEC needed if it is purely doc, but reviewers must verify the DEC-005 caveat is preserved).
+
+After PR D completes (whenever a real MCP host becomes available), a follow-up doc edit revisits each instance of the DEC-005 caveat and removes it where the evidence now exists.
+
+---
+
+### Cross-cutting note: scope of DEC-012
+
+DEC-012 authorises the *publish action*. It does **NOT** authorise:
+
+- Creating a git tag (`v0.1.0-alpha.0` or any other shape).
+- Creating a GitHub release.
+- Updating README install commands (which would imply the publish has already happened).
+- Removing the DEC-005 caveat from any artifact.
+- Publishing under a tag other than `alpha` (e.g. `latest`, `next`, `beta`).
+- Changing `package.json` or `package-lock.json` in the publish PR (the publish PR runs `npm publish` against the current `main` state; if metadata changes are needed, that's a new package-metadata PR first).
+
+Each of those is a distinct, separately-authorised action. DEC-012 is necessary but not sufficient for any of them.
