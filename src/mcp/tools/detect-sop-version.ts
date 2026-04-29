@@ -1,9 +1,7 @@
 import { z } from "zod";
-import {
-  detectSopVersion,
-  type DetectSopVersionData,
-} from "../../core/sop/detect-version.js";
+import { detectSopVersion, type DetectSopVersionData } from "../../core/sop/detect-version.js";
 import { msg } from "../../core/i18n.js";
+import { validateProjectRoot } from "../../core/security/project-root.js";
 import { mcpBlocked, mcpFromCommandResult, type MCPToolResult } from "../result.js";
 
 export const detectSopVersionInputShape = {
@@ -19,7 +17,11 @@ export const detectSopVersionTool = {
   async handler(args: unknown): Promise<MCPToolResult<DetectSopVersionData>> {
     try {
       const parsed = detectSopVersionSchema.parse(args);
-      const result = await detectSopVersion({ cwd: parsed.projectRoot });
+      const validation = await validateProjectRoot(parsed.projectRoot);
+      if (!validation.ok) {
+        return mcpBlocked(validation.error.code, validation.error.message);
+      }
+      const result = await detectSopVersion({ cwd: validation.projectRoot });
       return mcpFromCommandResult(result);
     } catch (err) {
       return mcpBlocked(

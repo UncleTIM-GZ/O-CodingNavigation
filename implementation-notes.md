@@ -452,4 +452,50 @@ The profile-override implementation announced in DEC-003 is still deferred — o
 
 ---
 
+## 13. GA Prep — PR C Note (2026-04-29)
+
+PR C is the third GA Prep PR. It is a security-hardening PR scoped to the MCP boundary; it adds a centralised `projectRoot` validator, wires it into all 7 allowed MCP tools, ships path-containment helpers, adds 80 new tests across two files, and writes the first OCN threat-model document. **No new product features. No MCP tool surface change. No new MCP tools registered.**
+
+### 13.1 What landed
+
+- **`src/core/security/project-root.ts`** (NEW): centralised seam for `projectRoot` validation.
+  - `validateProjectRoot(input: unknown): Promise<ProjectRootValidationResult>` — checks type, emptiness, null bytes, absolute path, normalisation, existence, directory-ness, realpath resolution, and a defence-in-depth re-stat. Returns a discriminated `{ ok: true, projectRoot: realpath } | { ok: false, error: { code, message } }` envelope. Never throws.
+  - `assertPathInsideRoot(root, target)` — pure, sync, no fs. Verifies a target sits inside a root after normalisation.
+  - `assertResolvedPathInsideRoot(root, target)` — async, symlink-aware. Resolves both paths via `fs.realpath` before the containment check.
+- **MCP tool wiring**: every one of the 7 allowed tools now calls `validateProjectRoot(parsed.projectRoot)` BEFORE the core fn. On failure, returns `mcpBlocked(validation.error.code, validation.error.message)`. On success, the tool passes `validation.projectRoot` (canonical realpath) downstream — never the raw user input.
+- **`docs/security/mcp-threat-model.md`** (NEW): scope, assets, trust boundaries, T-1 through T-11 threats, mitigations summary, residual risks (RR-1 through RR-8), and future work (F-1 through F-9). Out-of-scope explicitly: remote MCP, HTTP/SSE, OCN SaaS, host compromise, OS compromise.
+- **`docs/mcp-usage.md`**: §5 operational guarantees gained item 6 (projectRoot validation). New §5a "Safety boundaries and operating rules" lists what an MCP agent CAN and CANNOT do, the absence of auth / rate limiting / sandbox, and the local-stdio-only constraint. Troubleshooting table updated with the new validator error messages.
+
+### 13.2 Symlink policy
+
+Adopted: **allow** symlinked `projectRoot`, but resolve to canonical realpath. Subsequent core fns operate on the realpath, not the alias. Recorded in `src/core/security/project-root.ts` JSDoc and `docs/security/mcp-threat-model.md` §4 (T-2 mitigation).
+
+### 13.3 Tests added (80 new, 0 modified)
+
+- `tests/unit/project-root-validation.test.ts` — 23 cases across `validateProjectRoot`, `assertPathInsideRoot`, `assertResolvedPathInsideRoot`. Covers non-string, empty, null-byte, relative, non-existent, file-instead-of-dir, valid, normalisation (`..`-segments), symlink-followed, broken-symlink, prefix-collision (`/a/b` vs `/a/bb`), root-symlink-resolution.
+- `tests/security/mcp-projectroot-security.test.ts` — 57 cases. For each of the 7 tools: rejects relative / empty / non-string / non-existent / file-not-dir / null-byte projectRoot. Plus path-traversal containment: `create_artifact` does NOT write outside the project; `capture_log` does NOT write outside the project; `run_gate` does NOT mutate state.json; symlinked projectRoot is allowed and resolves to realpath; symlink-to-file is rejected; forbidden-tool absence reaffirmed; tricky-but-legal `..` segments are accepted after normalisation; symlink directory anchored to realpath.
+
+Full suite after PR C: **394 tests / 63 files / 0 failures** (was 314 / 61 after PR B).
+
+### 13.4 What did NOT change
+
+- No `src/cli/` change.
+- No `src/core/audit/`, `src/core/state/`, `src/core/templates/` change.
+- No `src/core/log/`, `src/core/sop/`, `src/core/prompt/`, `src/core/gate/`, `src/core/advance/` change.
+- No new MCP tool. No HTTP/SSE transport. No auth. No rate limiting (only documented as future work).
+- No frozen `docs/00-08` change. No DEC-003 / DEC-004 revision. No bulk path rewrite.
+- No `package.json` change.
+- No ESLint config change.
+
+### 13.5 GA Prep status after PR C
+
+- ✅ PR A — docs governance.
+- ✅ PR B — README + CLI help.
+- ✅ PR C — MCP `projectRoot` validator + threat model (this PR).
+- ⬜ PR D — External MCP host validation.
+- ⬜ PR E — npm publish gating + CI stability audit.
+- ⬜ PR F — `examples/` directory plan.
+
+---
+
 **END OF NOTES**
