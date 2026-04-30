@@ -7,13 +7,14 @@ import { registerDocCommand } from "./commands/doc.js";
 import { registerGateCommand } from "./commands/gate.js";
 import { registerInitCommand } from "./commands/init.js";
 import { registerStatusCommand } from "./commands/status.js";
+import { PACKAGE_VERSION } from "../version.js";
 
 const program = new Command();
 
 program
   .name("ocn")
   .description("O'CodingNavigator — local-first AI Coding workflow operating system.")
-  .version("0.0.1-alpha.0");
+  .version(PACKAGE_VERSION);
 
 registerInitCommand(program);
 registerStatusCommand(program);

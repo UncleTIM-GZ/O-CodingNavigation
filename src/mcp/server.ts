@@ -1,6 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { setAuditFallbackLogger, silentAuditFallbackLogger } from "../core/audit/index.js";
+import { PACKAGE_VERSION } from "../version.js";
 import { ALLOWED_TOOLS } from "./tools/index.js";
 import { toCallToolResult } from "./result.js";
 
@@ -18,6 +19,15 @@ export interface CreateMcpServerOptions {
   readonly silenceAuditFallback?: boolean;
 }
 
+// P1-004 — MCP server identity is the protocol-level handle and stays "ocn"
+// (separate from the npm package name "o-coding-navigation"). The version,
+// however, must track package.json so MCP hosts and bug reports see the
+// real shipped version rather than a stale literal.
+export const MCP_SERVER_DEFAULT_INFO = Object.freeze({
+  name: "ocn",
+  version: PACKAGE_VERSION,
+});
+
 export function createMcpServer(opts: CreateMcpServerOptions = {}): McpServer {
   if (opts.silenceAuditFallback ?? true) {
     setAuditFallbackLogger(silentAuditFallbackLogger);
@@ -25,8 +35,8 @@ export function createMcpServer(opts: CreateMcpServerOptions = {}): McpServer {
 
   const server = new McpServer(
     {
-      name: opts.name ?? "ocn",
-      version: opts.version ?? "0.0.1-alpha.0",
+      name: opts.name ?? MCP_SERVER_DEFAULT_INFO.name,
+      version: opts.version ?? MCP_SERVER_DEFAULT_INFO.version,
     },
     {
       capabilities: { tools: {} },
