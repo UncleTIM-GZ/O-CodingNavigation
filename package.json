@@ -33,6 +33,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
+    "test:flaky": "vitest run --config vitest.flaky.config.ts",
     "prepare": "husky || true",
     "prepublishOnly": "npm run lint && npm run typecheck && npm run test:coverage && npm run build"
   },

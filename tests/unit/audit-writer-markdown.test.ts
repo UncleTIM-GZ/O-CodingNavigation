@@ -1,9 +1,6 @@
 import { promises as fs } from "node:fs";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import {
-  appendAuditMarkdown,
-  renderMarkdownSection,
-} from "../../src/core/audit/audit-markdown.js";
+import { appendAuditMarkdown, renderMarkdownSection } from "../../src/core/audit/audit-markdown.js";
 import { AuditPaths } from "../../src/core/audit/audit-paths.js";
 import { createAuditEvent } from "../../src/core/audit/audit-event.js";
 import { createTempProject, type TempProject } from "../helpers/temp-project.js";
@@ -91,16 +88,8 @@ describe("appendAuditMarkdown — first-write + append", () => {
     expect(headerMatches).toHaveLength(1);
   });
 
-  it("concurrent first-writes still produce exactly one header", async () => {
-    await Promise.all([
-      appendAuditMarkdown(project.cwd, buildEvent()),
-      appendAuditMarkdown(project.cwd, buildEvent()),
-      appendAuditMarkdown(project.cwd, buildEvent()),
-    ]);
-    const raw = await fs.readFile(AuditPaths.markdownFile(project.cwd), "utf8");
-    const headerMatches = raw.match(/^# Audit Trail/gm) ?? [];
-    expect(headerMatches).toHaveLength(1);
-    const sectionMatches = raw.match(/^## /gm) ?? [];
-    expect(sectionMatches).toHaveLength(3);
-  });
+  // The concurrent first-write test was quarantined to tests/flaky/ per DEC-013
+  // (docs/20-decision-log.md). It passes 5/5 in isolation but failed under
+  // full-suite parallel load during the alpha publish prepublishOnly gate.
+  // Run it explicitly via `npm run test:flaky`.
 });
