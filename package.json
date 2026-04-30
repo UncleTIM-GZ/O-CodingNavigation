@@ -1,6 +1,6 @@
 {
   "name": "o-coding-navigation",
-  "version": "0.1.0-alpha.0",
+  "version": "0.1.0-alpha.1",
   "description": "Local-first AI coding navigation CLI and MCP server with step gates, audit trail, and SOP-aware project state.",
   "type": "module",
   "bin": {
