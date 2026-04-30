@@ -40,6 +40,43 @@ The process speaks JSON-RPC 2.0 over stdin/stdout per the MCP stdio framing. Std
 
 Every tool requires an absolute `projectRoot` argument (the path to an OCN-initialized project). The server itself is project-agnostic; one MCP server can serve any number of OCN projects sequentially.
 
+> External MCP Host Validation pending. The server contract has been verified
+> via local integration tests; real-host validation against Claude Desktop /
+> Cursor / Cline is tracked separately as PR D and has not yet been performed.
+
+### Project root must be initialized｜projectRoot 必须已初始化
+
+All seven OCN MCP tools require `projectRoot` to point to an **initialized OCN project**. A directory is considered initialized when:
+
+1. `<projectRoot>/.ocoding/state.json` exists, and
+2. that file is valid JSON, and
+3. it validates against the `ProjectState` schema.
+
+If the directory is not initialized, every MCP tool returns a structured envelope without performing any side effect (no `docs/` directory is created, no `.ocoding/` directory is created, no audit event is written, no lock is acquired). The envelope shape is:
+
+```jsonc
+{
+  "ok": false,
+  "code": "ERR_IO_OR_CONFIG",
+  "message": {
+    "en": "projectRoot is not an initialized OCN project. Run `ocn init` first.",
+    "zh": "projectRoot 不是已初始化的 OCN 项目。请先运行 `ocn init`。"
+  },
+  "data": {
+    "reason": "state-json-missing"
+    // or "state-json-malformed" / "state-json-schema-invalid" / "invalid-project-root"
+  }
+}
+```
+
+To make a directory usable as `projectRoot`, run:
+
+```bash
+ocn init
+```
+
+inside that directory before calling any MCP tool. This contract closes P1-001 from the post-alpha Codex audit (see [`docs/reports/2026-04-30-post-alpha-codex-audit.md`](./reports/2026-04-30-post-alpha-codex-audit.md)).
+
 ---
 
 ## 2. Allowed tools (7)
@@ -115,6 +152,7 @@ If you need to surface audit-fallback warnings in your MCP host, set a custom lo
 4. **Bilingual messages everywhere.** Every `code` carries an `en` + `zh` string.
 5. **Stable IDs.** Every state, step, section, and artifact ID is a stable string (`state_*`, `step_*`, `section_*`, `artifact_*`) — no numeric pointer leakage.
 6. **`projectRoot` is validated at the boundary** (PR C). The validator rejects non-strings, empty strings, null bytes, relative paths, missing paths, and non-directories before any core fn runs. Symlinks are resolved to canonical realpath, and downstream file operations are anchored to that realpath. See [`docs/security/mcp-threat-model.md`](./security/mcp-threat-model.md) §4 for the full threat list.
+7. **`projectRoot` must be an initialized OCN project** (P1-001). Every MCP tool — read-only and mutating — refuses to act on a directory that does not contain a valid `.ocoding/state.json`. Mutating tools never create `docs/` or `.ocoding/` as a side effect of a rejected call.
 
 ---
 

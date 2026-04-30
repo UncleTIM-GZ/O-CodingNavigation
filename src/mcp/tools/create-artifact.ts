@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { createArtifact, type CreateArtifactData } from "../../core/doc.js";
 import { msg } from "../../core/i18n.js";
-import { validateProjectRoot } from "../../core/security/project-root.js";
+import { validateInitializedProjectRoot } from "../../core/security/project-root.js";
 import { mcpBlocked, mcpFromCommandResult, type MCPToolResult } from "../result.js";
 
 export const createArtifactInputShape = {
@@ -21,9 +21,11 @@ export const createArtifactTool = {
   async handler(args: unknown): Promise<MCPToolResult<CreateArtifactData>> {
     try {
       const parsed = createArtifactSchema.parse(args);
-      const validation = await validateProjectRoot(parsed.projectRoot);
+      const validation = await validateInitializedProjectRoot(parsed.projectRoot);
       if (!validation.ok) {
-        return mcpBlocked(validation.error.code, validation.error.message);
+        return mcpBlocked(validation.error.code, validation.error.message, {
+          reason: validation.error.reason,
+        });
       }
       const result = await createArtifact({
         cwd: validation.projectRoot,
