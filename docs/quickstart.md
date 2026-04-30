@@ -4,9 +4,35 @@
 
 ---
 
-## 1. Install (local)
+## 1. Install
 
-OCN is not on npm yet. Install from source:
+### 1a. Recommended — install the alpha package from npm
+
+```bash
+npm install -g o-coding-navigation@alpha
+```
+
+Then verify both binaries are on your PATH:
+
+```bash
+ocn --version       # 0.1.0-alpha.0
+ocn --help
+ocn-mcp             # starts the MCP stdio server; press Ctrl+C to exit
+```
+
+The MCP server binary `ocn-mcp` is published, but Claude Desktop / Cursor / Cline host validation is **not yet complete** — see [DEC-005](./20-decision-log.md#dec-005defer-external-mcp-host-validation-until-a-real-host-is-available). Treat the published `ocn-mcp` as *implemented* but not as *verified host-compatibility*.
+
+> **External MCP Host Validation pending.**
+
+To uninstall: `npm uninstall -g o-coding-navigation`.
+
+**Prerequisites**: Node.js ≥ 20.
+
+> **dist-tag note**: at the moment, `npm view o-coding-navigation dist-tags` shows both `alpha` and `latest` pointing to `0.1.0-alpha.0` because this is the first published version of the package. Always install with the explicit `@alpha` selector — that decouples your install from any future `latest` movement when a stable `0.1.0` (no `-alpha`) or `1.0.0` lands. See [`docs/reports/2026-04-29-npm-alpha-publish-report.md`](./reports/2026-04-29-npm-alpha-publish-report.md) §9.
+
+### 1b. Alternative — local development from source
+
+If you are developing OCN itself, use the source checkout path instead. This is the contributor path, not the user path.
 
 ```bash
 git clone https://github.com/UncleTIM-GZ/O-CodingNavigation.git
@@ -16,16 +42,14 @@ npm run build
 npm link
 ```
 
-Verify both binaries are on your PATH:
+Verify:
 
 ```bash
-ocn --version       # 0.0.1-alpha.0
-ocn-mcp             # starts and waits for stdio JSON-RPC; press Ctrl+C to exit
+ocn --version
+ocn-mcp
 ```
 
 To uninstall the global links: `cd O-CodingNavigation && npm unlink -g ocn ocn-mcp`.
-
-**Prerequisites**: Node.js ≥ 20.
 
 ---
 
