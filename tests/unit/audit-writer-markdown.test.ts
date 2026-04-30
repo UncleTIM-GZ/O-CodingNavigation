@@ -88,8 +88,18 @@ describe("appendAuditMarkdown — first-write + append", () => {
     expect(headerMatches).toHaveLength(1);
   });
 
-  // The concurrent first-write test was quarantined to tests/flaky/ per DEC-013
-  // (docs/20-decision-log.md). It passes 5/5 in isolation but failed under
-  // full-suite parallel load during the alpha publish prepublishOnly gate.
-  // Run it explicitly via `npm run test:flaky`.
+  // Restored to the default suite by DEC-014 after the underlying first-write
+  // race was fixed via the writeFile-to-tmp + atomic fs.link approach.
+  it("concurrent first-writes still produce exactly one header", async () => {
+    await Promise.all([
+      appendAuditMarkdown(project.cwd, buildEvent()),
+      appendAuditMarkdown(project.cwd, buildEvent()),
+      appendAuditMarkdown(project.cwd, buildEvent()),
+    ]);
+    const raw = await fs.readFile(AuditPaths.markdownFile(project.cwd), "utf8");
+    const headerMatches = raw.match(/^# Audit Trail/gm) ?? [];
+    expect(headerMatches).toHaveLength(1);
+    const sectionMatches = raw.match(/^## /gm) ?? [];
+    expect(sectionMatches).toHaveLength(3);
+  });
 });
