@@ -38,14 +38,16 @@ OCN treats these as the same problem: *the AI coding loop has no rigorous notion
 
 ---
 
-## 3. Current status (Phase 2 Complete)
+## 3. Current status (Phase 2 Complete + alpha published)
 
 | | |
 |---|---|
 | Phase | **Phase 2 Complete** ([DEC-002](./docs/20-decision-log.md#dec-002phase-2-complete-after-mcp-safe-tools)) |
-| Tests | 312 passed across 61 files |
-| Coverage | 83.88% lines / 84.61% branches / 90.40% functions |
-| Public release | Not on npm yet — install via `git clone` (§4) |
+| Tests | 393 passed across 63 files (default suite) |
+| Coverage | 83.44% lines / 85.25% branches / 90.69% functions |
+| npm | published as `o-coding-navigation@0.1.0-alpha.0` ([report](./docs/reports/2026-04-29-npm-alpha-publish-report.md)) |
+| Maturity | **alpha** — not stable, not GA, not production-ready |
+| External host validation | **pending** ([DEC-005](./docs/20-decision-log.md#dec-005defer-external-mcp-host-validation-until-a-real-host-is-available)) |
 | MCP transport | stdio only (HTTP/SSE not started) |
 
 ### ✅ Implemented
@@ -55,29 +57,58 @@ OCN treats these as the same problem: *the AI coding loop has no rigorous notion
 - **Step Artifact Gate**: required-section detection with NFKC-normalised heading match for bilingual `Title｜标题` headings.
 - **State safety**: `.ocoding/.lock` (5s timeout + stale recovery), `state.json.bak` rolling backup, atomic temp-rename writes.
 - **Audit**: dual-track persistence, 16 event types, `correlationId` threading across the entire `ocn advance` event chain.
-- **MCP safe tools**: 7 read/prepare/create/log tools over stdio; 4 forbidden tools never registered (full list in §7).
+- **MCP safe tools**: 7 read/prepare/create/log tools over stdio; 4 forbidden tools never registered (full list in §7); `projectRoot` validator + threat model ([`docs/security/mcp-threat-model.md`](./docs/security/mcp-threat-model.md)).
+- **npm alpha**: package metadata, `prepublishOnly` gate, `files` allowlist, alpha publish on the public registry.
 
 ### ❌ Not implemented (deliberately deferred — see §10)
 
-`ocn doctor`, `ocn reset`, `ocn baseline`, SOP versioning / upgrade, `production` / `full` tiers, mini-CRM dogfood, npm publish, remote MCP transport, MCP auth, examples directory, threat-model document.
+`ocn doctor`, `ocn reset`, `ocn baseline`, SOP versioning / upgrade, `production` / `full` tiers, mini-CRM dogfood, **External MCP Host Validation** (PR D), remote MCP transport, MCP auth, executable `examples/` (only the planning placeholder is in the repo today).
 
 ---
 
-## 4. Install / local setup
+## 4. Install
 
-OCN is **not on npm yet**. Install from source:
+### Recommended: alpha from npm
+
+```bash
+npm install -g o-coding-navigation@alpha
+```
+
+Verify:
+
+```bash
+ocn --help
+ocn-mcp        # starts the MCP stdio server; press Ctrl+C to exit
+```
+
+**Current alpha**:
+
+| Field | Value |
+|---|---|
+| Package | `o-coding-navigation` |
+| Version | `0.1.0-alpha.0` |
+| npm | https://www.npmjs.com/package/o-coding-navigation |
+| Tag | `alpha` |
+
+**Prerequisites**: Node.js ≥ 20 (see `engines` in `package.json`).
+
+> **Note on dist-tags**: npm currently shows both `alpha` and `latest` pointing to `0.1.0-alpha.0` because this is the first published version of the package. Use `@alpha` explicitly until a stable tag is published — the `latest` co-pointing self-corrects on the next non-prerelease publish. See [`docs/reports/2026-04-29-npm-alpha-publish-report.md`](./docs/reports/2026-04-29-npm-alpha-publish-report.md) §9.
+
+> **Pre-GA caveat**: this is an **alpha** release. The package is not stable, not GA, and not production-ready. **External MCP Host Validation is pending** — do **not** treat the alpha as verified Claude Desktop / Cursor / Cline compatibility until external host validation completes. See [DEC-005](./docs/20-decision-log.md#dec-005defer-external-mcp-host-validation-until-a-real-host-is-available).
+
+To uninstall: `npm uninstall -g o-coding-navigation`.
+
+### Alternative: local development from source
+
+For contributing or local development:
 
 ```bash
 git clone https://github.com/UncleTIM-GZ/O-CodingNavigation.git
 cd O-CodingNavigation
 npm install
 npm run build
-npm link
+npm link              # exposes `ocn` and `ocn-mcp` on PATH
 ```
-
-This puts both `ocn` (the CLI) and `ocn-mcp` (the MCP stdio server) on your PATH.
-
-**Prerequisites**: Node.js ≥ 20 (see `engines` in `package.json`).
 
 To uninstall the global links: `cd O-CodingNavigation && npm unlink -g ocn ocn-mcp`.
 
