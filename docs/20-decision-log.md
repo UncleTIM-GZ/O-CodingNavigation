@@ -35,6 +35,7 @@ SOP Profile Version：`0.1.0`
 | DEC-012 | 2026-04-29 | Authorise separate npm alpha publish PR (with mandatory pre-publish checks) | ✅ Approved |
 | DEC-013 | 2026-04-29 | Quarantine audit-markdown concurrent first-write flake from publish gate | ✅ Approved |
 | DEC-014 | 2026-04-30 | Restore audit-markdown concurrency test to default gate (race fixed via writeFile-to-tmp + atomic `fs.link`) | ✅ Approved |
+| DEC-015 | 2026-04-30 | Authorise `0.1.0-alpha.1` patch publish (ships DEC-014 fix to npm alpha users) | ✅ Approved |
 
 ---
 
@@ -1441,3 +1442,192 @@ DEC-014 fixes ONE specific concurrency race and restores ONE specific test. It d
 - Modify any other audit subsystem behaviour. JSONL writer (`audit-jsonl.ts`) was NOT changed.
 - Modify the audit event schema or surface API. `appendAuditMarkdown(root, event): Promise<void>` is unchanged.
 - Authorise publishing a patch version to npm.
+
+---
+
+## DEC-015｜Authorise `0.1.0-alpha.1` Patch Publish
+
+**Date**: 2026-04-30
+**Status**: ✅ Approved
+**Captured by**: Project owner (manual capture — pull mode per CLAUDE.md §4.7)
+**Captured during**: GA Prep post-fix patch-authorisation DEC-only PR
+**Related artifacts**:
+- [DEC-005 — External MCP Host Validation pending](#dec-005defer-external-mcp-host-validation-until-a-real-host-is-available)
+- [DEC-007 — First semver lane (`0.1.0-alpha.0`)](#dec-007first-semver-lane)
+- [DEC-008 — Alpha publish before PR D, with caveat](#dec-008publish-alpha-before-pr-d-completion)
+- [DEC-009 — Package contents policy](#dec-009package-contents-policy)
+- [DEC-011 — Lock npm package name](#dec-011lock-npm-package-name-to-o-coding-navigation)
+- [DEC-012 — Authorise alpha publish PR (with 12-step checklist)](#dec-012authorise-separate-npm-alpha-publish-pr)
+- [DEC-013 — Quarantine audit-markdown concurrent first-write flake](#dec-013quarantine-audit-markdown-concurrent-first-write-flake-from-publish-gate)
+- [DEC-014 — Restore concurrency test to default gate (race fixed)](#dec-014restore-audit-markdown-concurrency-test-to-default-gate)
+- [`docs/reports/2026-04-30-audit-markdown-concurrency-fix.md`](./reports/2026-04-30-audit-markdown-concurrency-fix.md)
+- [`docs/reports/2026-04-29-npm-alpha-publish-report.md`](./reports/2026-04-29-npm-alpha-publish-report.md)
+
+---
+
+### Context
+
+The first npm alpha package was published as `o-coding-navigation@0.1.0-alpha.0` on 2026-04-30T12:48Z under [DEC-012](#dec-012authorise-separate-npm-alpha-publish-pr). That package contains a known concurrency race in `src/core/audit/audit-markdown.ts` — under full-suite parallel load, three concurrent first-writers produce one header but lose two of three event sections. The race is documented in detail in [DEC-013](#dec-013quarantine-audit-markdown-concurrent-first-write-flake-from-publish-gate) and resolved on `main` in [DEC-014](#dec-014restore-audit-markdown-concurrency-test-to-default-gate) via the `writeFile`-to-tmp + atomic `fs.link()` algorithm.
+
+`main` and the published `0.1.0-alpha.0` are now divergent on `src/core/audit/audit-markdown.ts`:
+
+| Surface | State of `appendAuditMarkdown` |
+|---|---|
+| `main` | Fixed via `ensureMarkdownHeader` (writeFile + link). Default suite (394/63) covers the regression. |
+| Published `o-coding-navigation@0.1.0-alpha.0` on npm | Old racy code (`fs.open(file, "wx")` + `handle.writeFile`). Users hitting concurrent first-writers in their own usage will observe missing markdown sections. |
+
+External MCP Host Validation is still pending.
+
+### Decision
+
+**Authorise a future, separate patch-publish PR for `o-coding-navigation@0.1.0-alpha.1`.**
+
+The purpose of `0.1.0-alpha.1` is **narrowly scoped**: ship the DEC-014 audit-markdown concurrency fix to alpha users on npm. Nothing else.
+
+This DEC explicitly does **NOT**:
+
+- Mutate `package.json` or `package-lock.json`.
+- Execute `npm publish`.
+- Create a git tag.
+- Create a GitHub release.
+- Change `README.md` or `docs/quickstart.md` install commands. (Both already say `npm install -g o-coding-navigation@alpha`, which will resolve to whatever the latest `alpha`-tagged version is — including `0.1.0-alpha.1` once published. No README change is needed.)
+- Change `src/`.
+- Change `.github/workflows/`.
+- Lift the [DEC-005](#dec-005defer-external-mcp-host-validation-until-a-real-host-is-available) caveat. The patch publish must continue to declare `External MCP Host Validation pending.`
+
+### Required pre-publish checks for the future `alpha.1` PR
+
+The future patch-publish PR must perform and record each of the following, in order, before invoking `npm publish`:
+
+1. **Sync to latest main** and confirm DEC-014 + the audit-markdown concurrency fix report are present:
+   ```bash
+   git checkout main && git pull
+   grep -n "^## DEC-014" docs/20-decision-log.md
+   test -f docs/reports/2026-04-30-audit-markdown-concurrency-fix.md
+   ```
+2. **Bump version** in `package.json`:
+   ```
+   "version": "0.1.0-alpha.0"  →  "version": "0.1.0-alpha.1"
+   ```
+   Hand-edit; do NOT use `npm version` (that creates a git tag, which is forbidden by this DEC).
+3. **Re-sync `package-lock.json`** via a single `npm install` (no dependency changes expected; only the lockfile's name+version mirror needs to update):
+   ```bash
+   npm install
+   git diff package-lock.json   # must show ONLY name/version sync, no dep graph change
+   ```
+   If the diff shows any dependency added/removed/upgraded/downgraded, abort and investigate before publishing.
+4. **Confirm package name** (must equal `o-coding-navigation`):
+   ```bash
+   node -p "require('./package.json').name"
+   ```
+5. **Confirm package version** (must equal `0.1.0-alpha.1`):
+   ```bash
+   node -p "require('./package.json').version"
+   ```
+6. **Confirm npm registry** (must be `https://registry.npmjs.org/`):
+   ```bash
+   npm config get registry
+   ```
+7. **Confirm npm identity** (must be `uncletimgz` per [DEC-011 R23](#dec-011lock-npm-package-name-to-o-coding-navigation)):
+   ```bash
+   npm whoami
+   ```
+8. **Run the full local gate stack:**
+   ```bash
+   npm run lint
+   npm run typecheck
+   npm run test
+   npm run test:coverage
+   npm run build
+   ```
+   Any failure halts the publish.
+9. **Run the targeted audit-markdown concurrency validation** at least 100 consecutive runs (DEC-014 §Validation requirement):
+   ```bash
+   for i in $(seq 1 100); do
+     npx vitest run tests/unit/audit-writer-markdown.test.ts || exit 1
+   done
+   ```
+   100/100 must pass. Any early exit halts the publish.
+10. **Confirm tarball shape:**
+    ```bash
+    npm pack --dry-run
+    ```
+    File list must match the [DEC-009](#dec-009package-contents-policy) allowlist; forbidden paths must be absent. Compare against [DEC-009 §Decision](#dec-009package-contents-policy) and the [package-metadata audit §6](./reports/2026-04-29-package-metadata-audit.md).
+11. **Confirm forbidden paths absent** in the tarball: `tests/`, `todos/`, `.ocoding/`, secrets, `.env`, `docs/plans/`, `docs/reports/`, `docs/amendments/`, `docs/00-08*`, `docs/security/`, `docs/20-decision-log.md`, `src/`, `node_modules/`, `.git/`, `.github/`, `.husky/`, `coverage/`, `tsconfig*.json`, `eslint.config.*`, `vitest.config.ts`.
+12. **Execute publish** (only after every check above passes):
+    ```bash
+    npm publish --tag alpha
+    ```
+    The `--tag alpha` flag is **mandatory** per [DEC-012 R22](#dec-012authorise-separate-npm-alpha-publish-pr).
+13. **Verify post-publish state:**
+    ```bash
+    npm view o-coding-navigation dist-tags version name --json
+    ```
+    Expected: `dist-tags.alpha = "0.1.0-alpha.1"`. The `latest` tag will likely also move to `0.1.0-alpha.1` (npm's default behaviour when publishing a higher semver to the same package); this matches the npm-alpha-publish report's §9 observation and is acceptable.
+14. **PR body must include**: the verbatim `npm publish` output, the npm registry URL of the new version, the verbatim caveat *"External MCP Host Validation pending."*, and a one-line statement that this is a `0.1.0-alpha.0 → 0.1.0-alpha.1` patch shipping the DEC-014 fix.
+
+### Options Considered
+
+| # | Option | Rejected because |
+|---|---|---|
+| A | Do not publish `alpha.1` | The published `alpha.0` contains a known audit-markdown concurrency race that has already been fixed on `main`. Leaving alpha users on the racy code without recourse is dishonest. |
+| **B** | Publish `alpha.1` as a narrow patch shipping only the DEC-014 fix (chosen) | — |
+| C | Wait for beta to ship the fix | The fix is small, validated, and relevant to alpha users. Beta is gated on PR D, audit-markdown fix, CI matrix expansion, and examples F2/F3 — likely weeks away. Alpha users would be on racy code for that whole window. |
+| D | Publish `alpha.1` and also update README install docs to pin the version explicitly | Unnecessary. The current install command in `README.md §4` and `docs/quickstart.md §1a` is `npm install -g o-coding-navigation@alpha` — the `@alpha` selector resolves to whatever the latest `alpha`-tagged version is. Once `alpha.1` is published with `--tag alpha`, the existing install command starts producing `0.1.0-alpha.1`. No README change required. |
+| E | Use `npm version 0.1.0-alpha.1` to bump | `npm version` creates a git tag by default. Git tags are explicitly forbidden by this DEC and by [DEC-012's cross-cutting note](#dec-012authorise-separate-npm-alpha-publish-pr). The patch-publish PR must hand-edit `package.json`. |
+
+### Decision
+
+**Adopt Option B.** A future, separate patch-publish PR for `o-coding-navigation@0.1.0-alpha.1` is authorised, subject to the 14-step checklist above.
+
+### Consequences
+
+**Positive:**
+
+- npm alpha users (anyone running `npm install -g o-coding-navigation@alpha`) automatically pick up the audit-markdown concurrency fix on their next install/update — no action required from them beyond rerunning the install command.
+- The published alpha aligns with `main`. The "main has a fix that the published package doesn't" anomaly is closed.
+- DEC-013's quarantine is fully closed end-to-end: in the repo (DEC-014, fix lands) AND in the package distribution (DEC-015, fix ships).
+- Follow-up readiness: when PR D eventually completes, the alpha line is on stable footing for a doc-edit caveat removal.
+
+**Negative:**
+
+- Requires another `npm publish` event. npm publishes are visible to anyone watching the registry; the version bump is auditable but small.
+- `latest` will likely move to `0.1.0-alpha.1` when the publish lands. This continues the pattern from the [npm-alpha-publish report §9](./reports/2026-04-29-npm-alpha-publish-report.md) — npm's default behaviour publishes higher semver as `latest` on the same package unless explicitly suppressed. The `--tag alpha` flag does not prevent this when no stable version exists. The patch-publish PR must document this; no surprise.
+- PR D remains pending. Host-compatibility claims remain forbidden. The alpha.1 patch does not unlock any beta-shaped messaging.
+- Anyone who installed `0.1.0-alpha.0` and wrote audit data with the racy code may have a slightly corrupted `docs/22-audit-trail.md` (sections clobbered at concurrent first-writes). The patch fix does not retroactively repair existing files. Users who care can re-run the affected operations after upgrading; the JSONL source of truth (`.ocoding/audit/audit-events.jsonl`) was unaffected by the race.
+
+### Risks
+
+| ID | Risk | Mitigation |
+|----|------|------------|
+| R32 | The patch-publish PR forgets to bump the version, and the publish fails because `0.1.0-alpha.0` already exists. | Step 5 (`node -p "require('./package.json').version"` must equal `0.1.0-alpha.1`) catches this before the publish call. |
+| R33 | Step 9 (100-run targeted validation) is skipped or run as a smaller sample. | Reviewers reject any patch-publish PR that doesn't paste the verbatim 100/100 output (or equivalent counted evidence) into the PR body. |
+| R34 | The patch-publish PR forgets `--tag alpha` and surfaces alpha.1 implicitly under `latest`. | npm has special behaviour for the *first* publish of a package (everything becomes latest), but for *subsequent* publishes, omitting `--tag` defaults to `latest` explicitly. Step 12's command is mandatory: `npm publish --tag alpha`. Reviewers reject any publish PR that lacks the flag. |
+| R35 | Maintainer's bypass-2FA token has expired between alpha.0 and alpha.1. | `npm whoami` (step 7) catches this. If the token expired, the publish PR pauses for the maintainer to refresh credentials before attempting publish. |
+| R36 | A new package on npm with the name `o-coding-navigation` somehow appeared between alpha.0 and alpha.1 (fork, transfer, etc.). | We own the package since alpha.0; this scenario is essentially impossible barring an npm-side incident. The `npm publish` command implicitly verifies maintainer authorisation — if it fails, the publish PR captures the error and stops. |
+
+### Follow-up
+
+The future patch-publish PR must:
+
+- Follow the 14-step checklist in §Required pre-publish checks above.
+- Record verbatim outputs of every step in a new `docs/reports/<DATE>-npm-alpha-1-publish-report.md` (matching the pattern of the existing alpha.0 publish report).
+- NOT create a git tag.
+- NOT create a GitHub release.
+- NOT modify `README.md` or `docs/quickstart.md` install commands.
+- NOT remove the `External MCP Host Validation pending.` caveat from any artifact.
+
+After the patch publish merges, no other follow-up is automatically authorised. `ocn doctor` sweep, beta promotion, PR D execution, examples F2/F3 — each remains gated on its own future DEC entry.
+
+---
+
+### Cross-cutting note: scope of DEC-015
+
+DEC-015 authorises **one** specific patch publish (`alpha.0 → alpha.1`) shipping **one** specific fix (DEC-014's audit-markdown concurrency repair). It does NOT:
+
+- Authorise any other content change in the alpha.1 publish. The version bump is the only `package.json` mutation; the bundled `dist/` reflects `main`'s state at the time of the publish PR.
+- Authorise creating a git tag or GitHub release for `alpha.1`.
+- Authorise any README / quickstart / mcp-usage.md change in the publish PR. Those are separate doc PRs gated on their own decisions (or on PR D's completion).
+- Authorise publishing under any tag other than `alpha`.
+- Authorise removal of the DEC-005 caveat.
+- Authorise any subsequent patch publish (`alpha.2`, etc.). Each future publish requires its own DEC entry.
