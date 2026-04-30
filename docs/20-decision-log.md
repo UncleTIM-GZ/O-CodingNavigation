@@ -34,6 +34,7 @@ SOP Profile Version：`0.1.0`
 | DEC-011 | 2026-04-29 | Lock npm package name to `o-coding-navigation` | ✅ Approved |
 | DEC-012 | 2026-04-29 | Authorise separate npm alpha publish PR (with mandatory pre-publish checks) | ✅ Approved |
 | DEC-013 | 2026-04-29 | Quarantine audit-markdown concurrent first-write flake from publish gate | ✅ Approved |
+| DEC-014 | 2026-04-30 | Restore audit-markdown concurrency test to default gate (race fixed via writeFile-to-tmp + atomic `fs.link`) | ✅ Approved |
 
 ---
 
@@ -1290,3 +1291,153 @@ DEC-013 quarantines **one** specific test on **one** specific failure pattern. I
 - Modify `prepublishOnly`'s gate set (`lint + typecheck + test:coverage + build`). The set stays the same; only the membership of `test:coverage` shrinks by one test file.
 - Modify CI's required-checks. CI continues to run `npm run test:coverage`, which now skips `tests/flaky/`.
 - Authorise creating `tests/flaky/` as a general bucket. R25 specifically forbids this.
+
+---
+
+## DEC-014｜Restore Audit Markdown Concurrency Test to Default Gate
+
+**Date**: 2026-04-30
+**Status**: ✅ Approved
+**Captured by**: Project owner (manual capture — pull mode per CLAUDE.md §4.7)
+**Captured during**: GA Prep audit-markdown concurrency fix PR
+**Related artifacts**:
+- [DEC-013 — Quarantine audit-markdown concurrent first-write flake](#dec-013quarantine-audit-markdown-concurrent-first-write-flake-from-publish-gate)
+- [`docs/reports/2026-04-30-audit-markdown-concurrency-fix.md`](./reports/2026-04-30-audit-markdown-concurrency-fix.md)
+- [`docs/reports/2026-04-29-flaky-test-quarantine.md`](./reports/2026-04-29-flaky-test-quarantine.md) §5 — the suggested patch this DEC supersedes
+
+---
+
+### Context
+
+DEC-013 quarantined the audit markdown concurrent first-write test from the default publish gate because the underlying `appendAuditMarkdown` function had a real concurrency edge case: under full-suite parallel load, three concurrent `Promise.all` first-writers produced one header but lost two of three event sections. The test was correct; the implementation was racy.
+
+The race is now identified precisely. The previous implementation:
+
+```ts
+const handle = await fs.open(file, "wx");
+try { await handle.writeFile(MARKDOWN_HEADER, "utf8"); }
+finally { await handle.close(); }
+// ... EEXIST fall-through ...
+await fs.appendFile(file, section, "utf8");
+```
+
+…uses `fs.open(file, "wx")` to atomically create-or-fail the file, then writes the header through the handle. The atomicity claim is correct for the *open* syscall, but the gap between `open` (which creates a 0-byte file) and `handle.writeFile` (which populates the header) is observable to a concurrent writer:
+
+1. Writer A: `open(wx)` succeeds → empty file exists, A holds handle.
+2. Writer B: `open(wx)` → EEXIST → falls through to `appendFile`.
+3. Writer B: `appendFile` opens the file with `O_APPEND`, sees EOF at offset 0 (file is empty), writes section B at offset 0. File is now 500 bytes containing only section B.
+4. Writer A: `handle.writeFile(MARKDOWN_HEADER)` writes ~200 bytes at handle position 0 (no `O_APPEND`), **overwriting the first 200 bytes of section B**, including its `## ` heading line.
+5. Writer A: `handle.close` and then `appendFile(section A)` → appended at end.
+
+The end result has 1 header + 1 visible `## ` line (section A's), not the expected 3. The test correctly observed this. The flake quarantine report ([`docs/reports/2026-04-29-flaky-test-quarantine.md`](./reports/2026-04-29-flaky-test-quarantine.md) §5) suggested using `fs.writeFile(path, header, { flag: "wx" })`. **That suggested patch has the same race**, because Node.js's `fs.writeFile` is implemented as separate libuv work items (open + write + close); a concurrent writer's `open(wx)` returns EEXIST after the first writer's open creates the empty file, before the first writer's write completes.
+
+### Decision
+
+**Adopt a different fix: `writeFile`-to-tmp + atomic `fs.link()` into place.** The primitive is `link(2)`, which is a single atomic filesystem syscall that either creates a hard link to an inode (success) or fails with EEXIST. Crucially, `link()` only succeeds against a **fully populated** source — the source's inode is fixed at link time, so the target name appears with full content in one atomic transition. There is no observable empty-file window.
+
+Implementation:
+
+```ts
+async function ensureMarkdownHeader(file: string): Promise<void> {
+  // Fast path: file already exists with full header.
+  try { await fs.access(file); return; }
+  catch (err) { if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err; }
+
+  // Slow path: write header to unique tmp, atomically link tmp → file.
+  const tmp = `${file}.${randomUUID()}.tmp`;
+  await fs.writeFile(tmp, MARKDOWN_HEADER, "utf8");
+  try { await fs.link(tmp, file); }
+  catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "EEXIST") throw err;
+    // Another writer linked first; their inode has the full header.
+  }
+  finally { try { await fs.unlink(tmp); } catch {} }
+}
+
+export async function appendAuditMarkdown(root, event): Promise<void> {
+  const file = AuditPaths.markdownFile(root);
+  await fs.mkdir(dirname(file), { recursive: true });
+  await ensureMarkdownHeader(file);
+  await fs.appendFile(file, renderMarkdownSection(event), "utf8");
+}
+```
+
+This guarantees:
+
+1. **Only one header**: any number of concurrent writers each `writeFile` their own tmp + try to `link`; exactly one's link succeeds (others get EEXIST), but every successful link points at a fully-populated header inode. The final file always has exactly one `# Audit Trail` line.
+2. **Every event section appends**: after `ensureMarkdownHeader` returns, the file is non-empty, so concurrent `fs.appendFile(file, section, "utf8")` calls each seek to EOF atomically (kernel-level `O_APPEND` semantics, atomic for writes ≤ PIPE_BUF, our sections are ~500 bytes). Three writers append three distinct sections.
+3. **No process-global lock**: each writer is independent; no in-memory mutex.
+4. **No sleep / retry magic**: there is no polling, no `setTimeout`, no retry loop. All operations are single-shot.
+
+### Options Considered
+
+| # | Option | Rejected because |
+|---|---|---|
+| A | Keep the test quarantined until beta | Concedes that the alpha publish ships with a known concurrency bug. The fix is small; the quarantine is removable now. |
+| B | Delete the test | The test protects an audit-narrative consistency property: every audit event must produce exactly one `## ` heading in the markdown trail. Deleting it removes the regression check for the property we just fixed. |
+| C | Add a `setTimeout(50)` after the open(wx) to "let the write complete" | Timing-based race hiding. Doesn't solve the race, just makes it less likely. Forbidden by the task's hard rules ("不依赖 sleep / setTimeout / arbitrary retry"). |
+| D | Add an in-process mutex (e.g. a `Map<projectRoot, Promise>` chain) | Forbidden by the task's hard rules ("不依赖 process-global in-memory lock"). Also doesn't solve cross-process concurrency, though OCN doesn't currently have multi-process audit writers. |
+| E | The flake quarantine report's suggested patch (`fs.writeFile(path, header, { flag: "wx" })`) | Has the same race as the original `fs.open(wx) + handle.writeFile`. Internally, Node.js's `fs.writeFile` is open + write + close as separate libuv work items; a concurrent writer's `open(wx)` returns EEXIST after the first writer creates the empty file, before the first writer's write completes. Verified by static reading of Node's source; the same overwrite-of-section-B happens. |
+| **F** | **`writeFile`-to-tmp + atomic `fs.link()` into place** (chosen) | — |
+
+### Validation
+
+Required and performed before this DEC was captured:
+
+| Check | Result |
+|---|---|
+| Targeted 100-run validation: `for i in $(seq 1 100); do npx vitest run tests/unit/audit-writer-markdown.test.ts || exit 1; done` | **100 / 100 passed.** No early exit. |
+| `npm run lint` | ✅ clean |
+| `npm run typecheck` | ✅ clean |
+| `npm run test` (default suite) | ✅ **394 passed across 63 files** (was 393 under the quarantine; the restored test bumps it back to 394) |
+| `npm run test:coverage` | ✅ 394 / 63; 83.45% lines / 85.06% branches / 90.76% functions (above thresholds 70 / 60 / 70 / 70) |
+| `npm run build` | ✅ clean |
+| `package.json` `test:flaky` script | removed (`node -p "require('./package.json').scripts['test:flaky']"` → `undefined`) |
+| `vitest.flaky.config.ts` | removed |
+| `tests/flaky/` directory | removed |
+| `vitest.config.ts` `tests/flaky/**` exclude | removed |
+
+### Consequences
+
+**Positive:**
+
+- The default publish gate now once again covers the audit-markdown concurrent first-write property.
+- DEC-013 quarantine is **resolved**: the test is back in `tests/unit/`, runs by default, and passes deterministically.
+- `tests/flaky/` and the `test:flaky` script are removed from the repo. No special infrastructure needed for tests that were thought to be flaky.
+- Beta readiness improves — one less quarantined test.
+
+**Negative:**
+
+- The fix relies on `fs.link()` (POSIX `link(2)`). Available on Linux, macOS, and modern Windows (NTFS hardlinks). Exotic filesystems (FAT32, some network filesystems) may not support hard links. OCN's `engines.node ≥ 20` plus the Node.js docs for `fs.link` cover all common platforms; if a user runs OCN on FAT32, they will get an error on first audit write — a clear failure mode, not a silent corruption.
+- The slow path performs one extra write (the tmp file) and one extra unlink per first-write. Negligible cost relative to the alternatives, and only on the very first audit event for a project. The fast path (`fs.access`) skips the link dance entirely after the file exists.
+- The markdown narrative remains best-effort vs the JSONL source of truth — that contract is unchanged. JSONL is still authoritative; the markdown is a human-readable mirror.
+
+### Risks
+
+| ID | Risk | Mitigation |
+|----|------|------------|
+| R29 | Filesystem doesn't support hard links (e.g. FAT32). | Documented in §Consequences. Failure mode is a clear error on first audit write, not silent corruption. Future work may add a fallback path using `rename(tmp, file)` (also atomic, but with different EEXIST semantics — accepts overwrite). Out of scope here. |
+| R30 | Tmp file leaks if the process crashes between `writeFile(tmp)` and `unlink(tmp)`. | The tmp uses a `randomUUID()` suffix, so collisions across crashes are negligible. The `.ocoding/audit/` directory may accumulate stale `*.tmp` files; future `ocn doctor` work can sweep them. Not a correctness issue. |
+| R31 | A future contributor reverts the fix, reintroducing the race. | DEC-014's §Decision contains the explicit `writeFile`-to-tmp + `fs.link` algorithm. The default suite includes the regression test. The CI Stability Audit F-2 finding is still on record. |
+
+### Follow-up
+
+This DEC does **NOT** authorise:
+
+- `npm publish` — the fix lands on `main`; whether to ship a `0.1.0-alpha.1` (or any subsequent) version requires its own DEC entry per [DEC-012](#dec-012authorise-separate-npm-alpha-publish-pr) §Cross-cutting note.
+- `npm version` — package version stays at `0.1.0-alpha.0` on `main`.
+- A git tag or GitHub release.
+- README install-command updates.
+
+External MCP Host Validation pending. Do not claim verified Claude Desktop / Cursor / Cline compatibility until PR D completes.
+
+---
+
+### Cross-cutting note: scope of DEC-014
+
+DEC-014 fixes ONE specific concurrency race and restores ONE specific test. It does **NOT**:
+
+- Authorise mass un-quarantine of other tests (there are none today; `tests/flaky/` is removed).
+- Modify any other audit subsystem behaviour. JSONL writer (`audit-jsonl.ts`) was NOT changed.
+- Modify the audit event schema or surface API. `appendAuditMarkdown(root, event): Promise<void>` is unchanged.
+- Authorise publishing a patch version to npm.
