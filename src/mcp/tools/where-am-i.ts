@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { getStatus, type StatusData } from "../../core/status.js";
 import { msg } from "../../core/i18n.js";
-import { validateProjectRoot } from "../../core/security/project-root.js";
+import { validateInitializedProjectRoot } from "../../core/security/project-root.js";
 import { mcpBlocked, mcpFromCommandResult, type MCPToolResult } from "../result.js";
 
 export const whereAmIInputShape = {
@@ -16,9 +16,11 @@ export const whereAmI = {
   async handler(args: unknown): Promise<MCPToolResult<StatusData>> {
     try {
       const parsed = whereAmISchema.parse(args);
-      const validation = await validateProjectRoot(parsed.projectRoot);
+      const validation = await validateInitializedProjectRoot(parsed.projectRoot);
       if (!validation.ok) {
-        return mcpBlocked(validation.error.code, validation.error.message);
+        return mcpBlocked(validation.error.code, validation.error.message, {
+          reason: validation.error.reason,
+        });
       }
       const result = await getStatus({ cwd: validation.projectRoot });
       return mcpFromCommandResult(result);

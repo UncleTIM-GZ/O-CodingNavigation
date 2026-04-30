@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { generateBrief, type BriefData } from "../../core/brief.js";
 import { msg } from "../../core/i18n.js";
-import { validateProjectRoot } from "../../core/security/project-root.js";
+import { validateInitializedProjectRoot } from "../../core/security/project-root.js";
 import { mcpBlocked, mcpFromCommandResult, type MCPToolResult } from "../result.js";
 
 export const briefInputShape = {
@@ -17,9 +17,11 @@ export const brief = {
   async handler(args: unknown): Promise<MCPToolResult<BriefData>> {
     try {
       const parsed = briefSchema.parse(args);
-      const validation = await validateProjectRoot(parsed.projectRoot);
+      const validation = await validateInitializedProjectRoot(parsed.projectRoot);
       if (!validation.ok) {
-        return mcpBlocked(validation.error.code, validation.error.message);
+        return mcpBlocked(validation.error.code, validation.error.message, {
+          reason: validation.error.reason,
+        });
       }
       const result = await generateBrief({ cwd: validation.projectRoot });
       return mcpFromCommandResult(result);
