@@ -33,6 +33,7 @@ SOP Profile Version：`0.1.0`
 | DEC-010 | 2026-04-29 | CI matrix policy: single-cell `ubuntu-latest` + Node 20 for alpha; expand at beta | ✅ Approved |
 | DEC-011 | 2026-04-29 | Lock npm package name to `o-coding-navigation` | ✅ Approved |
 | DEC-012 | 2026-04-29 | Authorise separate npm alpha publish PR (with mandatory pre-publish checks) | ✅ Approved |
+| DEC-013 | 2026-04-29 | Quarantine audit-markdown concurrent first-write flake from publish gate | ✅ Approved |
 
 ---
 
@@ -1169,3 +1170,123 @@ DEC-012 authorises the *publish action*. It does **NOT** authorise:
 - Changing `package.json` or `package-lock.json` in the publish PR (the publish PR runs `npm publish` against the current `main` state; if metadata changes are needed, that's a new package-metadata PR first).
 
 Each of those is a distinct, separately-authorised action. DEC-012 is necessary but not sufficient for any of them.
+
+---
+
+## DEC-013｜Quarantine Audit Markdown Concurrent First-Write Flake from Publish Gate
+
+**Date**: 2026-04-29
+**Status**: ✅ Approved
+**Captured by**: Project owner (manual capture — pull mode per CLAUDE.md §4.7)
+**Captured during**: GA Prep flake-quarantine PR (after the second alpha publish attempt was blocked by `prepublishOnly`)
+**Related artifacts**:
+- [DEC-012 — Authorise separate npm alpha publish PR](#dec-012authorise-separate-npm-alpha-publish-pr)
+- [`docs/reports/2026-04-29-ci-stability-audit.md`](./reports/2026-04-29-ci-stability-audit.md) §11 finding **F-2** (push-to-main `Test with coverage` flake) and §12 (recommendation to quarantine on third occurrence)
+
+---
+
+### Context
+
+The npm alpha publish authorised by [DEC-012](#dec-012authorise-separate-npm-alpha-publish-pr) was attempted twice. Neither attempt reached the registry:
+
+1. **Attempt 1** — blocked at npm registry by HTTP 403 (2FA gate). Recovered: maintainer added a granular access token with bypass-2FA enabled.
+2. **Attempt 2** — blocked at the local `prepublishOnly` gate during `npm run test:coverage`. **One** test failed:
+   - File: `tests/unit/audit-writer-markdown.test.ts`
+   - Test: `appendAuditMarkdown — first-write + append > concurrent first-writes still produce exactly one header`
+   - Symptom: `expected [ '## ' ] to have a length of 3 but got 1` — i.e. only one of the three concurrent appends produced a section under contention.
+
+Observed behaviour:
+
+- The test passes **5/5 in isolation** (just-verified by running `npx vitest run tests/unit/audit-writer-markdown.test.ts` five times consecutively after the failure).
+- The test failed under full-suite parallel load (`vitest run --coverage` with `pool: forks`).
+- Two prior failures of the same `Test with coverage` step on push-to-`main` events (PR #8 merge `598b63c`, PR #10 merge `114db5e`) were already recorded in the [CI Stability Audit §11 F-2](./reports/2026-04-29-ci-stability-audit.md). This local failure during alpha publish is **the third observation of the same pattern**, which the audit's §12 explicitly identified as the trigger for quarantine.
+
+The test asserts a real concurrency property of `appendAuditMarkdown`: when three first-writers race, exactly one must create the `# Audit Trail` header AND each must contribute a `## ` section heading. The race exists in the implementation (file existence is detected via `fs.stat` before `fs.appendFile` — a TOCTOU window). Under contention, multiple callers can decide "the file does not exist" simultaneously, and depending on Node's append ordering only one ends up writing both header and section while the others write nothing observable.
+
+The failure is therefore a **real concurrency edge case** in the implementation, not a bug in the test. The test correctly exercises the race; the implementation is flaky under load. Fixing the implementation requires non-trivial work (e.g. an exclusive-create handshake or a write-side lock around the audit markdown file), which is out of scope for an alpha publish PR.
+
+### Decision
+
+**Quarantine the flaky concurrent markdown first-write test from the default publish gate.**
+
+Concretely:
+
+1. **Move** the failing test from `tests/unit/audit-writer-markdown.test.ts` to a new file at `tests/flaky/audit-writer-markdown-concurrent-first-write.test.ts`. The test is **NOT deleted**.
+2. **Exclude** `tests/flaky/**` from `vitest.config.ts`'s default `include` via the `exclude` field. Default `npm run test` and `npm run test:coverage` no longer execute it.
+3. **Add** a separate vitest config at `vitest.flaky.config.ts` that includes only `tests/flaky/**`.
+4. **Add** a `test:flaky` script to `package.json` that runs the quarantined suite via the new config: `vitest run --config vitest.flaky.config.ts`.
+5. **`prepublishOnly`** continues to run `lint + typecheck + test:coverage + build`. It does **NOT** include `test:flaky`. The publish gate is therefore deterministic.
+
+The test remains:
+
+- ✅ Discoverable by anyone reading `tests/flaky/`.
+- ✅ Runnable via `npm run test:flaky`.
+- ✅ A fixed reference for the concurrency edge case it documents.
+- ❌ NOT a publish blocker.
+- ❌ NOT in default CI runs (CI runs `npm run test:coverage` per `.github/workflows/ci.yml` — that script no longer touches `tests/flaky/`).
+
+The other 6 tests in the original `tests/unit/audit-writer-markdown.test.ts` file remain in place — they are deterministic and continue to gate the publish.
+
+### Options Considered
+
+| # | Option | Rejected because |
+|---|---|---|
+| A | Leave the flaky test in the publish gate | Blocks alpha publish indefinitely with a known non-deterministic failure. Creates noise unrelated to package correctness. |
+| B | Delete the test | The test captures a real concurrency edge case in `appendAuditMarkdown`. Deleting it removes evidence of an open issue and forecloses fixing it later. |
+| C | Mark the test `.skip` in place | Plain `.skip` hides the test from intentional execution. Loses the ability to run it on demand without manually editing the file. |
+| **D** | **Move the test to an explicit flaky/concurrency suite + add a dedicated runner script** (chosen) | — |
+| E | Bypass `prepublishOnly` with `npm publish --ignore-scripts` | Violates the intent of [DEC-012](#dec-012authorise-separate-npm-alpha-publish-pr). The release gate exists for a reason; bypassing it once normalises bypassing it again. |
+| F | Add `retry: 3` to the test | Masks the underlying race. Tests don't get retries in production code paths; if the test needs three attempts to be green, the production code is broken. |
+
+### Decision
+
+**Adopt Option D.** The mechanical changes are listed in the four-step plan above (see §Decision). The flaky test stays as evidence; the publish gate becomes deterministic.
+
+### Consequences
+
+**Positive:**
+
+- Publish gate becomes deterministic enough for alpha publish (DEC-012's `prepublishOnly` no longer trips on this test).
+- The concurrency test is preserved as an explicit investigation target — discoverable in `tests/flaky/`, runnable via `npm run test:flaky`.
+- The remediation matches [CI Stability Audit §12 F-2 recommendation](./reports/2026-04-29-ci-stability-audit.md#11-findings) ("if a third occurrence is observed … quarantine the offending test").
+- No registry mutation occurs; the publish itself remains gated by DEC-012's checklist.
+
+**Negative:**
+
+- A real concurrency edge case is no longer checked by the default suite. Beta or GA must either fix the underlying race in `src/core/audit/audit-markdown.ts` (TOCTOU window between `fs.stat` and `fs.appendFile`) or run `tests/flaky/` as a separate required check.
+- The project now has a `tests/flaky/` directory. This must be a **rare** category — quarantine should require a DEC entry for each addition, otherwise it becomes a dumping ground.
+- A future contributor reading the codebase may not realise the race exists in `appendAuditMarkdown` until they look at `tests/flaky/`. The test file's header comment + this DEC entry mitigate this; an additional inline TODO in `src/core/audit/audit-markdown.ts` is OPTIONAL and not in scope for this PR.
+
+### Risks
+
+| ID | Risk | Mitigation |
+|----|------|------------|
+| R25 | `tests/flaky/` becomes a dumping ground; tests get quarantined without proper diagnosis. | Each addition to `tests/flaky/` requires a new DEC entry that records the failure mode, the isolation-pass/full-suite-flake evidence, and the follow-up fix plan. Reviewers reject any quarantine PR without this. |
+| R26 | The underlying concurrency race in `appendAuditMarkdown` is forgotten. | This DEC's §Follow-up enumerates the fix path. The quarantined test file's header comment links to this DEC. |
+| R27 | Beta or GA ships with the race unfixed. | A future DEC blocking beta promotion must include "fix or empty `tests/flaky/`" as a precondition. |
+| R28 | `test:flaky` is added to a CI required-check by mistake, blocking unrelated PRs on flake. | The new vitest.flaky.config.ts and DEC text both explicitly forbid this. CI workflow audit (PR #14 / future workflow PR) must verify `test:flaky` is NOT in CI required-checks. |
+
+### Follow-up
+
+Create a follow-up issue or TODO for **after** alpha publish:
+
+- **Fix audit markdown concurrent first-write determinism.** Likely approach: replace the `fs.stat`-then-`appendFile` race with an exclusive-create handshake — try `fs.open(path, 'wx')` for the header write; on `EEXIST`, skip header and append section only. This eliminates the TOCTOU window deterministically.
+- **Re-enable** the test in the default suite once the underlying code is deterministic. Move it back from `tests/flaky/` to `tests/unit/`. Capture the move in a follow-up DEC if the project is far enough along to warrant one.
+- **Optional**: run the concurrency suite (`npm run test:flaky`) in a nightly CI workflow rather than a required-check on every PR. Out of scope for this DEC; would be its own GitHub Actions workflow PR.
+
+This decision does **NOT** authorise `npm publish`. DEC-012 already authorises the publish; this DEC is the precondition that makes DEC-012's `prepublishOnly` gate green. After this DEC merges, the alpha publish is **re-attemptable** under the same DEC-012 12-step checklist.
+
+> External MCP Host Validation pending.
+> Do not claim verified Claude Desktop / Cursor / Cline compatibility until PR D completes.
+
+---
+
+### Cross-cutting note: scope of DEC-013
+
+DEC-013 quarantines **one** specific test on **one** specific failure pattern. It does NOT:
+
+- Authorise quarantining other tests reactively. Each future quarantine requires its own DEC.
+- Authorise `npm publish` (DEC-012 already did, subject to its checklist).
+- Modify `prepublishOnly`'s gate set (`lint + typecheck + test:coverage + build`). The set stays the same; only the membership of `test:coverage` shrinks by one test file.
+- Modify CI's required-checks. CI continues to run `npm run test:coverage`, which now skips `tests/flaky/`.
+- Authorise creating `tests/flaky/` as a general bucket. R25 specifically forbids this.
