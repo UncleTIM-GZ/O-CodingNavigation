@@ -2,7 +2,7 @@ import { promises as fs } from "node:fs";
 import { dirname, join } from "node:path";
 import { Paths } from "../paths.js";
 import { ProjectState } from "../../types/state.js";
-import { withLock } from "./lock.js";
+import { withLock, type LockLifecycleHook } from "./lock.js";
 
 // PR #2 — State Safety Foundation. Resolves implementation-notes.md L1 + L10.
 // All `state.json` mutations now flow through `writeStateAtomic`:
@@ -75,10 +75,7 @@ async function pathExists(p: string): Promise<boolean> {
  *   - failure BEFORE rename → state.json untouched (we wrote to a temp file)
  *   - failure AFTER rename  → state committed; audit will record in PR #3
  */
-export async function writeStateUnlocked(
-  root: string,
-  state: ProjectState,
-): Promise<void> {
+export async function writeStateUnlocked(root: string, state: ProjectState): Promise<void> {
   const file = Paths.stateFile(root);
   await fs.mkdir(dirname(file), { recursive: true });
   if (await pathExists(file)) {
@@ -100,6 +97,13 @@ export interface WriteStateOptions {
   readonly retryIntervalMs?: number;
   readonly timeoutMs?: number;
   readonly staleThresholdMs?: number;
+  /** Optional lock lifecycle hook. Symmetric with `acquireLock` / `withLock`
+   *  and the way `init.ts` / `advance-state.ts` already thread `lifecycle`
+   *  through their outer locks. Lets callers (and tests) observe acquire /
+   *  release / timeout / stale-recovery deterministically instead of polling
+   *  the lock file on disk. Hook errors are swallowed by `runHook` inside
+   *  `lock.ts`, so the lock contract is preserved. */
+  readonly lifecycle?: LockLifecycleHook;
 }
 
 /**
@@ -122,6 +126,7 @@ export async function writeStateAtomic(
       ...(opts.retryIntervalMs !== undefined ? { retryIntervalMs: opts.retryIntervalMs } : {}),
       ...(opts.timeoutMs !== undefined ? { timeoutMs: opts.timeoutMs } : {}),
       ...(opts.staleThresholdMs !== undefined ? { staleThresholdMs: opts.staleThresholdMs } : {}),
+      ...(opts.lifecycle !== undefined ? { lifecycle: opts.lifecycle } : {}),
     },
     async () => {
       await writeStateUnlocked(root, state);
