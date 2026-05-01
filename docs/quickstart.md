@@ -28,7 +28,7 @@ To uninstall: `npm uninstall -g o-coding-navigation`.
 
 **Prerequisites**: Node.js ≥ 20.
 
-> **dist-tag note**: at the moment, `npm view o-coding-navigation dist-tags` shows both `alpha` and `latest` pointing to `0.1.0-alpha.0` because this is the first published version of the package. Always install with the explicit `@alpha` selector — that decouples your install from any future `latest` movement when a stable `0.1.0` (no `-alpha`) or `1.0.0` lands. See [`docs/reports/2026-04-29-npm-alpha-publish-report.md`](./reports/2026-04-29-npm-alpha-publish-report.md) §9.
+> **dist-tag note**: per [DEC-020](./20-decision-log.md), `latest` remains intentionally unchanged at `0.1.0-alpha.0` while `alpha` resolves to the post-P1-fix-train `0.1.0-alpha.2`. Always install with the explicit `@alpha` selector — `latest` will only move when a future beta promotion DEC explicitly authorises it. Verified by [`reports/2026-05-01-npm-global-install-smoke.md`](./reports/2026-05-01-npm-global-install-smoke.md).
 
 ### 1b. Alternative — local development from source
 

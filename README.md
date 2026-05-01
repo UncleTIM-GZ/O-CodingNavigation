@@ -92,7 +92,7 @@ ocn-mcp        # starts the MCP stdio server; press Ctrl+C to exit
 
 **Prerequisites**: Node.js ≥ 20 (see `engines` in `package.json`).
 
-> **Note on dist-tags**: npm currently shows both `alpha` and `latest` pointing to `0.1.0-alpha.0` because this is the first published version of the package. Use `@alpha` explicitly until a stable tag is published — the `latest` co-pointing self-corrects on the next non-prerelease publish. See [`docs/reports/2026-04-29-npm-alpha-publish-report.md`](./docs/reports/2026-04-29-npm-alpha-publish-report.md) §9.
+> **Note on dist-tags**: per [DEC-020](./docs/20-decision-log.md), `latest` remains intentionally unchanged at `0.1.0-alpha.0` (the historical first publish) while `alpha` resolves to the post-P1-fix-train `0.1.0-alpha.2`. **Always install with the explicit `@alpha` selector** — `latest` will only move when a future beta promotion DEC explicitly authorises it. See [DEC-020](./docs/20-decision-log.md), [`docs/reports/2026-05-01-npm-global-install-smoke.md`](./docs/reports/2026-05-01-npm-global-install-smoke.md), and [`docs/reports/2026-04-30-npm-alpha-2-publish-report.md`](./docs/reports/2026-04-30-npm-alpha-2-publish-report.md).
 
 > **Pre-GA caveat**: this is an **alpha** release. The package is not stable, not GA, and not production-ready. **MCP Host validation completed for Claude Desktop on Windows with WSL2** (per [DEC-017](./docs/20-decision-log.md) and [`docs/reports/2026-04-30-mcp-external-host-validation-report.md`](./docs/reports/2026-04-30-mcp-external-host-validation-report.md)); **Cursor and Cline remain unverified** in this release. See [DEC-005](./docs/20-decision-log.md#dec-005defer-external-mcp-host-validation-until-a-real-host-is-available) for the historical caveat.
 
@@ -169,7 +169,7 @@ All commands accept `--json` to emit a machine-readable `CommandResult` envelope
 
 ## 7. MCP tools
 
-OCN's MCP server (`ocn-mcp`) exposes 7 tools over stdio transport. Wire it into any MCP-aware host (e.g. Claude Desktop, Cursor, Cline).
+OCN's MCP server (`ocn-mcp`) exposes 7 tools over stdio transport. **Wire it into Claude Desktop on Windows with WSL2** — that is the validated Host (per [DEC-017](./docs/20-decision-log.md) and [`docs/reports/2026-04-30-mcp-external-host-validation-report.md`](./docs/reports/2026-04-30-mcp-external-host-validation-report.md)). Cursor and Cline are MCP-aware but are **not yet verified** for OCN — see [DEC-019](./docs/20-decision-log.md) for the support boundary; do not treat them as supported until each has its own validation report.
 
 ### Allowed (7)
 
