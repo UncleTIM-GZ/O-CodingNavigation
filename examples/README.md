@@ -1,20 +1,24 @@
 # OCN Examples｜OCN 示例
 
-This directory will contain small, inspectable OCN example projects.
+This directory contains small, inspectable OCN example projects.
 
 ## Current status
 
-- `examples/` is **planned but not yet populated** with a full executable example.
-- External MCP Host Validation is **pending** per [DEC-005](../docs/20-decision-log.md#dec-005defer-external-mcp-host-validation-until-a-real-host-is-available).
-- Do **NOT** treat this directory as dogfood evidence or as a verified-host showcase.
+- **`discovery-to-plan/`** — present. Compact, executable example that walks an OCN project from `state_discovery` through `state_plan` using the documented CLI surface. See [`discovery-to-plan/README.md`](./discovery-to-plan/README.md) and the smoke script under `discovery-to-plan/scripts/smoke.sh`.
+- MCP Host validation is **scoped**: Claude Desktop on Windows with WSL2 is validated per [DEC-017](../docs/20-decision-log.md) and [`docs/reports/2026-04-30-mcp-external-host-validation-report.md`](../docs/reports/2026-04-30-mcp-external-host-validation-report.md). **Cursor and Cline are not yet verified** per [DEC-019](../docs/20-decision-log.md). Examples in this directory must not claim support for unverified Hosts.
 
-## Planned first example
+## Planned next examples
 
-- **`examples/discovery-to-plan/`** — a compact, domain-neutral OCN project that demonstrates the workflow from DISCOVERY through PLAN. Not yet present; lands in a follow-up implementation PR (Phase F2 → F3 in the plan below).
+Per the original PR F plan, the next examples (out of scope for the current implementation PR) are:
+
+- A second flow-style example walking SPEC → BUILD once `state_build` step IDs land in a future SOP profile version.
+- A domain-flavoured "real" example after a Cursor or Cline validation closure DEC widens the Host support boundary.
+
+Each future example requires its own implementation PR with the same constraints (no `.ocoding/` committed; Host claims scoped to validated Hosts only; no `npm publish` side effects).
 
 ## Plan
 
-Full directory structure, content policy, phasing (F1 → F4), DEC-003 / DEC-005 constraints, risks, and follow-up decisions are recorded in:
+Full directory structure, content policy, phasing (F1 → F4), DEC constraints, risks, and follow-up decisions are recorded in:
 
 - [`docs/plans/2026-04-29-ga-prep-pr-f-examples-directory-plan.md`](../docs/plans/2026-04-29-ga-prep-pr-f-examples-directory-plan.md)
 
@@ -23,4 +27,4 @@ Full directory structure, content policy, phasing (F1 → F4), DEC-003 / DEC-005
 - Not a replacement for [`README.md`](../README.md).
 - Not a replacement for [`docs/quickstart.md`](../docs/quickstart.md).
 - Not the mini-CRM dogfood track (that work is deferred behind its own DEC).
-- Not a host-compatibility statement. Until [PR D](../docs/plans/2026-04-28-ga-prep-gap-review-plan.md#33-mcp-usage-external-host-validation) completes, no example may claim Claude Desktop / Cursor / Cline verified compatibility.
+- Not a Cursor / Cline host-compatibility statement. Examples may name Claude Desktop on Windows with WSL2 as validated, but must not claim Cursor or Cline verified compatibility until each Host has its own validation report following the [DEC-017](../docs/20-decision-log.md) pattern.
