@@ -15,14 +15,25 @@ permissions:
 
 jobs:
   build:
+    name: build (node ${{ matrix.node-version }})
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    strategy:
+      # DEC-018 prerequisite: surface Node 22 issues even when Node 20 is green
+      # (or vice versa). Treat each Node version as a first-class signal.
+      fail-fast: false
+      matrix:
+        node-version: [20, 22]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: ${{ matrix.node-version }}
           cache: npm
+      - name: Print runtime versions
+        run: |
+          node --version
+          npm --version
       - name: Install dependencies
         run: npm ci
       - name: Lint
@@ -37,5 +48,8 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: coverage
+          # actions/upload-artifact@v4 forbids duplicate artifact names inside
+          # the same workflow run; suffix the matrix Node version so each cell
+          # uploads under a unique artifact.
+          name: coverage-node-${{ matrix.node-version }}
           path: coverage/
