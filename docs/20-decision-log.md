@@ -37,6 +37,8 @@ SOP Profile Version：`0.1.0`
 | DEC-014 | 2026-04-30 | Restore audit-markdown concurrency test to default gate (race fixed via writeFile-to-tmp + atomic `fs.link`) | ✅ Approved |
 | DEC-015 | 2026-04-30 | Authorise `0.1.0-alpha.1` patch publish (ships DEC-014 fix to npm alpha users) | ✅ Approved |
 | DEC-016 | 2026-04-30 | Authorise future `0.1.0-alpha.2` P1 fix train publish (ships P1-001/002/003/004 to npm alpha users) | ✅ Approved |
+| DEC-017 | 2026-04-30 | Close Claude Desktop MCP Host validation caveat (DEC-005 superseded for Claude Desktop only; Cursor/Cline still unverified) | ✅ Approved |
+| DEC-018 | 2026-04-30 | Begin beta candidate preparation (no beta promotion authorised; gated on a future DEC and prerequisite PRs) | ✅ Approved |
 
 ---
 
@@ -1785,3 +1787,216 @@ A future alpha.2 publish PR must:
 - not remove the caveat
 
 External MCP Host Validation pending.
+
+---
+
+## DEC-017｜Close Claude Desktop MCP Host Validation Caveat
+
+Date: 2026-04-30
+
+### Status
+
+Accepted.
+
+### Context
+
+DEC-005 introduced the `External MCP Host Validation pending.` caveat because OCN's MCP server had not been validated in any real MCP Host. PR D, kicked off after the alpha.2 P1 fix train was published, validated OCN's MCP stdio server in **Claude Desktop on Windows with WSL2** using:
+
+```
+wsl.exe -e node /home/timou/repos/OCN/dist/mcp/index.js
+```
+
+The validation evidence — Host transcripts, tool-list verification, raw envelopes for `navigator.where_am_i` / `navigator.brief` / `navigator.run_gate`, the structured-failure path for an invalid `projectRoot`, and a Host-side protocol-cleanliness statement — is recorded in:
+
+`docs/reports/2026-04-30-mcp-external-host-validation-report.md`
+
+The verdict in §9 of that report is **Pass** across 11 / 11 checks.
+
+### Decision
+
+Remove the **active user-facing** pending caveat where it referred to Claude Desktop validation, and replace it with a Host-scoped statement of completion:
+
+> MCP Host validation completed for Claude Desktop on Windows with WSL2. Cursor and Cline remain unverified.
+
+This decision applies to:
+
+- `README.md` §1 install caveat banner and §"GA Prep" PR D status entry.
+- `docs/quickstart.md` Step 0 (npm-install path).
+- `docs/mcp-usage.md` opening notice.
+
+This decision does **not** apply to:
+
+- `docs/reports/*` — historical state-of-the-world snapshots; rewriting them would falsify the audit trail.
+- `docs/plans/*` — historical planning artefacts.
+- `docs/20-decision-log.md` body of every prior DEC (DEC-005 / DEC-007 / DEC-008 / DEC-009 / DEC-012 / DEC-013 / DEC-014 / DEC-015 / DEC-016) — append-only history; superseding facts go in DEC-017 itself, not by editing earlier DECs in place.
+
+Host compatibility claims must be **scoped only to the tested Host**. OCN may now claim:
+
+> MCP Host validation completed for Claude Desktop on Windows with WSL2.
+
+OCN must **not** claim Cursor or Cline compatibility based on this DEC. Each unverified Host requires its own validation run + DEC entry before any compatibility wording is added.
+
+### Validated Host
+
+| Field | Value |
+| --- | --- |
+| Host | Claude Desktop (Cowork mode) |
+| OS | Windows + WSL2 |
+| OCN package | `o-coding-navigation@0.1.0-alpha.2` |
+| OCN repo HEAD on validation branch | `73c5e3fce8500b9f4100ca014bfb90ccffade208` |
+| MCP server command | `wsl.exe -e node /home/timou/repos/OCN/dist/mcp/index.js` |
+| Test projectRoot | `/tmp/ocn-mcp-demo` |
+| Verdict | **Pass** (11 / 11 checks) |
+| Evidence report | `docs/reports/2026-04-30-mcp-external-host-validation-report.md` |
+
+### Options considered
+
+#### Option A — Remove the caveat globally for all hosts
+
+Rejected.
+
+Reason:
+Cursor and Cline have not been validated. A blanket removal would assert compatibility we cannot back with evidence. The DEC-005 caveat was specifically about *real Host* validation; removing it requires evidence per Host.
+
+#### Option B — Remove the caveat only from active user-facing docs, scoped to the tested Host (Claude Desktop)
+
+Accepted.
+
+Reason:
+Honest scoping. The caveat existed because no real Host had been validated. One real Host now has been. The fix matches the gap the caveat was opened to track, and explicitly preserves the unverified status of every other Host.
+
+#### Option C — Keep the caveat until Cursor and Cline are also validated
+
+Rejected.
+
+Reason:
+Bundles separate validation runs into a single decision. PR D was scoped to a real Host validation; the next Hosts can be addressed in their own future PRs and DECs without holding back the Claude Desktop closure.
+
+#### Option D — Rewrite historical reports / DECs to remove the caveat retroactively
+
+Rejected. Forbidden.
+
+Reason:
+Append-only history (CLAUDE.md governance + DEC-016 follow-up requirement). Historical artefacts record what was true when they were written.
+
+### Consequences
+
+Positive:
+
+- OCN can truthfully state Claude Desktop MCP Host validation is complete.
+- The long-standing pending caveat is removed from active user-facing docs without overclaiming.
+- PR D is complete for Claude Desktop, unblocking DEC-018 (beta candidate preparation).
+
+Negative:
+
+- Cursor and Cline remain unverified. Future support claims for those Hosts each require their own validation + DEC.
+- A material change to `src/mcp/server.ts`, the `ALLOWED_TOOLS` registry, or the `wsl.exe -e node …` invocation path requires re-validation before claiming Claude Desktop compatibility on the new release.
+
+### Follow-up
+
+- Validate Cursor separately if a Cursor support claim is required; record evidence in a future report and add a closure DEC.
+- Validate Cline separately if a Cline support claim is required; same pattern.
+- Re-run §5 / §6 / §7 of the Claude Desktop validation report on a fresh disposable project before claiming Claude Desktop compatibility on a new release where any of the re-validation triggers in the report's §11 apply.
+- Beta promotion still requires a separate DEC. See DEC-018.
+
+External MCP Host Validation closed for Claude Desktop. Cursor and Cline remain unverified.
+
+---
+
+## DEC-018｜Begin Beta Candidate Preparation
+
+Date: 2026-04-30
+
+### Status
+
+Accepted.
+
+### Context
+
+OCN alpha.2 is published and aligned with main:
+
+- `o-coding-navigation@0.1.0-alpha.2` is the current `@alpha` install target.
+- The post-alpha Codex P1 fix train (P1-001 / P1-002 / P1-003 / P1-004) is complete on `main` and shipped to npm alpha users (DEC-016).
+- Claude Desktop real MCP Host validation has passed (DEC-017).
+- DEC-005's pending caveat has been closed for Claude Desktop in active user-facing docs.
+
+The codebase is now healthy enough to *begin preparing* a beta candidate. Beta is a real promotion: it changes user expectations, it usually triggers `latest`-tag conversations, and it implies a stronger compatibility surface than alpha. The remaining unknowns (CI matrix scope, support boundary for non-Claude-Desktop hosts, examples readiness, install smoke under real `npm install -g`) all need their own focused PRs before any beta promotion is responsible.
+
+### Decision
+
+**Do not promote to beta immediately.** Begin Beta Candidate Preparation.
+
+Beta promotion requires:
+
+1. A separate future DEC explicitly authorising the promotion.
+2. A separate implementation PR that follows the DEC-016 publish-discipline pattern (manual version bump, `npm publish --tag <next-tag>`, evidence report).
+3. Completion of the prerequisite PRs listed below.
+
+### Beta candidate prerequisites
+
+Before any DEC can authorise beta promotion, the following must be completed (each as its own PR with its own narrow scope):
+
+1. **Host support boundary.** Decide whether beta supports only Claude Desktop or also requires Cursor / Cline validation. Record the decision in a separate DEC. If multiple Hosts, each needs its own validation report following the DEC-017 pattern.
+2. **CI matrix expansion.** Per the DEC-010 follow-up, expand from single-cell `ubuntu-latest` + Node 20 to **at minimum Node 20 + Node 22** on `ubuntu-latest`. Multi-OS expansion is optional at beta but encouraged.
+3. **Examples F2 / F3.** Complete the executable example projects from `docs/plans/2026-04-29-ga-prep-pr-f-examples-directory-plan.md`. Each example must be runnable against the published `@alpha` (or future `@beta`) tarball without source-tree access.
+4. **Install smoke from real npm install.** Beyond the existing CLI-from-`dist/` smokes, run:
+
+   ```
+   npm install -g o-coding-navigation@alpha
+   ocn --version
+   ocn --help
+   ocn-mcp   # verify it boots, then Ctrl+C
+   ```
+
+   in a clean container or VM and capture the result in an evidence report.
+5. **`latest` tag strategy.** Decide whether and when to promote `latest` past `0.1.0-alpha.0`. Currently `latest` is deliberately stale per DEC-008 / DEC-012 / DEC-015 / DEC-016 because alpha publishes have always used `--tag alpha`. A beta promotion is an opportune moment to revisit, in a separate DEC.
+6. **Doc audit for beta claims.** Sweep `README.md`, `docs/quickstart.md`, `docs/mcp-usage.md` and any release notes for accidental beta language before beta DEC; ensure no doc claims "GA", "production-ready", or "verified" for unverified Hosts.
+
+### Options considered
+
+#### Option A — Promote beta immediately
+
+Rejected.
+
+Reason:
+One Host validation is enough to close the Claude Desktop caveat (DEC-017) but is not enough to underwrite beta-level expectations. Beta needs an explicit support boundary, a broader CI matrix, examples readiness, and an install smoke that exercises the actual `npm install -g` path. None of those exist yet at the level beta deserves.
+
+#### Option B — Begin Beta Candidate Preparation
+
+Accepted.
+
+Reason:
+Preserves momentum. Names the prerequisites explicitly. Prevents the post-alpha.2 calm from drifting into "we should ship beta" without the supporting work. Each prerequisite becomes a focused PR.
+
+#### Option C — Stay indefinitely in alpha
+
+Rejected.
+
+Reason:
+The codebase is now healthy enough to prepare beta. Refusing to plan beta would lock the project in an alpha holding pattern even after the work to leave it has compounded.
+
+### Consequences
+
+Positive:
+
+- Project momentum preserved.
+- Each beta prerequisite is named, gated, and decomposable.
+- Cursor / Cline / `latest` strategy questions get individual DECs rather than being bundled into a beta promotion that would over-claim.
+
+Negative:
+
+- Beta promotion is not immediate; users staying on `@alpha` may expect `@beta` sooner than the prerequisite PRs allow.
+- Each prerequisite is its own commitment of effort.
+
+### Follow-up
+
+Open focused PRs for, in any order convenient to schedule:
+
+- **CI Node 22 matrix expansion** (DEC-010 follow-up).
+- **Examples F2 / F3** (executable examples directory).
+- **Beta support boundary DEC** (Claude Desktop only, or also Cursor / Cline?).
+- **Install smoke from real `npm install -g`** evidence report.
+- **`latest` tag strategy DEC** (when and how to move `latest` off `0.1.0-alpha.0`).
+- **Beta promotion DEC** when prerequisites are met. The promotion PR follows the DEC-016 publish discipline pattern.
+
+External MCP Host Validation closed for Claude Desktop. Cursor and Cline remain unverified.

@@ -94,7 +94,7 @@ ocn-mcp        # starts the MCP stdio server; press Ctrl+C to exit
 
 > **Note on dist-tags**: npm currently shows both `alpha` and `latest` pointing to `0.1.0-alpha.0` because this is the first published version of the package. Use `@alpha` explicitly until a stable tag is published — the `latest` co-pointing self-corrects on the next non-prerelease publish. See [`docs/reports/2026-04-29-npm-alpha-publish-report.md`](./docs/reports/2026-04-29-npm-alpha-publish-report.md) §9.
 
-> **Pre-GA caveat**: this is an **alpha** release. The package is not stable, not GA, and not production-ready. **External MCP Host Validation is pending** — do **not** treat the alpha as verified Claude Desktop / Cursor / Cline compatibility until external host validation completes. See [DEC-005](./docs/20-decision-log.md#dec-005defer-external-mcp-host-validation-until-a-real-host-is-available).
+> **Pre-GA caveat**: this is an **alpha** release. The package is not stable, not GA, and not production-ready. **MCP Host validation completed for Claude Desktop on Windows with WSL2** (per [DEC-017](./docs/20-decision-log.md) and [`docs/reports/2026-04-30-mcp-external-host-validation-report.md`](./docs/reports/2026-04-30-mcp-external-host-validation-report.md)); **Cursor and Cline remain unverified** in this release. See [DEC-005](./docs/20-decision-log.md#dec-005defer-external-mcp-host-validation-until-a-real-host-is-available) for the historical caveat.
 
 To uninstall: `npm uninstall -g o-coding-navigation`.
 
@@ -235,7 +235,7 @@ The GA Prep phase is a documentation, packaging, and operational-readiness audit
 - ✅ **PR A** — Docs numbering reconciliation + amendments index (merged).
 - 🟡 **PR B** — README first-5-minutes + CLI help copy audit (this PR).
 - ⬜ **PR C** — MCP `projectRoot` path-traversal audit + threat-model doc.
-- ⬜ **PR D** — External MCP host validation (Claude Desktop / Cursor / Cline smoke tests).
+- 🟢 **PR D** — External MCP Host validation. Claude Desktop on Windows with WSL2 validated (see [`docs/reports/2026-04-30-mcp-external-host-validation-report.md`](./docs/reports/2026-04-30-mcp-external-host-validation-report.md) and [DEC-017](./docs/20-decision-log.md)). Cursor and Cline remain unverified in separate future work.
 - ⬜ **PR E** — npm publish gating plan + CI stability audit.
 - ⬜ **PR F** — `examples/` directory plan.
 

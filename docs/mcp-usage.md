@@ -40,9 +40,12 @@ The process speaks JSON-RPC 2.0 over stdin/stdout per the MCP stdio framing. Std
 
 Every tool requires an absolute `projectRoot` argument (the path to an OCN-initialized project). The server itself is project-agnostic; one MCP server can serve any number of OCN projects sequentially.
 
-> External MCP Host Validation pending. The server contract has been verified
-> via local integration tests; real-host validation against Claude Desktop /
-> Cursor / Cline is tracked separately as PR D and has not yet been performed.
+> MCP Host validation completed for Claude Desktop on Windows with WSL2 (per
+> [DEC-017](./20-decision-log.md) and the validation report at
+> [`reports/2026-04-30-mcp-external-host-validation-report.md`](./reports/2026-04-30-mcp-external-host-validation-report.md)).
+> Cursor and Cline remain **unverified** in this release — treat the server
+> contract as observed working in Claude Desktop but not yet confirmed in
+> other MCP Hosts.
 
 ### Project root must be initialized｜projectRoot 必须已初始化
 
