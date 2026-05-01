@@ -32,7 +32,45 @@ describe("ocn init", () => {
     await fs.access(join(project.cwd, ".ocoding", "sop.yaml"));
     await fs.access(join(project.cwd, ".ocoding", "gates.yaml"));
     await fs.access(join(project.cwd, ".ocoding", "config.yaml"));
+    // P1-003 — artifacts.yaml is now persisted as part of the SOP snapshot.
+    await fs.access(join(project.cwd, ".ocoding", "artifacts.yaml"));
     await fs.access(join(project.cwd, "docs"));
+  }, 30_000);
+
+  // P1-003 — guard against a regression to the Skeleton Spike snapshot. The
+  // persisted .ocoding/sop.yaml must list every state and step the runtime
+  // claims to know about; previously it carried only state_spec / step_prd.
+  it("persisted .ocoding/sop.yaml covers every v1.0 state and step", async () => {
+    await spawnOcn(["init", "--tier", "minimal"], { cwd: project.cwd });
+    const sopYaml = await fs.readFile(join(project.cwd, ".ocoding", "sop.yaml"), "utf8");
+    const states = [
+      "state_discovery",
+      "state_spec",
+      "state_design",
+      "state_plan",
+      "state_build",
+      "state_verify",
+      "state_ship",
+      "state_reflect",
+    ];
+    for (const stateId of states) {
+      expect(sopYaml).toContain(`id: ${stateId}`);
+    }
+    const steps = [
+      "step_project_brief",
+      "step_scope",
+      "step_prd",
+      "step_acceptance_criteria",
+      "step_technical_architecture",
+      "step_information_architecture",
+      "step_data_model",
+      "step_api_contract",
+      "step_test_strategy",
+      "step_mvp_plan",
+    ];
+    for (const stepId of steps) {
+      expect(sopYaml).toContain(`- ${stepId}`);
+    }
   }, 30_000);
 
   // @ac AC-INIT-002 — default tier when omitted = minimal

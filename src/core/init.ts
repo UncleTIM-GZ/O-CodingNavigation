@@ -21,6 +21,8 @@ export interface InitData {
   readonly stateFile: string;
   readonly sopFile: string;
   readonly gatesFile: string;
+  /** P1-003 — added so callers can surface the persisted artifacts manifest. */
+  readonly artifactsFile: string;
   readonly configFile: string;
   readonly docsDir: string;
   readonly currentStateId: string;
@@ -97,6 +99,12 @@ export async function initProject(opts: InitOptions): Promise<CommandResult<Init
         await fs.mkdir(Paths.docsDir(opts.cwd), { recursive: true });
         await fs.writeFile(Paths.sopFile(opts.cwd), profile.sopYaml, "utf8");
         await fs.writeFile(Paths.gatesFile(opts.cwd), profile.gatesYaml, "utf8");
+        // P1-003 — persist artifacts.yaml so the on-disk snapshot fully
+        // expresses the runtime profile (artifact path + requiredForSteps
+        // for every step the runtime claims to know about). Pre-P1-003
+        // only sop.yaml and gates.yaml were written, leaving the artifact
+        // map invisible to anything that read .ocoding/ as ground truth.
+        await fs.writeFile(Paths.artifactsFile(opts.cwd), profile.artifactsYaml, "utf8");
         await fs.writeFile(Paths.configFile(opts.cwd), profile.defaultConfigYaml, "utf8");
         // We already hold the outer lock; use the unlocked variant to avoid
         // a self-acquire deadlock.
@@ -133,6 +141,7 @@ export async function initProject(opts: InitOptions): Promise<CommandResult<Init
       stateFile,
       Paths.sopFile(opts.cwd),
       Paths.gatesFile(opts.cwd),
+      Paths.artifactsFile(opts.cwd),
       Paths.configFile(opts.cwd),
     ];
     await safeAudit(
@@ -181,6 +190,7 @@ export async function initProject(opts: InitOptions): Promise<CommandResult<Init
       stateFile,
       sopFile: Paths.sopFile(opts.cwd),
       gatesFile: Paths.gatesFile(opts.cwd),
+      artifactsFile: Paths.artifactsFile(opts.cwd),
       configFile: Paths.configFile(opts.cwd),
       docsDir: Paths.docsDir(opts.cwd),
       currentStateId: state.currentStateId,
