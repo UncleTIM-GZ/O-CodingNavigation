@@ -1,6 +1,7 @@
 import { promises as fs } from "node:fs";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import type { LockHandle } from "../../src/core/state/lock.js";
 import {
   readState,
   writeStateAtomic,
@@ -103,29 +104,57 @@ describe("writeStateAtomic — lock + backup + temp + rename", () => {
   });
 
   it("acquires and releases the lock around writeStateAtomic via the public API", async () => {
-    // Sneak a watchdog: count lock-file-existence transitions during a write.
+    // Earlier this test polled the lock file with `setInterval(..., 1)` to
+    // observe the lock-held window. On fast CI runners the entire
+    // writeStateAtomic critical section (acquire → backup → temp → rename →
+    // release) completed inside a single tick, so the polling never observed
+    // the lock and the test flaked (PR #33 attempt 1 hit exactly this — see
+    // docs/reports/2026-05-01-state-store-lock-observability-flake-hardening.md).
+    //
+    // The fix routes the assertion through the LockLifecycleHook surface that
+    // `acquireLock` / `withLock` already expose. `onAcquired` fires
+    // synchronously *while* the lock is held, with the lock file present on
+    // disk; `onReleased` fires after the unlink. There is no timing window
+    // for the lock to slip past — the hook IS the moment.
     const lockFile = join(project.cwd, ".ocoding", ".lock");
-    let sawLock = false;
-    const watcher = setInterval(() => {
-      void (async () => {
-        try {
-          await fs.stat(lockFile);
-          sawLock = true;
-        } catch {
-          /* ignore */
-        }
-      })();
-    }, 1);
+    let acquiredCount = 0;
+    let releasedCount = 0;
+    let lockFilePresentDuringAcquire = false;
+    // Use a single-slot mutable holder so TypeScript doesn't narrow the
+    // captured variable to `never` after assignment inside the callback.
+    const acquiredHandleSlot: LockHandle[] = [];
 
-    try {
-      await writeStateAtomic(project.cwd, buildState());
-    } finally {
-      clearInterval(watcher);
-    }
-    // After release, lock must be gone.
+    await writeStateAtomic(project.cwd, buildState(), {
+      lifecycle: {
+        onAcquired: async (handle) => {
+          acquiredCount += 1;
+          acquiredHandleSlot.push(handle);
+          // While the lock is held the file MUST exist on disk. This is the
+          // strong invariant the previous polling test was trying to
+          // approximate; we now check it deterministically inside the
+          // hook callback.
+          await fs.access(lockFile);
+          lockFilePresentDuringAcquire = true;
+        },
+        onReleased: () => {
+          releasedCount += 1;
+        },
+      },
+    });
+
+    // Lifecycle assertions: exactly one acquire, exactly one release, both
+    // observed without polling.
+    expect(acquiredCount).toBe(1);
+    expect(releasedCount).toBe(1);
+    expect(lockFilePresentDuringAcquire).toBe(true);
+    expect(acquiredHandleSlot).toHaveLength(1);
+    const acquiredHandle = acquiredHandleSlot[0];
+    expect(acquiredHandle?.lockFile).toBe(lockFile);
+    expect(acquiredHandle?.lockState.pid).toBe(process.pid);
+
+    // Disk assertion (preserved from the original test): after release the
+    // lock file must be gone.
     await expect(fs.stat(lockFile)).rejects.toMatchObject({ code: "ENOENT" });
-    // We expect to have observed the lock at least once during the op.
-    expect(sawLock).toBe(true);
   });
 });
 
@@ -151,10 +180,7 @@ describe("writeStateUnlocked — caller already holds the outer lock", () => {
     await writeStateUnlocked(project.cwd, buildState({ name: "U-First" }));
     await writeStateUnlocked(project.cwd, buildState({ name: "U-Second" }));
     const bak = JSON.parse(
-      await fs.readFile(
-        join(project.cwd, ".ocoding", "state.json.bak"),
-        "utf8",
-      ),
+      await fs.readFile(join(project.cwd, ".ocoding", "state.json.bak"), "utf8"),
     );
     expect(bak.project.name).toBe("U-First");
   });
