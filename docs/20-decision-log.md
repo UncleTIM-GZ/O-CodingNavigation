@@ -39,6 +39,7 @@ SOP Profile Version：`0.1.0`
 | DEC-016 | 2026-04-30 | Authorise future `0.1.0-alpha.2` P1 fix train publish (ships P1-001/002/003/004 to npm alpha users) | ✅ Approved |
 | DEC-017 | 2026-04-30 | Close Claude Desktop MCP Host validation caveat (DEC-005 superseded for Claude Desktop only; Cursor/Cline still unverified) | ✅ Approved |
 | DEC-018 | 2026-04-30 | Begin beta candidate preparation (no beta promotion authorised; gated on a future DEC and prerequisite PRs) | ✅ Approved |
+| DEC-019 | 2026-05-01 | Beta Host Support Boundary — first beta scoped to Claude Desktop on Windows with WSL2; Cursor and Cline explicitly unverified and not blockers | ✅ Approved |
 
 ---
 
@@ -1998,5 +1999,127 @@ Open focused PRs for, in any order convenient to schedule:
 - **Install smoke from real `npm install -g`** evidence report.
 - **`latest` tag strategy DEC** (when and how to move `latest` off `0.1.0-alpha.0`).
 - **Beta promotion DEC** when prerequisites are met. The promotion PR follows the DEC-016 publish discipline pattern.
+
+External MCP Host Validation closed for Claude Desktop. Cursor and Cline remain unverified.
+
+---
+
+## DEC-019｜Beta Host Support Boundary
+
+Date: 2026-05-01
+
+### Status
+
+Accepted.
+
+### Context
+
+OCN alpha.2 is published and aligned with main:
+
+- `o-coding-navigation@0.1.0-alpha.2` is the current `@alpha` install target (DEC-016, alpha.2 publish report).
+- The four post-alpha Codex P1 fixes (P1-001 / P1-002 / P1-003 / P1-004) are shipped on alpha.
+- Claude Desktop real MCP Host validation passed on Windows with WSL2 and is recorded in `docs/reports/2026-04-30-mcp-external-host-validation-report.md` (verdict: Pass, 11 / 11 checks; closure recorded as DEC-017).
+- The state-store lock-observability timing flake has been hardened (PR #34 / `docs/reports/2026-05-01-state-store-lock-observability-flake-hardening.md`).
+- CI now runs on Node 20 + Node 22 (PR #35 / `docs/reports/2026-05-01-ci-node-22-matrix-expansion.md`); both cells were green on first attempt.
+- Cursor and Cline remain unverified. No real-Host validation has been run for either.
+- DEC-018 began Beta Candidate Preparation and explicitly did **not** authorise beta promotion. Beta promotion is still gated on a future DEC + prerequisite PRs.
+
+The project now needs an explicit support boundary for beta candidate planning: whether beta requires validation across multiple MCP Hosts before promotion, or whether beta can initially be scoped to the one Host already validated.
+
+### Decision
+
+Adopt a scoped beta Host support boundary:
+
+> **Beta Candidate may target Claude Desktop on Windows with WSL2 as the only verified MCP Host.**
+
+Cursor and Cline are **not blockers** for a first beta, provided every public beta-related artifact clearly states the support scope:
+
+- Claude Desktop on Windows with WSL2: validated.
+- Cursor: not yet verified.
+- Cline: not yet verified.
+
+OCN must **not** claim Cursor or Cline compatibility until each Host has its own validation report following the DEC-017 pattern. Each unverified Host requires its own validation run + closure DEC before any compatibility wording is added.
+
+### Options considered
+
+#### Option A — Require Claude Desktop, Cursor, AND Cline before beta
+
+Rejected for the first beta.
+
+Reason:
+It would delay beta despite already having a real validated Host path. Cursor and Cline can be validated in follow-up PRs without blocking a Claude-Desktop-scoped beta. Bundling all three Hosts into a single gate also bundles three separate evidence runs into one PR — bad for review hygiene and bad for incident triage when one Host's session has issues that the other Hosts don't.
+
+#### Option B — Allow beta with Claude Desktop only, with explicit scoped support claim
+
+Accepted.
+
+Reason:
+Truthful, testable, and aligned with the current evidence. The DEC-017 closure was already scoped to Claude Desktop only; this DEC carries the same scoping forward into the beta planning surface. A scoped beta is preferable to either an over-broad beta that out-claims its evidence or a delayed beta that throws away ready-to-ship value.
+
+#### Option C — Avoid any MCP Host support claim in beta
+
+Rejected.
+
+Reason:
+OCN's MCP integration is central to its value proposition (CLAUDE.md §1: "MCP-first … AI Coding workflow operating system"), and a real Claude Desktop validation has already passed. Beta artifacts that omit Host claims entirely would be less useful than the alpha docs that already point users at Claude Desktop. The right move is scoped truth, not silence.
+
+### Consequences
+
+Positive:
+
+- Beta planning can proceed without waiting for Cursor / Cline validation.
+- Public claims remain evidence-based and audit-trail-complete.
+- Cursor / Cline validation can happen later as separate, focused PRs (and separate closure DECs), each with their own evidence report.
+- The DEC-017 caveat scoping pattern carries forward into the beta surface unchanged — readers familiar with alpha docs see consistent language.
+
+Negative:
+
+- Beta support boundary is narrower than "all major MCP Hosts". This may surprise users coming from other ecosystems where "MCP Host" is treated as a single compatibility surface.
+- Cursor / Cline users need explicit warning that support is unverified — every active beta-related doc has to repeat that scope.
+- Future docs must avoid broad "MCP hosts" compatibility language unless scoped or unless additional Host validation reports land.
+
+### Beta documentation rule (binding for the future Beta promotion PR)
+
+Before beta promotion, all active user-facing docs must use scoped wording. The canonical phrasing is:
+
+> Validated with Claude Desktop on Windows with WSL2. Cursor and Cline are not yet verified.
+
+The sentence — or a wording with strictly equivalent scoping (verified Host named, unverified Hosts explicitly listed) — is required in:
+
+- `README.md` install caveat banner.
+- `docs/quickstart.md` Step 0 (npm-install path).
+- `docs/mcp-usage.md` opening notice.
+- Any release notes drafted for the beta promotion PR.
+
+Any broader MCP Host compatibility statement (e.g. "compatible with all MCP Hosts", "supports the MCP ecosystem") requires either (a) additional Host validation reports for every Host implicitly covered, or (b) an amendment DEC widening the support boundary. Reviewers reject the beta promotion PR if its wording exceeds the validated Host set.
+
+### Validated Host (scope of this DEC)
+
+| Field | Value |
+| --- | --- |
+| Host | Claude Desktop (Cowork mode) |
+| OS | Windows with WSL2 |
+| OCN package | `o-coding-navigation@0.1.0-alpha.2` |
+| MCP server command | `wsl.exe -e node /home/timou/repos/OCN/dist/mcp/index.js` |
+| Validation report | `docs/reports/2026-04-30-mcp-external-host-validation-report.md` |
+| Closure DEC | DEC-017 |
+| Verdict | Pass (11 / 11 checks) |
+
+### Follow-up
+
+This DEC defines the **support boundary** for beta planning. It does **not** authorise beta promotion. Beta promotion is still gated on a future DEC plus the remaining DEC-018 prerequisite PRs:
+
+- ✅ **CI Node 22 matrix expansion** — done in PR #35 (`docs/reports/2026-05-01-ci-node-22-matrix-expansion.md`).
+- ✅ **Host support boundary** — this DEC.
+- ⬜ **Examples F2 / F3** (executable example projects per `docs/plans/2026-04-29-ga-prep-pr-f-examples-directory-plan.md`).
+- ⬜ **Install smoke from real `npm install -g o-coding-navigation@alpha`** evidence report.
+- ⬜ **`latest`-tag strategy DEC** (when / whether to move `latest` off `0.1.0-alpha.0`).
+- ⬜ **Doc audit for accidental beta language** before beta promotion.
+- ⬜ **Beta promotion DEC** (final gate). The promotion PR follows the DEC-016 publish discipline pattern.
+
+Optional, not gating beta:
+
+- Cursor real-Host validation in a separate future PR (DEC-017-style scoped report + closure DEC).
+- Cline real-Host validation in a separate future PR (same pattern).
 
 External MCP Host Validation closed for Claude Desktop. Cursor and Cline remain unverified.
