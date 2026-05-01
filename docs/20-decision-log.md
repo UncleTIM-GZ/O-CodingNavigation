@@ -36,6 +36,7 @@ SOP Profile Version：`0.1.0`
 | DEC-013 | 2026-04-29 | Quarantine audit-markdown concurrent first-write flake from publish gate | ✅ Approved |
 | DEC-014 | 2026-04-30 | Restore audit-markdown concurrency test to default gate (race fixed via writeFile-to-tmp + atomic `fs.link`) | ✅ Approved |
 | DEC-015 | 2026-04-30 | Authorise `0.1.0-alpha.1` patch publish (ships DEC-014 fix to npm alpha users) | ✅ Approved |
+| DEC-016 | 2026-04-30 | Authorise future `0.1.0-alpha.2` P1 fix train publish (ships P1-001/002/003/004 to npm alpha users) | ✅ Approved |
 
 ---
 
@@ -1631,3 +1632,156 @@ DEC-015 authorises **one** specific patch publish (`alpha.0 → alpha.1`) shippi
 - Authorise publishing under any tag other than `alpha`.
 - Authorise removal of the DEC-005 caveat.
 - Authorise any subsequent patch publish (`alpha.2`, etc.). Each future publish requires its own DEC entry.
+
+---
+
+## DEC-016｜Authorise 0.1.0-alpha.2 P1 Fix Train Publish
+
+Date: 2026-04-30
+
+### Status
+
+Accepted.
+
+### Context
+
+The published npm alpha package is currently:
+
+`o-coding-navigation@0.1.0-alpha.1`
+
+After alpha.1, the post-alpha Codex audit (`docs/reports/2026-04-30-post-alpha-codex-audit.md`) identified four P1 findings that must be fixed before beta and before meaningful real MCP Host validation.
+
+All four P1 findings have now been fixed on main:
+
+1. P1-001 — MCP tools must require initialized OCN project roots (PR #27, merged at `954de58`; report `docs/reports/2026-04-30-fix-mcp-mutating-tools-require-initialized-project-plan.md` and the audit report §3 P1-001).
+2. P1-004 — CLI and MCP version surfaces must match `package.json` (PR #28, merged at `204eaa4`; report `docs/reports/2026-04-30-version-surface-sync.md`).
+3. P1-002 — `ocn check` must evaluate the current step artifact, not hard-code `step_prd` (PR #29, merged at `ba49b63`; report `docs/reports/2026-04-30-check-current-step-generic.md`).
+4. P1-003 — persisted `.ocoding/sop.yaml` snapshots must match the runtime default SOP profile (PR #30, merged at `2979771`; report `docs/reports/2026-04-30-sop-snapshot-runtime-sync.md`).
+
+The current npm alpha package does not include these four P1 fixes.
+
+External MCP Host Validation is still pending.
+
+### Decision
+
+Authorise a future, separate patch publish PR for:
+
+`o-coding-navigation@0.1.0-alpha.2`
+
+The purpose of alpha.2 is narrowly scoped:
+
+- publish the four completed P1 fixes from the Codex post-alpha audit
+- keep npm alpha aligned with main
+- prepare the codebase for later PR D real MCP Host validation
+
+This decision does not mutate `package.json`.
+This decision does not execute `npm publish`.
+This decision does not create a git tag.
+This decision does not create a GitHub release.
+This decision does not remove the MCP Host validation caveat.
+
+Any release-related artifact must include:
+
+`External MCP Host Validation pending.`
+
+### Required pre-publish checks for the future alpha.2 PR
+
+The future alpha.2 publish PR must perform and record:
+
+1. Confirm `main` includes the four P1 fixes:
+   - P1-001 initialized project root validation
+   - P1-004 version surface sync
+   - P1-002 current-step check
+   - P1-003 SOP snapshot/runtime sync
+2. Bump `package.json` version from `0.1.0-alpha.1` to `0.1.0-alpha.2`.
+3. Resync `package-lock.json` if npm requires it.
+4. Confirm package name:
+   `node -p "require('./package.json').name"`
+5. Confirm package version:
+   `node -p "require('./package.json').version"`
+6. Confirm npm registry:
+   `npm config get registry`
+7. Confirm npm identity:
+   `npm whoami`
+8. Run:
+   - `npm run lint`
+   - `npm run typecheck`
+   - `npm run test`
+   - `npm run test:coverage`
+   - `npm run build`
+9. Run at least one smoke test for each P1 fix:
+   - MCP tools reject uninitialized project roots.
+   - `ocn --version` returns `package.json` version.
+   - `ocn check` passes on `step_project_brief` without requiring `docs/02-prd.md`.
+   - Fresh `ocn init` writes a SOP snapshot aligned with the runtime profile.
+10. Run:
+    `npm pack --dry-run`
+11. Confirm tarball contents match the DEC-009 allowlist.
+12. Execute publish only after all checks pass:
+    `npm publish --tag alpha`
+13. Verify:
+    `npm view o-coding-navigation dist-tags version name --json`
+14. Confirm no forbidden actions occurred:
+    - no git tag
+    - no GitHub release
+    - no `latest` promotion
+    - no caveat removal
+
+### Options considered
+
+#### Option A — Do not publish alpha.2
+
+Rejected.
+
+Reason:
+The published alpha.1 package lacks four completed P1 fixes that materially affect MCP safety, CLI truthfulness, version reporting, and SOP trust.
+
+#### Option B — Publish alpha.2 as a narrow P1 fix train patch
+
+Accepted.
+
+Reason:
+It aligns npm alpha with `main` and gives external alpha testers the safer P1-fixed build without claiming beta readiness.
+
+#### Option C — Wait for PR D before publishing alpha.2
+
+Rejected.
+
+Reason:
+PR D itself is more meaningful after the P1 fixes are published and available through the documented alpha install path.
+
+#### Option D — Promote `latest` to alpha.2
+
+Rejected.
+
+Reason:
+`latest` strategy remains a separate release decision. The documented install path uses `@alpha`.
+
+### Consequences
+
+Positive:
+
+- npm alpha users receive the P1 fixes.
+- PR D can later validate the same code line that users install through `@alpha`.
+- The alpha line remains aligned with `main`.
+
+Negative:
+
+- Another `npm publish` event is required.
+- `latest` may remain behind `alpha` and continue pointing to an older pre-beta package.
+- External MCP Host validation remains pending.
+
+### Follow-up
+
+A future alpha.2 publish PR must:
+
+- bump version to `0.1.0-alpha.2`
+- run all required checks
+- publish with `--tag alpha`
+- record publish output
+- not create a git tag
+- not create a GitHub release
+- not claim external MCP Host compatibility
+- not remove the caveat
+
+External MCP Host Validation pending.
