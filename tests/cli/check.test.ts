@@ -84,3 +84,85 @@ describe("ocn check", () => {
     expect(parsed.code).toBe("OK");
   }, 30_000);
 });
+
+// P1-002 — `ocn check` evaluates the *current* step's artifact (resolved from
+// state.json + the SOP profile) instead of always assuming step_prd. These
+// tests fire on the very first step (`step_project_brief`) — without seeding
+// to step_prd — so any regression to a PRD-only check would surface here.
+describe("ocn check — current-step generic (P1-002)", () => {
+  let project: TempProject;
+
+  beforeEach(async () => {
+    project = await createTempProject();
+    await spawnOcn(["init", "--tier", "minimal"], { cwd: project.cwd });
+    // No seed: init lands at state_discovery / step_project_brief.
+  });
+
+  afterEach(async () => {
+    await project.cleanup();
+  });
+
+  it("passes step_project_brief after `ocn doc create project-brief`", async () => {
+    await spawnOcn(["doc", "create", "project-brief"], { cwd: project.cwd });
+    const result = await spawnOcn(["check", "--json"], { cwd: project.cwd });
+    expect(result.exitCode).toBe(0);
+    const parsed = JSON.parse(result.stdout);
+    expect(parsed.ok).toBe(true);
+    expect(parsed.code).toBe("OK");
+    expect(parsed.data.status).toBe("pass");
+    expect(parsed.data.artifactPath).toMatch(/00-project-brief\.md$/);
+    expect(parsed.message.en).toContain("step_project_brief");
+  }, 30_000);
+
+  it("blocks step_project_brief with exit 2 when artifact is missing", async () => {
+    const result = await spawnOcn(["check", "--json"], { cwd: project.cwd });
+    expect(result.exitCode).toBe(2);
+    const parsed = JSON.parse(result.stdout);
+    expect(parsed.code).toBe("ERR_ARTIFACT_INVALID");
+    expect(parsed.data.artifactPath).toMatch(/00-project-brief\.md$/);
+    // Should suggest the project-brief subcommand, not prd.
+    expect(parsed.message.en).toContain("ocn doc create project-brief");
+    expect(parsed.message.en).not.toContain("ocn doc create prd");
+    expect(parsed.data.missingRequiredSectionIds).toEqual([
+      "section_problem",
+      "section_goal",
+      "section_users",
+      "section_success_criteria",
+    ]);
+  }, 30_000);
+
+  it("blocks step_project_brief when a required section is missing (exit 2)", async () => {
+    await fs.writeFile(
+      join(project.cwd, "docs", "00-project-brief.md"),
+      "# Project Brief\n\n## Problem\n\nx\n\n## Goal\n\nx\n\n## Users\n\nx\n",
+      "utf8",
+    );
+    const result = await spawnOcn(["check", "--json"], { cwd: project.cwd });
+    expect(result.exitCode).toBe(2);
+    const parsed = JSON.parse(result.stdout);
+    expect(parsed.code).toBe("ERR_ARTIFACT_INVALID");
+    expect(parsed.data.missingRequiredSectionIds).toEqual(["section_success_criteria"]);
+    expect(parsed.message.en).toContain("step_project_brief");
+  }, 30_000);
+
+  it("regression: `ocn check` no longer hard-codes step_prd", async () => {
+    // Same project as the pass case above but written verbatim here so the
+    // intent is impossible to overlook in code review. If anyone reverts to
+    // a PRD-only check, this test fails because there is no docs/02-prd.md.
+    await spawnOcn(["doc", "create", "project-brief"], { cwd: project.cwd });
+    let prdExisted = true;
+    try {
+      await fs.access(join(project.cwd, "docs", "02-prd.md"));
+    } catch {
+      prdExisted = false;
+    }
+    expect(prdExisted).toBe(false);
+
+    const result = await spawnOcn(["check", "--json"], { cwd: project.cwd });
+    expect(result.exitCode).toBe(0);
+    const parsed = JSON.parse(result.stdout);
+    expect(parsed.ok).toBe(true);
+    expect(parsed.data.artifactPath).toMatch(/00-project-brief\.md$/);
+    expect(parsed.data.artifactPath).not.toMatch(/02-prd\.md$/);
+  }, 30_000);
+});
