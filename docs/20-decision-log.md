@@ -40,6 +40,7 @@ SOP Profile Version：`0.1.0`
 | DEC-017 | 2026-04-30 | Close Claude Desktop MCP Host validation caveat (DEC-005 superseded for Claude Desktop only; Cursor/Cline still unverified) | ✅ Approved |
 | DEC-018 | 2026-04-30 | Begin beta candidate preparation (no beta promotion authorised; gated on a future DEC and prerequisite PRs) | ✅ Approved |
 | DEC-019 | 2026-05-01 | Beta Host Support Boundary — first beta scoped to Claude Desktop on Windows with WSL2; Cursor and Cline explicitly unverified and not blockers | ✅ Approved |
+| DEC-020 | 2026-05-01 | npm `latest` tag strategy before beta — keep `latest` unchanged during alpha; canonical pre-beta install path remains `@alpha`; future beta promotion DEC must explicitly decide `latest` movement | ✅ Approved |
 
 ---
 
@@ -2121,5 +2122,127 @@ Optional, not gating beta:
 
 - Cursor real-Host validation in a separate future PR (DEC-017-style scoped report + closure DEC).
 - Cline real-Host validation in a separate future PR (same pattern).
+
+External MCP Host Validation closed for Claude Desktop. Cursor and Cline remain unverified.
+
+---
+
+## DEC-020｜npm latest Tag Strategy before Beta
+
+Date: 2026-05-01
+
+### Status
+
+Accepted.
+
+### Context
+
+The npm package `o-coding-navigation` currently has the following dist-tag layout (verified at this DEC's authoring time via `npm view o-coding-navigation dist-tags version name --json`):
+
+```
+dist-tags:
+  alpha:  0.1.0-alpha.2
+  latest: 0.1.0-alpha.0
+```
+
+This is intentional history accumulated across the alpha publishes:
+
+- **DEC-007 / DEC-008** authorised the first alpha lane (`0.1.0-alpha.0`) under the `alpha` tag. The first ever publish of a package on npm always lands on `latest` — that is npm's documented default behaviour for the first publish — so `latest` ended up at `0.1.0-alpha.0` automatically.
+- **DEC-015 / DEC-014** shipped `0.1.0-alpha.1` (audit-markdown concurrency repair) under `--tag alpha`. `latest` did not move because `--tag alpha` was explicit on that publish.
+- **DEC-016** shipped the post-alpha Codex P1 fix train as `0.1.0-alpha.2` under `--tag alpha`. Same discipline: `latest` did not move.
+
+User-facing install instructions (`README.md` §1, `docs/quickstart.md` §0) recommend the `@alpha` selector:
+
+```bash
+npm install -g o-coding-navigation@alpha
+```
+
+`docs/reports/2026-05-01-npm-global-install-smoke.md` confirms the `@alpha` path resolves to the post-fix `0.1.0-alpha.2` end-to-end (15 / 15 checks Pass), and `docs/reports/2026-05-01-examples-discovery-to-plan.md` confirms the same alpha walks DISCOVERY → PLAN cleanly through the documented CLI surface.
+
+DEC-018 began Beta Candidate Preparation; DEC-019 scoped the beta Host support boundary. The project now needs an explicit policy for whether to move `latest` **before** beta is promoted.
+
+### Decision
+
+**Do not move `latest` during alpha.** Keep `latest` unchanged at `0.1.0-alpha.0` until the first beta promotion decision authorises a different state.
+
+`alpha` remains the canonical pre-beta installation channel. The future beta promotion DEC must explicitly choose between:
+
+1. publish a beta version under the `beta` tag only — leave `latest` at `0.1.0-alpha.0`,
+2. publish a beta version under both `beta` and `latest` — move `latest` forward,
+3. or keep `latest` unchanged until GA.
+
+This DEC does **not** authorise any of those options. It only authorises the *current state*: `latest = 0.1.0-alpha.0` is the intended steady state for the remainder of alpha and is preserved through to the beta promotion DEC.
+
+This DEC does **not** authorise any `npm dist-tag` command. No registry mutation happens here.
+
+### Options considered
+
+#### Option A — Move `latest` to `0.1.0-alpha.2` now
+
+Rejected.
+
+Reason:
+The project is still in alpha / beta-candidate preparation. Moving `latest` would expose users who run `npm install -g o-coding-navigation` (without an explicit `@alpha` selector) to a pre-beta package. The whole point of the `@alpha` install discipline established in DEC-008 / DEC-012 / DEC-015 / DEC-016 is to make pre-beta consumption an *opt-in* signal. Moving `latest` to alpha.2 silently turns that opt-in into the default.
+
+A weaker version of this option — "users on alpha.0 are *worse off* than users on alpha.2 because alpha.0 lacks the four post-alpha P1 fixes" — is real but is mitigated by the install path the docs already recommend. Anyone following `README.md` ends up on `@alpha` and gets the fixed alpha.2. The set of users who are simultaneously (a) installing without `@alpha` AND (b) staying on the result long enough to hit a P1 case is small enough that promoting `latest` mid-alpha is the larger risk.
+
+#### Option B — Keep `latest` unchanged until the beta promotion DEC
+
+Accepted.
+
+Reason:
+It preserves the explicit `@alpha` install path established by all prior alpha publish DECs, avoids accidental broad adoption by untagged npm installs, and keeps the registry-mutation budget zero until a separate beta-promotion DEC has weighed up support boundary, install lane, and docs sweep together.
+
+#### Option C — Move `latest` only after beta promotion succeeds
+
+Deferred.
+
+Reason:
+This option may be appropriate at beta or GA, but the decision belongs in the future beta promotion DEC (or a successor `latest` strategy DEC tied to GA), not here. This DEC's scope is "what to do **before** beta promotion", and the answer is "nothing".
+
+### Consequences
+
+Positive:
+
+- Users following the documented install command (`npm install -g o-coding-navigation@alpha`) get `0.1.0-alpha.2` — the post-P1-fix-train alpha, validated by `docs/reports/2026-05-01-npm-global-install-smoke.md`.
+- Users who run `npm install -g o-coding-navigation` without a tag still get the conservative `0.1.0-alpha.0` historical-first-publish snapshot. This is **not** ideal, but it is *intentionally* conservative for a pre-beta lane.
+- No npm registry mutation happens in this DEC. No `npm dist-tag` is executed. No publish occurs.
+- The beta promotion DEC inherits a clean, documented `latest` baseline.
+
+Negative:
+
+- `npm install -g o-coding-navigation` without `@alpha` continues to resolve to the older `0.1.0-alpha.0`, missing the four post-alpha Codex P1 fixes (P1-001 / P1-002 / P1-003 / P1-004). Users in this corner case need the `@alpha` selector to get the fixes.
+- Active docs must continue to instruct users to install with `@alpha`. Any drift in the install command (e.g. a future README edit that drops `@alpha`) becomes a real correctness bug, not a stylistic preference.
+- The "two semvers under two tags, one is older than the other" optics are mildly confusing for npm-savvy users who notice. The trade-off is acceptable because the alternatives are worse (Option A's silent promotion) or premature (Option C's binding the beta DEC's hand).
+
+### Documentation rule (binding until beta or GA changes this policy)
+
+Active user-facing docs must continue to recommend the `@alpha` selector for installation:
+
+```bash
+npm install -g o-coding-navigation@alpha
+```
+
+Active docs must **not** recommend the untagged form:
+
+```bash
+npm install -g o-coding-navigation         # do NOT recommend
+```
+
+This rule applies to:
+
+- `README.md` (currently compliant: §1 install banner uses `@alpha`).
+- `docs/quickstart.md` (currently compliant: §0 install path uses `@alpha`).
+- `docs/mcp-usage.md` (does not currently contain an install command — keep it that way; it links into `docs/quickstart.md`).
+- Release notes drafted for any future alpha patch publish (e.g. a future alpha.3 if one is needed).
+- The future beta promotion PR's docs **may** revise this rule, scoped to the beta install lane only — but only if the beta promotion DEC explicitly authorises the change.
+
+Reviewers reject any PR that adds an untagged `npm install -g o-coding-navigation` command to active user-facing docs while this DEC is in force.
+
+### Follow-up
+
+- **The future beta promotion DEC must revisit `latest`.** It must explicitly choose Option (1), (2), or (3) from the §Decision section above and document the trade-off it is making. The choice cannot be left implicit.
+- **The beta docs audit** (DEC-018 prerequisite #6) must verify that every install command in active docs (`README.md`, `docs/quickstart.md`, `docs/mcp-usage.md`) uses the intended tag for the lane the doc describes. The audit checklist should explicitly include a `grep` for `npm install -g o-coding-navigation` (without `@alpha` / `@beta`) as a CI-blocking signal.
+- **No `npm dist-tag` command is authorised here.** Future tag movement requires its own publish-discipline DEC following the DEC-016 / DEC-015 / DEC-012 pattern (manual version handling, evidence report, no `--ignore-scripts`, etc.).
 
 External MCP Host Validation closed for Claude Desktop. Cursor and Cline remain unverified.
