@@ -36,6 +36,71 @@ describe("core/init.initProject", () => {
     expect(gatesYaml).toMatch(/section_scenarios/);
     const configYaml = await fs.readFile(join(project.cwd, ".ocoding/config.yaml"), "utf8");
     expect(configYaml).toMatch(/tier: minimal/);
+
+    // P1-003 — artifacts.yaml is now part of the persisted snapshot.
+    const artifactsYaml = await fs.readFile(join(project.cwd, ".ocoding/artifacts.yaml"), "utf8");
+    expect(artifactsYaml).toMatch(/artifact_prd:/);
+    expect(artifactsYaml).toMatch(/path: docs\/02-prd\.md/);
+  });
+
+  // P1-003 — exercises the full canonical snapshot. If anyone reverts data.ts
+  // to a skeleton-only set, every assertion below fails together.
+  it("persists a canonical sop.yaml/gates.yaml/artifacts.yaml that mirrors the runtime profile", async () => {
+    const result = await initProject({ cwd: project.cwd, tier: "minimal" });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.data?.artifactsFile).toMatch(/\.ocoding\/artifacts\.yaml$/);
+
+    const sopYaml = await fs.readFile(join(project.cwd, ".ocoding/sop.yaml"), "utf8");
+    const gatesYaml = await fs.readFile(join(project.cwd, ".ocoding/gates.yaml"), "utf8");
+    const artifactsYaml = await fs.readFile(join(project.cwd, ".ocoding/artifacts.yaml"), "utf8");
+
+    const states = [
+      "state_discovery",
+      "state_spec",
+      "state_design",
+      "state_plan",
+      "state_build",
+      "state_verify",
+      "state_ship",
+      "state_reflect",
+    ];
+    for (const stateId of states) {
+      expect(sopYaml, `${stateId} appears in persisted sop.yaml`).toContain(`id: ${stateId}`);
+    }
+
+    const steps = [
+      "step_project_brief",
+      "step_scope",
+      "step_prd",
+      "step_acceptance_criteria",
+      "step_technical_architecture",
+      "step_information_architecture",
+      "step_data_model",
+      "step_api_contract",
+      "step_test_strategy",
+      "step_mvp_plan",
+    ];
+    for (const stepId of steps) {
+      expect(sopYaml, `${stepId} appears in persisted sop.yaml`).toContain(`- ${stepId}`);
+      expect(gatesYaml, `${stepId} gate appears in persisted gates.yaml`).toContain(`${stepId}:`);
+    }
+
+    const artifactPaths = [
+      "docs/00-project-brief.md",
+      "docs/01-scope.md",
+      "docs/02-prd.md",
+      "docs/03-acceptance-criteria.md",
+      "docs/04-technical-architecture.md",
+      "docs/05-information-architecture.md",
+      "docs/06-data-model.md",
+      "docs/07-api-contract.md",
+      "docs/08-test-strategy.md",
+      "docs/09-mvp-plan.md",
+    ];
+    for (const path of artifactPaths) {
+      expect(artifactsYaml, `${path} mapped in artifacts.yaml`).toContain(`path: ${path}`);
+    }
   });
 
   it("defaults tier to minimal when omitted", async () => {

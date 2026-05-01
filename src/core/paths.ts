@@ -7,6 +7,9 @@ export const Paths = {
   stateFile: (root: string): string => join(root, ".ocoding", "state.json"),
   sopFile: (root: string): string => join(root, ".ocoding", "sop.yaml"),
   gatesFile: (root: string): string => join(root, ".ocoding", "gates.yaml"),
+  // P1-003 — `artifacts.yaml` is persisted alongside `sop.yaml`/`gates.yaml`
+  // so the on-disk snapshot fully expresses the runtime profile.
+  artifactsFile: (root: string): string => join(root, ".ocoding", "artifacts.yaml"),
   configFile: (root: string): string => join(root, ".ocoding", "config.yaml"),
   docsDir: (root: string): string => join(root, "docs"),
   prdFile: (root: string): string => join(root, "docs", "02-prd.md"),
