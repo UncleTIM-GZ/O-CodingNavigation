@@ -20,9 +20,9 @@ ocn --help
 ocn-mcp             # starts the MCP stdio server; press Ctrl+C to exit
 ```
 
-The MCP server binary `ocn-mcp` is published, but Claude Desktop / Cursor / Cline host validation is **not yet complete** — see [DEC-005](./20-decision-log.md#dec-005defer-external-mcp-host-validation-until-a-real-host-is-available). Treat the published `ocn-mcp` as *implemented* but not as *verified host-compatibility*.
+The MCP server binary `ocn-mcp` is published. **MCP Host validation completed for Claude Desktop on Windows with WSL2** (see [DEC-017](./20-decision-log.md) and [`reports/2026-04-30-mcp-external-host-validation-report.md`](./reports/2026-04-30-mcp-external-host-validation-report.md)). **Cursor and Cline remain unverified** — treat them as *implemented* but not as *verified host-compatibility* until separate validation lands. The historical [DEC-005](./20-decision-log.md#dec-005defer-external-mcp-host-validation-until-a-real-host-is-available) caveat is preserved as a record of the deferral that originally applied.
 
-> **External MCP Host Validation pending.**
+> MCP Host validation completed for Claude Desktop on Windows with WSL2. Cursor and Cline remain unverified.
 
 To uninstall: `npm uninstall -g o-coding-navigation`.
 
