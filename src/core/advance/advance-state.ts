@@ -166,6 +166,17 @@ export async function advanceState(opts: AdvanceOptions): Promise<CommandResult<
     correlationId,
   });
 
+  // Sentinel thrown from inside the lock when a concurrent advance has already
+  // moved the project past `from`. We surface it as a structured
+  // ERR_STATE_MACHINE result rather than a thrown error to keep the
+  // command-level envelope contract.
+  class StaleAdvanceError extends Error {
+    constructor(public readonly observed: StepLocation) {
+      super("stale advance — state changed during advance");
+      this.name = "StaleAdvanceError";
+    }
+  }
+
   try {
     await withLock(
       {
@@ -175,8 +186,24 @@ export async function advanceState(opts: AdvanceOptions): Promise<CommandResult<
         lifecycle: lockHook,
       },
       async () => {
-        // Re-read inside the lock to guard against a concurrent-advance race.
+        // Re-read inside the lock to detect concurrent advance.
+        // PR (post-Codex P1 fix): the previous implementation re-read but
+        // did not compare; the lock-protected critical section then wrote
+        // the pre-lock-computed `next` regardless of whether another caller
+        // had already advanced. If two advance calls race from the same
+        // `from`, the second to acquire the lock observes that the project
+        // has already moved and aborts with a structured stale-state error
+        // instead of overwriting the newer state with `next`.
         const currentState = await readState(opts.cwd);
+        if (
+          currentState.currentStateId !== from.stateId ||
+          currentState.currentStepId !== from.stepId
+        ) {
+          throw new StaleAdvanceError({
+            stateId: currentState.currentStateId,
+            stepId: currentState.currentStepId,
+          });
+        }
         const newState: ProjectState = {
           ...currentState,
           currentStateId: next.stateId,
@@ -186,6 +213,24 @@ export async function advanceState(opts: AdvanceOptions): Promise<CommandResult<
       },
     );
   } catch (err) {
+    if (err instanceof StaleAdvanceError) {
+      const failMessage = msg(
+        `Advance aborted: project state changed during advance (now at ${err.observed.stateId} / ${err.observed.stepId}).`,
+        `推进已放弃：在推进期间状态被并发改写（当前位于 ${err.observed.stateId} / ${err.observed.stepId}）。`,
+      );
+      await safeAudit(
+        opts.cwd,
+        createAuditEvent(
+          buildAdvanceEvent("advance_failed", "failed", failMessage, {
+            from,
+            observed: err.observed,
+            reason: "stale_state",
+          }),
+        ),
+      );
+      const advanceData: AdvanceResult = { from, correlationId };
+      return blocked("ERR_STATE_MACHINE", failMessage, advanceData);
+    }
     if (err instanceof LockTimeoutError) {
       const failMessage = msg(
         "Could not acquire OCN lock during advance. Another OCN process may be running.",
