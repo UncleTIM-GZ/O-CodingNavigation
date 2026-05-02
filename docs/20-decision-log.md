@@ -41,6 +41,7 @@ SOP Profile Version：`0.1.0`
 | DEC-018 | 2026-04-30 | Begin beta candidate preparation (no beta promotion authorised; gated on a future DEC and prerequisite PRs) | ✅ Approved |
 | DEC-019 | 2026-05-01 | Beta Host Support Boundary — first beta scoped to Claude Desktop on Windows with WSL2; Cursor and Cline explicitly unverified and not blockers | ✅ Approved |
 | DEC-020 | 2026-05-01 | npm `latest` tag strategy before beta — keep `latest` unchanged during alpha; canonical pre-beta install path remains `@alpha`; future beta promotion DEC must explicitly decide `latest` movement | ✅ Approved |
+| DEC-021 | 2026-05-01 | Authorise first beta promotion (`0.1.0-beta.0` under `--tag beta` only; `latest` stays at `0.1.0-alpha.0`; Host scope = Claude Desktop on Windows with WSL2; Cursor / Cline still unverified; future publish PR must follow the 18-step checklist) | ✅ Approved |
 
 ---
 
@@ -2244,5 +2245,222 @@ Reviewers reject any PR that adds an untagged `npm install -g o-coding-navigatio
 - **The future beta promotion DEC must revisit `latest`.** It must explicitly choose Option (1), (2), or (3) from the §Decision section above and document the trade-off it is making. The choice cannot be left implicit.
 - **The beta docs audit** (DEC-018 prerequisite #6) must verify that every install command in active docs (`README.md`, `docs/quickstart.md`, `docs/mcp-usage.md`) uses the intended tag for the lane the doc describes. The audit checklist should explicitly include a `grep` for `npm install -g o-coding-navigation` (without `@alpha` / `@beta`) as a CI-blocking signal.
 - **No `npm dist-tag` command is authorised here.** Future tag movement requires its own publish-discipline DEC following the DEC-016 / DEC-015 / DEC-012 pattern (manual version handling, evidence report, no `--ignore-scripts`, etc.).
+
+External MCP Host Validation closed for Claude Desktop. Cursor and Cline remain unverified.
+
+---
+
+## DEC-021｜Authorise First Beta Promotion
+
+Date: 2026-05-01
+
+### Status
+
+Accepted.
+
+### Context
+
+OCN has completed the beta candidate preparation track authorised by DEC-018. The full evidence chain is on `main` and verifiable:
+
+1. **Post-alpha P1 fix train published** as `o-coding-navigation@0.1.0-alpha.2` (DEC-016, `docs/reports/2026-04-30-npm-alpha-2-publish-report.md`). Ships P1-001 / P1-002 / P1-003 / P1-004.
+2. **Claude Desktop real MCP Host validation passed** on Windows with WSL2 and was closed by DEC-017 (`docs/reports/2026-04-30-mcp-external-host-validation-report.md` — verdict Pass, 11 / 11 checks).
+3. **DEC-019 defined the beta Host support boundary** as Claude Desktop on Windows with WSL2 only.
+4. **CI matrix expanded to Node 20 + Node 22** and both cells passed (`docs/reports/2026-05-01-ci-node-22-matrix-expansion.md`).
+5. **State-store lock-observability flake hardened** before the matrix expansion (`docs/reports/2026-05-01-state-store-lock-observability-flake-hardening.md`).
+6. **npm global install smoke passed** for `npm install -g o-coding-navigation@alpha` (`docs/reports/2026-05-01-npm-global-install-smoke.md` — verdict Pass, 15 / 15 checks).
+7. **Examples F2 / F3** added an executable `examples/discovery-to-plan/` with a smoke that walked all 10 enumerated v1.0 SOP steps end-to-end (`docs/reports/2026-05-01-examples-discovery-to-plan.md`).
+8. **DEC-020 kept `latest` unchanged during alpha** and bound this DEC to choose the next tag strategy.
+9. **Beta documentation language audit** passed with three minimal corrections; active docs now use scoped Host wording and the `@alpha` install path uniformly (`docs/reports/2026-05-01-beta-doc-language-audit.md`).
+
+Current published tags (verified at this DEC's authoring time via `npm view o-coding-navigation dist-tags version name --json`):
+
+```
+dist-tags:
+  alpha:  0.1.0-alpha.2
+  latest: 0.1.0-alpha.0
+```
+
+Current repo `package.json` version: `0.1.0-alpha.2` (verified via `node -p "require('./package.json').version"`).
+
+### Decision
+
+Authorise a future, separate **beta publish PR** for:
+
+`o-coding-navigation@0.1.0-beta.0`
+
+The beta publish PR may execute:
+
+```
+npm publish --tag beta
+```
+
+**only after** completing the 18-step pre-publish checklist below.
+
+This DEC does **not** mutate `package.json`.
+This DEC does **not** execute `npm publish`.
+This DEC does **not** move `latest`.
+This DEC does **not** create a git tag.
+This DEC does **not** create a GitHub release.
+
+### `latest` strategy for the first beta
+
+Adopt **Option A** from DEC-020:
+
+> Publish beta under the `beta` tag only.
+> Do not move `latest` during the first beta publish.
+
+After the future beta publish PR succeeds, the expected dist-tag state is:
+
+```
+alpha:  0.1.0-alpha.2  (unchanged)
+beta:   0.1.0-beta.0   (NEW — created by the beta publish PR)
+latest: 0.1.0-alpha.0  (deliberately unchanged from DEC-008 / DEC-012 / DEC-015 / DEC-016 / DEC-020)
+```
+
+Rationale:
+
+- `beta` should be an **explicit opt-in** install signal, like `alpha` is today.
+- Untagged `npm install -g o-coding-navigation` should not silently jump to beta.
+- `latest` movement remains a separate **GA or later-beta** decision and requires its own DEC.
+
+No `npm dist-tag` command is authorised by this DEC.
+
+### Host support wording (binding for the beta publish PR)
+
+All beta release notes and active user-facing docs MUST use exactly this scoped wording (or a wording with strictly equivalent scoping — verified Host named, unverified Hosts explicitly listed):
+
+> Validated with Claude Desktop on Windows with WSL2. Cursor and Cline are not yet verified.
+
+This is the canonical wording fixed in DEC-019 and reaffirmed in DEC-021. Any phrasing that implies Cursor or Cline compatibility is **forbidden** until each Host has its own validation report and closure DEC. Reviewers reject the beta publish PR if its wording exceeds the validated Host set.
+
+### Required pre-publish checklist for the future beta publish PR
+
+The future beta publish PR must perform and record each of the following 18 steps in the publish evidence report:
+
+1. **Confirm `main` includes DEC-021** (this DEC) and all DEC-018 prerequisites (DEC-019, DEC-020, the audit and smoke reports listed in §Context).
+2. **Confirm package name** is unchanged: `o-coding-navigation`.
+3. **Confirm current version before bump** is `0.1.0-alpha.2`.
+4. **Hand-edit `package.json` version** from `0.1.0-alpha.2` to `0.1.0-beta.0`. Do not use `npm version`.
+5. **Resync `package-lock.json`** with `npm install --package-lock-only` (top-level + `packages[""].version` only).
+6. **Confirm `package-lock.json` diff is version-only** — no dependency graph change. Reject the PR if any other field changed.
+7. **Confirm npm registry**: `npm config get registry` → `https://registry.npmjs.org/`.
+8. **Confirm npm identity**: `npm whoami` succeeds. Username may be redacted in the public report.
+9. **Confirm `o-coding-navigation@0.1.0-beta.0` is not already published**: `npm view o-coding-navigation@0.1.0-beta.0` returns E404. If it returns metadata, stop — do not republish.
+10. **Run all local gates**:
+    - `npm run lint`
+    - `npm run typecheck`
+    - `npm run test`
+    - `npm run test:coverage`
+    - `npm run build`
+11. **Run the discovery-to-plan example smoke**: `bash examples/discovery-to-plan/scripts/smoke.sh`. The smoke must walk all 10 enumerated steps and report `Discovery-to-plan smoke completed.`
+12. **Run npm global install smoke** in a temp prefix (`mktemp -d` + `--prefix`) against the **packed tarball** produced by step 13, or against the published `@beta` selector after step 15 — choose one and document the choice. Verifies `ocn --version` returns `0.1.0-beta.0`, `ocn-mcp` boots clean, and the disposable-project flow passes.
+13. **Run `npm pack --dry-run`** and capture the tarball summary (file count, packed size, unpacked size, shasum).
+14. **Confirm tarball contents match the DEC-009 allowlist**: only `LICENSE`, `README.md`, `package.json`, `docs/quickstart.md`, `docs/mcp-usage.md`, `dist/**`. Reject if any forbidden path appears (`tests/`, `src/`, `.ocoding/`, `.env`, `docs/plans/`, `docs/reports/`, `docs/amendments/`, `node_modules/`, `.git/`, `.github/`, `.husky/`, `coverage/`, etc.).
+15. **Execute publish**: `npm publish --tag beta`. The exact flag is mandatory. Forbidden alternatives (any of which means rejecting the PR):
+    - bare `npm publish` (would default to `latest` for an existing package)
+    - `--tag latest`
+    - `--ignore-scripts`
+    - `--access public` if the package is already public — should not be needed
+16. **Verify post-publish via `npm view`**:
+    ```
+    npm view o-coding-navigation dist-tags version name --json
+    npm view o-coding-navigation@0.1.0-beta.0 name version dist-tags --json
+    ```
+    Capture both. The version-specific query is the authoritative one (the unqualified query may show cached `latest`-resolved metadata for several minutes after publish).
+17. **Confirm expected post-publish tag state**:
+    - `dist-tags.beta` = `0.1.0-beta.0`
+    - `dist-tags.alpha` = `0.1.0-alpha.2` (unchanged)
+    - `dist-tags.latest` = `0.1.0-alpha.0` (unchanged)
+    Reject and roll back if any of these is different.
+18. **Confirm no forbidden actions occurred** during the publish:
+    - no `npm dist-tag` command
+    - no `latest` promotion
+    - no git tag created
+    - no GitHub release created
+    - no Cursor / Cline compatibility claim added anywhere
+    - no caveat removal beyond the pre-existing DEC-017 scope
+
+### Options considered
+
+#### Option A — Publish first beta under `beta` only and keep `latest` unchanged
+
+Accepted.
+
+Reason:
+Preserves the explicit-opt-in install discipline (`@alpha` and `@beta` both require explicit selectors), creates a clear beta channel for early adopters who want the post-alpha-2 line plus any future beta-only fixes, and avoids accidental broad adoption via untagged `npm install -g`. Aligned with how alpha publishes were handled in DEC-008 / DEC-012 / DEC-015 / DEC-016.
+
+#### Option B — Publish beta and move `latest` to beta
+
+Rejected.
+
+Reason:
+The project is **not GA**. Moving `latest` would expose anyone running untagged `npm install -g o-coding-navigation` (e.g. CI scripts, package.json `dependencies`, tutorials that don't use `@beta`) to a pre-GA package. The whole `@alpha` discipline established in DEC-008 was specifically to make pre-stable consumption an opt-in signal. Beta is closer to GA than alpha but is still pre-GA.
+
+A weaker version of this option — "users on alpha.0 (the current `latest`) are *worse off* than users on beta.0 because alpha.0 lacks the four post-alpha P1 fixes" — is real, but is mitigated by the documented `@alpha` install path that already routes following-the-docs users to `0.1.0-alpha.2`. The set of users who are simultaneously (a) installing without an explicit tag AND (b) staying on the result is small enough that promoting `latest` mid-pre-GA remains the larger risk.
+
+#### Option C — Defer beta despite completed prerequisites
+
+Rejected.
+
+Reason:
+All eight DEC-018 prerequisites are complete, all evidence is on `main`, the lock-observability and CI flake risks have been hardened, the doc audit is clean, and the Host scope is honest. Deferring beta would be valuable only if a *new* risk emerged that the existing evidence chain doesn't cover. None has. Continuing to ship under `@alpha` long after the candidate preparation is complete would erode the "alpha vs beta vs GA" semantic ladder rather than respect it.
+
+#### Option D — Require Cursor and Cline real-Host validation before beta
+
+Rejected.
+
+Reason:
+DEC-019 explicitly allowed the first beta to be Claude-Desktop-scoped. Cursor and Cline validation each require their own focused validation runs (DEC-017-style) and closure DECs; bundling those into the first beta gate would (a) delay beta indefinitely, (b) bundle three independent validation efforts into one PR's review surface, and (c) create pressure to declare success on Cursor / Cline before they're actually validated. Each Host gets its own future PR.
+
+### Consequences
+
+Positive:
+
+- Creates a clear `@beta` install channel for users who want the post-P1-fix-train alpha plus any future beta-only fixes.
+- Preserves explicit-opt-in install semantics: `@alpha`, `@beta`, and untagged installs all resolve to different versions.
+- Keeps Host support claims evidence-based and scoped — Claude Desktop only, Cursor / Cline still flagged as unverified.
+- Avoids accidental broad adoption through untagged `npm install -g`.
+- Establishes the publish-discipline pattern (DEC-016 / DEC-015 / DEC-012 / DEC-008) for the next semver-prefix transition.
+
+Negative:
+
+- Active docs must continue to instruct users to install with an explicit `@alpha` (current) or `@beta` (after publish) selector. Any drift in install commands is a CI-blockable correctness issue per DEC-020.
+- `latest` remains intentionally stale at `0.1.0-alpha.0` — this is correct per the explicit-opt-in discipline but visually confusing to users who expect `latest` to mean "newest". The pre-GA caveat in active docs already explains this.
+- Cursor / Cline users remain outside the verified support boundary. Their support is a separate future track.
+
+### Beta documentation rule (post-publish)
+
+After the future beta publish PR succeeds, active docs **may** introduce:
+
+```
+npm install -g o-coding-navigation@beta
+```
+
+as the **beta install command** alongside or in place of the `@alpha` form. The decision of whether to keep `@alpha` references in active docs (e.g. as a "stable previous channel" pointer) belongs to the docs PR that follows the beta publish, not to this DEC.
+
+Active docs MUST NOT recommend the untagged form:
+
+```
+npm install -g o-coding-navigation         # do NOT recommend
+```
+
+while DEC-020 / DEC-021 are in force. Any later DEC that moves `latest` may revisit this rule.
+
+Active docs MUST NOT replace the scoped Host wording fixed in §"Host support wording" above. Any active-doc edit that broadens Host claims requires an additional Host validation report + closure DEC (DEC-017-style) for each new Host claimed.
+
+### Follow-up
+
+The future beta publish PR (separate from this DEC; not authorised to start until DEC-021 lands on `main`) must:
+
+- bump `package.json` version to `0.1.0-beta.0`
+- publish with `--tag beta` (the literal flag, no shortcuts)
+- record full publish evidence in `docs/reports/<DATE>-npm-beta-0-publish-report.md` following the DEC-016 / alpha.2 evidence pattern
+- keep `latest` unchanged at `0.1.0-alpha.0`
+- not create a git tag
+- not create a GitHub release
+- not claim Cursor or Cline compatibility
+- not remove the DEC-017 caveat scoping
+
+A separate follow-up docs PR may update active install commands from `@alpha` to `@beta` (or include both) **only after** the beta publish PR succeeds and `npm view o-coding-navigation@beta` returns `0.1.0-beta.0`.
 
 External MCP Host Validation closed for Claude Desktop. Cursor and Cline remain unverified.
