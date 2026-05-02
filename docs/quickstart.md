@@ -29,29 +29,35 @@
 
 ## 1. Install
 
-### 1.1 Recommended — install the beta package from npm
+### 1.1 Recommended — install from npm
+
+```bash
+npm install -g o-coding-navigation
+```
+
+As of v0.2.0-beta.0, npm latest and beta both point to the SOP 0.2.0 Plan → Build → Verify release.
+
+Then verify both binaries are on your PATH:
+
+```bash
+ocn --version       # 0.2.0-beta.0
+ocn --help
+ocn-mcp             # starts the MCP stdio server; press Ctrl+C to exit
+```
+
+Use @beta when you want to pin the prerelease channel explicitly:
 
 ```bash
 npm install -g o-coding-navigation@beta
 ```
 
-Then verify both binaries are on your PATH:
-
-```bash
-ocn --version       # 0.1.0-beta.0
-ocn --help
-ocn-mcp             # starts the MCP stdio server; press Ctrl+C to exit
-```
-
-The MCP server binary `ocn-mcp` is published. **MCP Host validation completed for Claude Desktop on Windows with WSL2** (see [DEC-017](./20-decision-log.md) and [`reports/2026-04-30-mcp-external-host-validation-report.md`](./reports/2026-04-30-mcp-external-host-validation-report.md)). **Cursor and Cline remain unverified** — treat them as *implemented* but not as *verified host-compatibility* until separate validation lands. The historical [DEC-005](./20-decision-log.md#dec-005defer-external-mcp-host-validation-until-a-real-host-is-available) caveat is preserved as a record of the deferral that originally applied.
+The MCP server binary `ocn-mcp` is published. Validated with Claude Desktop on Windows with WSL2. Cursor and Cline are not yet verified.
 
 To uninstall: `npm uninstall -g o-coding-navigation`.
 
 **Prerequisites**: Node.js ≥ 20.
 
-> **Alpha is still available** at `npm install -g o-coding-navigation@alpha` (resolves to `0.1.0-alpha.2`) but `@beta` is now the recommended pre-GA channel. The `@alpha` form is kept available for users who specifically need the alpha line; new users should prefer `@beta`.
-
-> **dist-tag note**: per [DEC-020](./20-decision-log.md) and [DEC-021](./20-decision-log.md), `latest` remains intentionally unchanged at `0.1.0-alpha.0`. Current dist-tags: `beta = 0.1.0-beta.0` (recommended), `alpha = 0.1.0-alpha.2`, `latest = 0.1.0-alpha.0`. **Do NOT use untagged `npm install -g o-coding-navigation`** while `latest` is intentionally stale — always pass an explicit `@beta` (or `@alpha`) selector. `latest` will only move when a future DEC authorises it. Verified by [`reports/2026-05-01-npm-global-install-smoke.md`](./reports/2026-05-01-npm-global-install-smoke.md) and [`reports/2026-05-01-npm-beta-0-publish-report.md`](./reports/2026-05-01-npm-beta-0-publish-report.md).
+Current npm dist-tags: `latest = 0.2.0-beta.0`, `beta = 0.2.0-beta.0`, `alpha = 0.1.0-alpha.2` (historical; preserved).
 
 ### 1.2 Alternative — local development from source
 
@@ -184,8 +190,8 @@ After `doc create project-brief` you'll also see `docs/00-project-brief.md`. Aft
 | `ERR_ARTIFACT_INVALID` from `ocn doc create <type>` | `<type>` is not one of the 5 supported. | Pick from `project-brief`, `scope`, `prd`, `acceptance-criteria`, `technical-architecture`. |
 | `ERR_IO_OR_CONFIG: lock acquire timeout` | A previous `ocn advance` was killed mid-write and the lock is stale. | Wait 30 s for the stale-recovery path to fire automatically, or inspect `.ocoding/.lock` — if its PID is not running, it is safe to delete. |
 | `ocn-mcp` writes nothing on stderr but the host shows nothing happening | MCP stdio is silent on the success path by design (audit fallback uses a silent logger). | Use the host's tool-list view to confirm 7 tools loaded. |
-| `ocn` not found after `npm install -g …@beta` | Global npm bin not on `PATH`. | `echo $(npm prefix -g)/bin` and add to `PATH`. |
-| `ocn --version` does not show `0.1.0-beta.0` | Installed without the `@beta` selector — npm resolved an older version via `latest`. | Re-install with the explicit selector: `npm install -g o-coding-navigation@beta`. Do **not** use untagged `npm install -g o-coding-navigation` while DEC-020 / DEC-021 are in force. |
+| `ocn` not found after `npm install -g …` | Global npm bin not on `PATH`. | `echo $(npm prefix -g)/bin` and add to `PATH`. |
+| `ocn --version` does not show `0.2.0-beta.0` | Installed an older cached version. | Re-install: `npm install -g o-coding-navigation@latest`, or pin the prerelease explicitly with `npm install -g o-coding-navigation@beta`. |
 | Claude Desktop does not show OCN tools after editing the config | Config edits require a clean restart. | Fully quit Claude Desktop (system tray included) and reopen. Confirm 7 `navigator.*` tools appear. |
 
 If you suspect a real bug, run with `--json` to capture the full `CommandResult` envelope and file an issue with that JSON.
@@ -270,29 +276,35 @@ Every tool requires an absolute `projectRoot` argument. The host (or your prompt
 
 ## A. 安装
 
-### A.1 推荐——从 npm 安装 beta
+### A.1 推荐——从 npm 安装
+
+```bash
+npm install -g o-coding-navigation
+```
+
+从 v0.2.0-beta.0 开始，npm latest 与 beta 均指向 SOP 0.2.0 的 Plan → Build → Verify 闭环版本。
+
+安装后验证两个二进制都在 `PATH` 上：
+
+```bash
+ocn --version       # 0.2.0-beta.0
+ocn --help
+ocn-mcp             # 启动 MCP stdio server；按 Ctrl+C 退出（stdin EOF 时也会自动退出）
+```
+
+如果希望明确固定在 beta 预发布通道，可以使用 @beta：
 
 ```bash
 npm install -g o-coding-navigation@beta
 ```
 
-安装后验证两个二进制都在 `PATH` 上：
-
-```bash
-ocn --version       # 0.1.0-beta.0
-ocn --help
-ocn-mcp             # 启动 MCP stdio server；按 Ctrl+C 退出（stdin EOF 时也会自动退出）
-```
-
-`ocn-mcp` 已发布。**MCP Host 验证仅完成于 Claude Desktop on Windows + WSL2**（见 [DEC-017](./20-decision-log.md) 与 [`reports/2026-04-30-mcp-external-host-validation-report.md`](./reports/2026-04-30-mcp-external-host-validation-report.md)）。**Cursor 与 Cline 尚未验证**——视为"已实现但未验证 host 兼容性"，等到独立验证报告落地后才能改。历史背景见 [DEC-005](./20-decision-log.md#dec-005defer-external-mcp-host-validation-until-a-real-host-is-available)。
+`ocn-mcp` 已发布。已在 Claude Desktop on Windows + WSL2 验证。Cursor 与 Cline 暂未验证。
 
 卸载：`npm uninstall -g o-coding-navigation`。
 
 **前置依赖**：Node.js ≥ 20。
 
-> **Alpha 仍可用**：`npm install -g o-coding-navigation@alpha`（解析到 `0.1.0-alpha.2`），但 `@beta` 已是推荐 pre-GA 通道。`@alpha` 仅供确实需要 alpha 线的用户；新用户优先用 `@beta`。
-
-> **关于 dist-tag**：按 [DEC-020](./20-decision-log.md) 与 [DEC-021](./20-decision-log.md)，`latest` 故意停留在 `0.1.0-alpha.0`。当前 dist-tag：`beta = 0.1.0-beta.0`（推荐）、`alpha = 0.1.0-alpha.2`、`latest = 0.1.0-alpha.0`。**不要在 `latest` 故意陈旧的情况下使用不带 tag 的 `npm install -g o-coding-navigation`**——一律传显式 `@beta`（或 `@alpha`）选择器。`latest` 仅在未来某个 DEC 授权时才会移动。证据：[`reports/2026-05-01-npm-global-install-smoke.md`](./reports/2026-05-01-npm-global-install-smoke.md) 与 [`reports/2026-05-01-npm-beta-0-publish-report.md`](./reports/2026-05-01-npm-beta-0-publish-report.md)。
+当前 npm dist-tag：`latest = 0.2.0-beta.0`、`beta = 0.2.0-beta.0`、`alpha = 0.1.0-alpha.2`（历史保留）。
 
 ### A.2 备选——从源码本地开发
 
@@ -425,8 +437,8 @@ ocn-demo/
 | `ocn doc create <type>` 抛 `ERR_ARTIFACT_INVALID` | `<type>` 不在 5 类之内。 | 选 `project-brief`、`scope`、`prd`、`acceptance-criteria`、`technical-architecture`。 |
 | `ERR_IO_OR_CONFIG: lock acquire timeout` | 上一次 `ocn advance` 中途被杀，锁残留。 | 等 30 秒等陈旧锁回收触发，或检查 `.ocoding/.lock`——里面的 PID 已经不在跑就可以删。 |
 | `ocn-mcp` stderr 一片空，但 host 也没动静 | MCP stdio 在成功路径上**故意**安静（audit fallback 走 silent logger）。 | 看 host 的 tools 面板，确认 7 个工具加载成功。 |
-| `npm install -g …@beta` 之后 `ocn` 找不到 | npm 全局 bin 不在 `PATH` 上。 | `echo $(npm prefix -g)/bin`，把它加进 `PATH`。 |
-| `ocn --version` 不是 `0.1.0-beta.0` | 安装时没带 `@beta` 选择器，被 `latest` 解析到旧版本。 | 重新用显式选择器安装：`npm install -g o-coding-navigation@beta`。**不要**用不带 tag 的 `npm install -g o-coding-navigation`（DEC-020 / DEC-021 期间生效）。 |
+| `npm install -g …` 之后 `ocn` 找不到 | npm 全局 bin 不在 `PATH` 上。 | `echo $(npm prefix -g)/bin`，把它加进 `PATH`。 |
+| `ocn --version` 不是 `0.2.0-beta.0` | 安装到了旧的缓存版本。 | 重新安装：`npm install -g o-coding-navigation@latest`，或显式固定预发布通道：`npm install -g o-coding-navigation@beta`。 |
 | 改完配置但 Claude Desktop 看不到 OCN 工具 | 配置改动需要一次干净的重启。 | **完全退出** Claude Desktop（含系统托盘）再重启，确认看到 7 个 `navigator.*` 工具。 |
 
 如果你怀疑是真 bug，加 `--json` 把完整 `CommandResult` envelope 抓下来，附在 issue 里。
