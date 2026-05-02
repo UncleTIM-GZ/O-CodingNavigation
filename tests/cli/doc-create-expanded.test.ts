@@ -8,7 +8,12 @@ const cases = [
   {
     type: "project-brief",
     file: "docs/00-project-brief.md",
-    headings: ["## Problem｜问题", "## Goal｜目标", "## Users｜用户", "## Success Criteria｜成功标准"],
+    headings: [
+      "## Problem｜问题",
+      "## Goal｜目标",
+      "## Users｜用户",
+      "## Success Criteria｜成功标准",
+    ],
   },
   {
     type: "scope",
@@ -83,12 +88,31 @@ describe("ocn doc create — 5 supported types", () => {
     expect(result.exitCode).toBe(2);
     const parsed = JSON.parse(result.stdout);
     expect(parsed.code).toBe("ERR_ARTIFACT_INVALID");
+    // SOP 0.2.0 PR 2 (DEC-023) added templates for every artifact id 00-18
+    // of the SOP 0.2.0 profile alongside the original 5. The exact ordering
+    // is locked here so consumers can rely on a stable CommandResult
+    // `supportedTypes` payload — the order matches the registry insertion
+    // order in src/core/templates/index.ts.
     expect(parsed.data.supportedTypes).toEqual([
       "project-brief",
       "scope",
       "prd",
       "acceptance-criteria",
       "technical-architecture",
+      "information-architecture",
+      "data-model",
+      "api-contract",
+      "test-strategy",
+      "mvp-plan",
+      "build-plan",
+      "implementation-log",
+      "change-evidence",
+      "integration-notes",
+      "verification-report",
+      "acceptance-mapping",
+      "failure-fix-log",
+      "regression-evidence",
+      "final-build-verdict",
     ]);
   }, 30_000);
 

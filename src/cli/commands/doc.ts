@@ -1,5 +1,6 @@
 import type { Command } from "commander";
 import { createArtifact } from "../../core/doc.js";
+import { DOC_TYPES } from "../../core/templates/index.js";
 import { outputResult } from "../output.js";
 
 export function registerDocCommand(program: Command): void {
@@ -7,10 +8,7 @@ export function registerDocCommand(program: Command): void {
   doc
     .command("create")
     .description("Create an artifact from its bundled template")
-    .argument(
-      "<type>",
-      "Artifact type: project-brief | scope | prd | acceptance-criteria | technical-architecture",
-    )
+    .argument("<type>", `Artifact type. One of: ${DOC_TYPES.join(", ")}`)
     .option("--overwrite", "Overwrite an existing file", false)
     .option("--json", "Emit machine-readable JSON CommandResult", false)
     .action(async (type: string, rawOpts: { overwrite: boolean; json: boolean }) => {
