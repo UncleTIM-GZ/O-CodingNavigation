@@ -24,7 +24,28 @@ npx ocn-mcp
 
 The process speaks JSON-RPC 2.0 over stdin/stdout per the MCP stdio framing. Stderr is reserved for protocol notifications — **OCN guarantees zero application stderr writes on the success path** (audit fallback messages are routed to a silent logger; see PR #5 §11.5).
 
-### Wire into an MCP host (example: Claude Desktop)
+### Wire into an MCP host｜接入 MCP Host
+
+#### Validated path: Claude Desktop on Windows + WSL2
+
+Edit `%APPDATA%\Claude\claude_desktop_config.json` and add:
+
+```json
+{
+  "mcpServers": {
+    "ocn": {
+      "command": "wsl.exe",
+      "args": ["-e", "ocn-mcp"]
+    }
+  }
+}
+```
+
+If `ocn-mcp` is not on the WSL2 `PATH`, replace `"ocn-mcp"` with the absolute path printed by `which ocn-mcp` inside WSL2 (typically `/home/<user>/.npm-global/bin/ocn-mcp`). Save, fully quit Claude Desktop (system tray included), and reopen — the seven `navigator.*` tools should appear in the tools panel.
+
+#### Native (non-WSL) host on Linux / macOS
+
+If you run a host directly on Linux or macOS (not WSL2) and `ocn-mcp` is on `PATH`:
 
 ```json
 {
@@ -38,6 +59,8 @@ The process speaks JSON-RPC 2.0 over stdin/stdout per the MCP stdio framing. Std
 }
 ```
 
+This native path has **not** been validated end-to-end with a real Host yet — only the WSL2 path was. Treat the native config as plausible-but-unverified until a separate Host validation lands.
+
 Every tool requires an absolute `projectRoot` argument (the path to an OCN-initialized project). The server itself is project-agnostic; one MCP server can serve any number of OCN projects sequentially.
 
 > MCP Host validation completed for Claude Desktop on Windows with WSL2 (per
@@ -46,6 +69,11 @@ Every tool requires an absolute `projectRoot` argument (the path to an OCN-initi
 > Cursor and Cline remain **unverified** in this release — treat the server
 > contract as observed working in Claude Desktop but not yet confirmed in
 > other MCP Hosts.
+
+> **中文说明｜Chinese summary**
+> 当前真实验证通过的 MCP Host 是 **Windows Claude Desktop**，并通过 `wsl.exe -e ocn-mcp` 在 WSL2 中启动 OCN MCP server。
+> Cursor 与 Cline 暂未完成验证，不能声明兼容；每个 Host 都需要独立的真实 Host 验证报告（DEC-017 模式）才能加入支持声明。
+> 每次工具调用都需要绝对路径的 `projectRoot` 参数，且该目录必须已经跑过 `ocn init`。
 
 ### Project root must be initialized｜projectRoot 必须已初始化
 
@@ -82,7 +110,7 @@ inside that directory before calling any MCP tool. This contract closes P1-001 f
 
 ---
 
-## 2. Allowed tools (7)
+## 2. Allowed tools (7)｜允许的 7 个工具
 
 All tools return a structured `MCPToolResult` envelope:
 
@@ -104,6 +132,11 @@ type MCPToolResult<T> =
 | 6 | `navigator.detect_sop_version` | Compare project-locked SOP profile against bundled OCN SOP; returns drift status | No | No |
 | 7 | `navigator.generate_next_prompt` | Returns required sections + AI governance reminder + uncertainty policy + self-check rule for the current step | No | No |
 
+> **中文说明｜Chinese summary**
+> 在已验证 Host（Windows Claude Desktop + WSL2）的工具面板中，应当看到下面 7 个 `navigator.*` 工具：
+> `navigator.where_am_i`, `navigator.brief`, `navigator.run_gate`, `navigator.create_artifact`, `navigator.capture_log`, `navigator.detect_sop_version`, `navigator.generate_next_prompt`。
+> 任何工具调用都需要绝对路径的 `projectRoot` 参数；如果目录未 `ocn init`，工具会返回 `ERR_IO_OR_CONFIG` 结构化错误，不会写入任何文件、不会获取锁、不会写 audit。
+
 ### Input envelopes (zod-validated)
 
 ```ts
@@ -122,7 +155,7 @@ Invalid input never throws — the handler returns an `ERR_VALIDATION` envelope 
 
 ---
 
-## 3. Forbidden tools (NEVER exposed)
+## 3. Forbidden tools (NEVER exposed)｜禁止暴露的 4 个工具
 
 The MCP server intentionally refuses to expose four high-blast-radius operations. They are reserved for human-driven CLI invocation:
 
@@ -134,6 +167,11 @@ The MCP server intentionally refuses to expose four high-blast-radius operations
 | `navigator.force_release_lock` | Bypasses state-safety invariants. Operator-only escape hatch. |
 
 The forbidden list is enforced by `tests/unit/mcp-tool-registry.test.ts` — the test will fail if any of these names ever appear in `ALLOWED_TOOL_NAMES`.
+
+> **中文说明｜Chinese summary**
+> 下面 4 个工具**绝不会**出现在 MCP Host 工具面板中：`navigator.advance_phase`, `navigator.capture_decision`, `navigator.reset_project`, `navigator.force_release_lock`。
+> 这是 OCN 的安全边界：state 推进、决策捕获、项目重置、强制释放锁这四类高风险操作只能通过人类手动 CLI 触发。`tests/unit/mcp-tool-registry.test.ts` 在 CI 上守住这个约束。
+> 如果你的 Host 工具面板里出现了上面任何一个工具名称，立刻停止使用并复查配置——这是错误状态。
 
 ---
 
