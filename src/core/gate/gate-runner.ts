@@ -1,6 +1,7 @@
 import { promises as fs } from "node:fs";
 import { join } from "node:path";
 import type { CommandResult } from "../../types/result.js";
+import type { SopProfile } from "../../types/sop.js";
 import type { GateResult, GateStatus } from "../../types/state-machine.js";
 import type { ProjectState } from "../../types/state.js";
 import { computeArtifactGateStatus } from "../artifact/gate-status.js";
@@ -21,6 +22,15 @@ export interface RunGateOptions {
   readonly actor?: "user" | "system" | "ai_agent";
   readonly source?: "cli" | "core" | "test";
   readonly command?: string;
+  /**
+   * Optional explicit SOP profile to validate against. When omitted, the
+   * runtime default profile is used (currently 0.1.0). SOP 0.2.0 PR 3
+   * (DEC-023) introduced this override so callers can validate the SOP 0.2.0
+   * required-section gates without flipping the default runtime profile.
+   * Internals are reused for PR 4 (advance flow). The default CLI / MCP /
+   * advance behavior does NOT change in PR 3.
+   */
+  readonly profile?: SopProfile;
 }
 
 const ENOENT = "ENOENT";
@@ -67,7 +77,7 @@ export async function runGate(opts: RunGateOptions): Promise<CommandResult<GateR
     throw err;
   }
 
-  const profile = loadSopProfile();
+  const profile = opts.profile ?? loadSopProfile();
   const required = profile.requiredSectionsForStep(state.currentStepId);
   const relativeArtifactPath = profile.artifactPathForStep(state.currentStepId);
 
