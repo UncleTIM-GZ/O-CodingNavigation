@@ -66,9 +66,9 @@ OCN treats these as the same problem: *the AI coding loop has no rigorous notion
 
 ---
 
-## 4. Install
+## 4. Install｜安装
 
-### Recommended: beta from npm
+### Recommended: beta from npm｜推荐通过 npm 安装 beta
 
 ```bash
 npm install -g o-coding-navigation@beta
@@ -81,6 +81,11 @@ ocn --version       # 0.1.0-beta.0
 ocn --help
 ocn-mcp        # starts the MCP stdio server; press Ctrl+C to exit
 ```
+
+> **中文说明｜Chinese summary**
+> 当前推荐使用 `@beta` 通道全局安装：`npm install -g o-coding-navigation@beta`。
+> 安装后用 `ocn --version` 验证版本号是否为 `0.1.0-beta.0`，再用 `ocn --help` 确认命令可用。
+> 暂时不要使用不带 tag 的 `npm install -g o-coding-navigation`：npm 的 `latest` 仍故意指向旧的 `0.1.0-alpha.0`，是否移动 `latest` 留待后续决策（详见 §"Note on dist-tags"）。
 
 **Currently published**:
 
@@ -118,7 +123,10 @@ If you prefer not to `npm link`, run the CLI in-place via `node /path/to/O-Codin
 
 ---
 
-## 5. First 5 minutes
+## 5. First 5 minutes｜首次使用
+
+> **中文说明｜Chinese summary**
+> 在一个新目录里跑 `ocn init` 初始化项目，然后用 `ocn status` 查看当前状态机步骤；用 `ocn doc create project-brief` 生成项目简报模板，编辑填好 4 个必填章节（Problem / Goal / Users / Success Criteria）；再用 `ocn check` 或 `ocn gate` 验证当前 step 的产物是否合规；通过后用 `ocn advance` 推进到下一个 step。最后 `ocn brief` 为接管的 AI agent 输出当前 step 的 brief。
 
 ```bash
 mkdir ocn-demo && cd ocn-demo
@@ -169,9 +177,37 @@ All commands accept `--json` to emit a machine-readable `CommandResult` envelope
 
 ---
 
-## 7. MCP tools
+## 7. MCP tools｜MCP 工具
 
 OCN's MCP server (`ocn-mcp`) exposes 7 tools over stdio transport. **Wire it into Claude Desktop on Windows with WSL2** — that is the validated Host (per [DEC-017](./docs/20-decision-log.md) and [`docs/reports/2026-04-30-mcp-external-host-validation-report.md`](./docs/reports/2026-04-30-mcp-external-host-validation-report.md)). Cursor and Cline are MCP-aware but are **not yet verified** for OCN — see [DEC-019](./docs/20-decision-log.md) for the support boundary; do not treat them as supported until each has its own validation report.
+
+> **中文说明｜Chinese summary**
+> 当前已通过真实 Host 验证的路径是 **Windows + WSL2 + Claude Desktop**（参见 [DEC-017](./docs/20-decision-log.md) 与 [`docs/reports/2026-04-30-mcp-external-host-validation-report.md`](./docs/reports/2026-04-30-mcp-external-host-validation-report.md)）。
+> Cursor 和 Cline 暂未完成验证，不应视为正式支持路径。每个 Host 都需要独立的验证报告（DEC-017 模式）才能加入支持声明。
+
+### Wire into Claude Desktop on Windows + WSL2｜在 Windows + WSL2 中接入 Claude Desktop
+
+Add the OCN entry to `%APPDATA%\Claude\claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "ocn": {
+      "command": "wsl.exe",
+      "args": ["-e", "ocn-mcp"]
+    }
+  }
+}
+```
+
+If `ocn-mcp` is not on the WSL2 `PATH`, replace `"ocn-mcp"` with the absolute path printed by `which ocn-mcp` inside WSL2 (typically the npm global bin, e.g. `/home/<user>/.npm-global/bin/ocn-mcp`). Save the config, fully quit Claude Desktop (system tray included), and reopen — the seven `navigator.*` tools should appear in the tools panel.
+
+Full wiring guidance + per-tool envelopes: [`docs/mcp-usage.md`](./docs/mcp-usage.md). The validation transcript that proved this exact path works lives in [`docs/reports/2026-04-30-mcp-external-host-validation-report.md`](./docs/reports/2026-04-30-mcp-external-host-validation-report.md).
+
+> **中文说明｜Chinese summary**
+> 在 Windows 中编辑 `%APPDATA%\Claude\claude_desktop_config.json`，把上面的 JSON 段并入 `mcpServers`。
+> 如果 WSL2 里 `ocn-mcp` 不在 `PATH` 上，把 `"ocn-mcp"` 替换成 `which ocn-mcp` 输出的绝对路径。
+> 保存后**完全退出**（含系统托盘）再重启 Claude Desktop，即可看到 7 个 `navigator.*` 工具。
 
 ### Allowed (7)
 
