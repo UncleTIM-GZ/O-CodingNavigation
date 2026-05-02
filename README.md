@@ -42,12 +42,12 @@ OCN treats these as the same problem: *the AI coding loop has no rigorous notion
 
 | | |
 |---|---|
-| Phase | **Phase 2 Complete** ([DEC-002](./docs/20-decision-log.md#dec-002phase-2-complete-after-mcp-safe-tools)) |
-| Tests | 393 passed across 63 files (default suite) |
-| Coverage | 83.44% lines / 85.25% branches / 90.69% functions |
-| npm | published as `o-coding-navigation@0.1.0-alpha.0` ([report](./docs/reports/2026-04-29-npm-alpha-publish-report.md)) |
-| Maturity | **alpha** — not stable, not GA, not production-ready |
-| External host validation | **pending** ([DEC-005](./docs/20-decision-log.md#dec-005defer-external-mcp-host-validation-until-a-real-host-is-available)) |
+| Phase | **Phase 2 Complete** ([DEC-002](./docs/20-decision-log.md#dec-002phase-2-complete-after-mcp-safe-tools)) + **beta candidate prep complete** ([DEC-018](./docs/20-decision-log.md), [DEC-021](./docs/20-decision-log.md)) |
+| Tests | 393 → **449** passed across 68 files (default suite, post-beta-candidate work) |
+| Coverage | **83.47%** lines (matches the publish-time gate) |
+| npm | currently published — `@beta` → `0.1.0-beta.0` ([report](./docs/reports/2026-05-01-npm-beta-0-publish-report.md)); `@alpha` → `0.1.0-alpha.2` (post-P1-fix-train); `latest` deliberately unchanged at `0.1.0-alpha.0` per [DEC-020](./docs/20-decision-log.md) / [DEC-021](./docs/20-decision-log.md) |
+| Maturity | **pre-GA beta** — not stable, not GA, not production-ready |
+| External host validation | **completed for Claude Desktop on Windows with WSL2** ([DEC-017](./docs/20-decision-log.md), [report](./docs/reports/2026-04-30-mcp-external-host-validation-report.md)). Cursor and Cline remain unverified ([DEC-019](./docs/20-decision-log.md)) |
 | MCP transport | stdio only (HTTP/SSE not started) |
 
 ### ✅ Implemented
@@ -68,33 +68,35 @@ OCN treats these as the same problem: *the AI coding loop has no rigorous notion
 
 ## 4. Install
 
-### Recommended: alpha from npm
+### Recommended: beta from npm
 
 ```bash
-npm install -g o-coding-navigation@alpha
+npm install -g o-coding-navigation@beta
 ```
 
 Verify:
 
 ```bash
+ocn --version       # 0.1.0-beta.0
 ocn --help
 ocn-mcp        # starts the MCP stdio server; press Ctrl+C to exit
 ```
 
-**Current alpha**:
+**Currently published**:
 
-| Field | Value |
-|---|---|
-| Package | `o-coding-navigation` |
-| Version | `0.1.0-alpha.0` |
-| npm | https://www.npmjs.com/package/o-coding-navigation |
-| Tag | `alpha` |
+| Channel | Version | npm tag | Notes |
+|---|---|---|---|
+| Beta (recommended pre-GA) | `0.1.0-beta.0` | `beta` | Authorised by [DEC-021](./docs/20-decision-log.md); evidence in [`docs/reports/2026-05-01-npm-beta-0-publish-report.md`](./docs/reports/2026-05-01-npm-beta-0-publish-report.md). |
+| Alpha (still available) | `0.1.0-alpha.2` | `alpha` | Prior pre-GA channel; ships the same post-P1-fix-train bits. Use only if you need the alpha-line specifically. |
+| `latest` (do **not** rely on this for OCN) | `0.1.0-alpha.0` | `latest` | Deliberately unchanged from the historical first publish per [DEC-020](./docs/20-decision-log.md) / [DEC-021](./docs/20-decision-log.md). Will only move when a future GA-or-later DEC authorises it. |
+
+Package home: https://www.npmjs.com/package/o-coding-navigation
 
 **Prerequisites**: Node.js ≥ 20 (see `engines` in `package.json`).
 
-> **Note on dist-tags**: per [DEC-020](./docs/20-decision-log.md), `latest` remains intentionally unchanged at `0.1.0-alpha.0` (the historical first publish) while `alpha` resolves to the post-P1-fix-train `0.1.0-alpha.2`. **Always install with the explicit `@alpha` selector** — `latest` will only move when a future beta promotion DEC explicitly authorises it. See [DEC-020](./docs/20-decision-log.md), [`docs/reports/2026-05-01-npm-global-install-smoke.md`](./docs/reports/2026-05-01-npm-global-install-smoke.md), and [`docs/reports/2026-04-30-npm-alpha-2-publish-report.md`](./docs/reports/2026-04-30-npm-alpha-2-publish-report.md).
+> **Note on dist-tags**: per [DEC-020](./docs/20-decision-log.md) and [DEC-021](./docs/20-decision-log.md), `latest` remains intentionally unchanged at `0.1.0-alpha.0` while `beta` (recommended) resolves to `0.1.0-beta.0` and `alpha` (prior pre-GA channel) resolves to `0.1.0-alpha.2`. **Do NOT use untagged `npm install -g o-coding-navigation`** — `latest` is intentionally stale and will only move when a future DEC authorises it. Always install with an explicit selector (`@beta` for the recommended channel, `@alpha` if you need the alpha line specifically). Smoke evidence: [`docs/reports/2026-05-01-npm-global-install-smoke.md`](./docs/reports/2026-05-01-npm-global-install-smoke.md).
 
-> **Pre-GA caveat**: this is an **alpha** release. The package is not stable, not GA, and not production-ready. **MCP Host validation completed for Claude Desktop on Windows with WSL2** (per [DEC-017](./docs/20-decision-log.md) and [`docs/reports/2026-04-30-mcp-external-host-validation-report.md`](./docs/reports/2026-04-30-mcp-external-host-validation-report.md)); **Cursor and Cline remain unverified** in this release. See [DEC-005](./docs/20-decision-log.md#dec-005defer-external-mcp-host-validation-until-a-real-host-is-available) for the historical caveat.
+> **Pre-GA caveat**: this is a **pre-GA beta** release. The package is not stable, not GA, and not production-ready. **MCP Host validation completed for Claude Desktop on Windows with WSL2** (per [DEC-017](./docs/20-decision-log.md) and [`docs/reports/2026-04-30-mcp-external-host-validation-report.md`](./docs/reports/2026-04-30-mcp-external-host-validation-report.md)); **Cursor and Cline remain unverified** in this release. See [DEC-005](./docs/20-decision-log.md#dec-005defer-external-mcp-host-validation-until-a-real-host-is-available) for the historical caveat.
 
 To uninstall: `npm uninstall -g o-coding-navigation`.
 

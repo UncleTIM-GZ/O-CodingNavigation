@@ -6,16 +6,16 @@
 
 ## 1. Install
 
-### 1a. Recommended — install the alpha package from npm
+### 1a. Recommended — install the beta package from npm
 
 ```bash
-npm install -g o-coding-navigation@alpha
+npm install -g o-coding-navigation@beta
 ```
 
 Then verify both binaries are on your PATH:
 
 ```bash
-ocn --version       # 0.1.0-alpha.0
+ocn --version       # 0.1.0-beta.0
 ocn --help
 ocn-mcp             # starts the MCP stdio server; press Ctrl+C to exit
 ```
@@ -28,7 +28,9 @@ To uninstall: `npm uninstall -g o-coding-navigation`.
 
 **Prerequisites**: Node.js ≥ 20.
 
-> **dist-tag note**: per [DEC-020](./20-decision-log.md), `latest` remains intentionally unchanged at `0.1.0-alpha.0` while `alpha` resolves to the post-P1-fix-train `0.1.0-alpha.2`. Always install with the explicit `@alpha` selector — `latest` will only move when a future beta promotion DEC explicitly authorises it. Verified by [`reports/2026-05-01-npm-global-install-smoke.md`](./reports/2026-05-01-npm-global-install-smoke.md).
+> **Alpha is still available** at `npm install -g o-coding-navigation@alpha` (resolves to `0.1.0-alpha.2`) but `@beta` is now the recommended pre-GA channel. The `@alpha` form is kept available for users who specifically need the alpha line; new users should prefer `@beta`.
+
+> **dist-tag note**: per [DEC-020](./20-decision-log.md) and [DEC-021](./20-decision-log.md), `latest` remains intentionally unchanged at `0.1.0-alpha.0`. Current dist-tags: `beta = 0.1.0-beta.0` (recommended), `alpha = 0.1.0-alpha.2`, `latest = 0.1.0-alpha.0`. **Do NOT use untagged `npm install -g o-coding-navigation`** while `latest` is intentionally stale — always pass an explicit `@beta` (or `@alpha`) selector. `latest` will only move when a future DEC authorises it. Verified by [`reports/2026-05-01-npm-global-install-smoke.md`](./reports/2026-05-01-npm-global-install-smoke.md) and [`reports/2026-05-01-npm-beta-0-publish-report.md`](./reports/2026-05-01-npm-beta-0-publish-report.md).
 
 ### 1b. Alternative — local development from source
 
