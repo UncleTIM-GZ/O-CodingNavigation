@@ -22,11 +22,16 @@ describe("navigator.generate_next_prompt", () => {
       expect(result.data?.targetStateId).toBe("state_discovery");
       expect(result.data?.targetStepId).toBe("step_project_brief");
       expect(result.data?.targetArtifactPath).toBe("docs/00-project-brief.md");
+      // SOP 0.2.0 PR 4 (DEC-023) — runtime cutover. project_brief now
+      // requires 7 sections.
       expect(result.data?.requiredSections).toEqual([
         "Problem",
         "Goal",
         "Users",
         "Success Criteria",
+        "Constraints",
+        "Risks",
+        "Non-goals",
       ]);
       // The instruction must include all 3 mandated rules:
       const instruction = result.data?.instruction ?? "";

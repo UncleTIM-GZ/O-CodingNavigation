@@ -5,16 +5,11 @@ import { spawnOcn } from "../helpers/spawn-ocn.js";
 import { createTempProject, type TempProject } from "../helpers/temp-project.js";
 
 async function readState(cwd: string) {
-  return JSON.parse(
-    await fs.readFile(join(cwd, ".ocoding", "state.json"), "utf8"),
-  );
+  return JSON.parse(await fs.readFile(join(cwd, ".ocoding", "state.json"), "utf8"));
 }
 
 async function readEvents(cwd: string) {
-  const raw = await fs.readFile(
-    join(cwd, ".ocoding", "audit", "audit-events.jsonl"),
-    "utf8",
-  );
+  const raw = await fs.readFile(join(cwd, ".ocoding", "audit", "audit-events.jsonl"), "utf8");
   return raw
     .trimEnd()
     .split("\n")
@@ -59,8 +54,10 @@ describe("ocn advance", () => {
     expect(parsed.data.from.stepId).toBe("step_project_brief");
     expect(parsed.data.to.stepId).toBe("step_scope");
 
+    // SOP 0.2.0 PR 4 (DEC-023) — runtime cutover. step_scope lives in
+    // state_spec under 0.2.0 (state_discovery has only step_project_brief).
     const state = await readState(project.cwd);
-    expect(state.currentStateId).toBe("state_discovery");
+    expect(state.currentStateId).toBe("state_spec");
     expect(state.currentStepId).toBe("step_scope");
   }, 30_000);
 

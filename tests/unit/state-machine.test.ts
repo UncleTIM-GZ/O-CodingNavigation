@@ -22,10 +22,18 @@ describe("SopProfile state-machine API", () => {
     ]);
   });
 
-  it("returns the configured steps for state_discovery", () => {
-    expect(profile.stepsForState("state_discovery")).toEqual([
-      "step_project_brief",
+  // SOP 0.2.0 PR 4 (DEC-023) — runtime cutover. step_scope moved out of
+  // state_discovery into state_spec; state_build / state_verify gained
+  // wired steps; only state_ship and state_reflect remain stubs.
+  it("returns the configured steps for state_discovery (only step_project_brief)", () => {
+    expect(profile.stepsForState("state_discovery")).toEqual(["step_project_brief"]);
+  });
+
+  it("returns the configured steps for state_spec (3 wired steps: scope, prd, acceptance_criteria)", () => {
+    expect(profile.stepsForState("state_spec")).toEqual([
       "step_scope",
+      "step_prd",
+      "step_acceptance_criteria",
     ]);
   });
 
@@ -39,9 +47,29 @@ describe("SopProfile state-machine API", () => {
     ]);
   });
 
-  it("returns empty arrays for state stubs (state_build / state_verify / state_ship / state_reflect)", () => {
-    expect(profile.stepsForState("state_build")).toEqual([]);
-    expect(profile.stepsForState("state_verify")).toEqual([]);
+  it("returns the configured steps for state_plan (mvp_plan, build_plan)", () => {
+    expect(profile.stepsForState("state_plan")).toEqual(["step_mvp_plan", "step_build_plan"]);
+  });
+
+  it("returns the configured steps for state_build (3 wired steps under 0.2.0)", () => {
+    expect(profile.stepsForState("state_build")).toEqual([
+      "step_implementation_log",
+      "step_change_evidence",
+      "step_integration_notes",
+    ]);
+  });
+
+  it("returns the configured steps for state_verify (5 wired steps under 0.2.0)", () => {
+    expect(profile.stepsForState("state_verify")).toEqual([
+      "step_verification_report",
+      "step_acceptance_mapping",
+      "step_failure_fix_log",
+      "step_regression_evidence",
+      "step_final_build_verdict",
+    ]);
+  });
+
+  it("returns empty arrays for state stubs that remain in 0.2.0 (state_ship / state_reflect)", () => {
     expect(profile.stepsForState("state_ship")).toEqual([]);
     expect(profile.stepsForState("state_reflect")).toEqual([]);
   });
@@ -59,16 +87,32 @@ describe("SopProfile state-machine API", () => {
     expect(profile.artifactPathForStep("step_information_architecture")).toBe(
       "docs/05-information-architecture.md",
     );
-    expect(profile.artifactPathForStep("step_data_model")).toBe(
-      "docs/06-data-model.md",
-    );
-    expect(profile.artifactPathForStep("step_api_contract")).toBe(
-      "docs/07-api-contract.md",
-    );
-    expect(profile.artifactPathForStep("step_test_strategy")).toBe(
-      "docs/08-test-strategy.md",
-    );
+    expect(profile.artifactPathForStep("step_data_model")).toBe("docs/06-data-model.md");
+    expect(profile.artifactPathForStep("step_api_contract")).toBe("docs/07-api-contract.md");
+    expect(profile.artifactPathForStep("step_test_strategy")).toBe("docs/08-test-strategy.md");
     expect(profile.artifactPathForStep("step_mvp_plan")).toBe("docs/09-mvp-plan.md");
+    // SOP 0.2.0 PR 4 — wired build/verify steps map to docs/10-18.
+    expect(profile.artifactPathForStep("step_build_plan")).toBe("docs/10-build-plan.md");
+    expect(profile.artifactPathForStep("step_implementation_log")).toBe(
+      "docs/11-implementation-log.md",
+    );
+    expect(profile.artifactPathForStep("step_change_evidence")).toBe("docs/12-change-evidence.md");
+    expect(profile.artifactPathForStep("step_integration_notes")).toBe(
+      "docs/13-integration-notes.md",
+    );
+    expect(profile.artifactPathForStep("step_verification_report")).toBe(
+      "docs/14-verification-report.md",
+    );
+    expect(profile.artifactPathForStep("step_acceptance_mapping")).toBe(
+      "docs/15-acceptance-mapping.md",
+    );
+    expect(profile.artifactPathForStep("step_failure_fix_log")).toBe("docs/16-failure-fix-log.md");
+    expect(profile.artifactPathForStep("step_regression_evidence")).toBe(
+      "docs/17-regression-evidence.md",
+    );
+    expect(profile.artifactPathForStep("step_final_build_verdict")).toBe(
+      "docs/18-final-build-verdict.md",
+    );
   });
 
   it("artifactPathForStep returns null for unknown steps", () => {
@@ -77,17 +121,19 @@ describe("SopProfile state-machine API", () => {
 });
 
 describe("nextStepFor", () => {
-  it("advances within state_discovery: project_brief → scope", () => {
+  // SOP 0.2.0 PR 4 (DEC-023) — runtime cutover. project_brief is the only
+  // step in state_discovery; its successor is state_spec/step_scope.
+  it("advances ACROSS states: state_discovery/project_brief → state_spec/step_scope", () => {
     const next = nextStepFor(profile, {
       stateId: "state_discovery",
       stepId: "step_project_brief",
     });
-    expect(next).toEqual({ stateId: "state_discovery", stepId: "step_scope" });
+    expect(next).toEqual({ stateId: "state_spec", stepId: "step_scope" });
   });
 
-  it("advances ACROSS states: scope → state_spec/step_prd", () => {
+  it("advances within state_spec: scope → prd", () => {
     const next = nextStepFor(profile, {
-      stateId: "state_discovery",
+      stateId: "state_spec",
       stepId: "step_scope",
     });
     expect(next).toEqual({ stateId: "state_spec", stepId: "step_prd" });
@@ -115,7 +161,7 @@ describe("nextStepFor", () => {
     });
   });
 
-  it("advances state_design final step into state_plan", () => {
+  it("advances state_design final step into state_plan/step_mvp_plan", () => {
     const next = nextStepFor(profile, {
       stateId: "state_design",
       stepId: "step_test_strategy",
@@ -123,10 +169,51 @@ describe("nextStepFor", () => {
     expect(next).toEqual({ stateId: "state_plan", stepId: "step_mvp_plan" });
   });
 
-  it("returns null at the terminal step (state_plan/step_mvp_plan, since BUILD+ are stubs)", () => {
+  it("advances within state_plan: mvp_plan → build_plan", () => {
     const next = nextStepFor(profile, {
       stateId: "state_plan",
       stepId: "step_mvp_plan",
+    });
+    expect(next).toEqual({ stateId: "state_plan", stepId: "step_build_plan" });
+  });
+
+  it("advances state_plan final step (build_plan) into state_build/step_implementation_log", () => {
+    const next = nextStepFor(profile, {
+      stateId: "state_plan",
+      stepId: "step_build_plan",
+    });
+    expect(next).toEqual({
+      stateId: "state_build",
+      stepId: "step_implementation_log",
+    });
+  });
+
+  it("advances state_build final step (integration_notes) into state_verify/step_verification_report", () => {
+    const next = nextStepFor(profile, {
+      stateId: "state_build",
+      stepId: "step_integration_notes",
+    });
+    expect(next).toEqual({
+      stateId: "state_verify",
+      stepId: "step_verification_report",
+    });
+  });
+
+  it("advances within state_verify: verification_report → acceptance_mapping", () => {
+    const next = nextStepFor(profile, {
+      stateId: "state_verify",
+      stepId: "step_verification_report",
+    });
+    expect(next).toEqual({
+      stateId: "state_verify",
+      stepId: "step_acceptance_mapping",
+    });
+  });
+
+  it("returns null at the terminal step (state_verify/step_final_build_verdict, since SHIP/REFLECT are stubs)", () => {
+    const next = nextStepFor(profile, {
+      stateId: "state_verify",
+      stepId: "step_final_build_verdict",
     });
     expect(next).toBeNull();
   });
@@ -176,11 +263,26 @@ describe("isKnownLocation", () => {
     ).toBe(false);
   });
 
-  it("returns false for stub states with no steps", () => {
+  it("returns false when step is not in the named state (state_build does not contain step_prd)", () => {
     expect(
       isKnownLocation(profile, {
         stateId: "state_build",
         stepId: "step_prd",
+      }),
+    ).toBe(false);
+  });
+
+  it("returns false for stub states (state_ship / state_reflect) under 0.2.0", () => {
+    expect(
+      isKnownLocation(profile, {
+        stateId: "state_ship",
+        stepId: "step_anything",
+      }),
+    ).toBe(false);
+    expect(
+      isKnownLocation(profile, {
+        stateId: "state_reflect",
+        stepId: "step_anything",
       }),
     ).toBe(false);
   });

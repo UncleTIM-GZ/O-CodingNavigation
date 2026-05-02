@@ -27,24 +27,25 @@ import {
 import { gatesYaml as gatesYaml020 } from "../../sops/default-ai-coding-sop/0.2.0/gates.js";
 import { sopYaml as sopYaml020 } from "../../sops/default-ai-coding-sop/0.2.0/sop.js";
 
-// P1-003 — the runtime profile and the persisted .ocoding/sop.yaml now share
-// a single source of truth (data.ts). The loader is a thin adapter that
-// wires the canonical data into the SopProfile interface; gates.yaml,
-// sop.yaml, and artifacts.yaml come from the same data via the renderer in
+// P1-003 — the runtime profile and the persisted .ocoding/sop.yaml share a
+// single source of truth (data.ts). The loader is a thin adapter that wires
+// the canonical data into the SopProfile interface; gates.yaml, sop.yaml,
+// and artifacts.yaml come from the same data via the renderer in
 // `render.ts`. Adding a step requires editing data.ts only — both surfaces
 // pick it up automatically.
 //
-// SOP 0.2.0 PR 3 (DEC-023) — added `loadSopProfileByVersion(version)` for
-// callers that need to validate against an explicit profile version (e.g.
-// the gate runner when invoked with an override profile, or unit tests
-// pinning 0.2.0 enforcement). The default `loadSopProfile()` STILL returns
-// 0.1.0; the runtime default does not change in PR 3. Flipping the default
-// is reserved for PR 4.
+// SOP 0.2.0 PR 4 (DEC-023) — runtime cutover: `loadSopProfile()` now
+// returns 0.2.0 by default. Fresh `ocn init` writes
+// `sopProfileVersion: "0.2.0"` and renders the 0.2.0 snapshot files; gate /
+// check / status / brief / advance / MCP all see the 0.2.0 profile by
+// default. `loadSopProfileByVersion("0.1.0")` and `("0.2.0")` remain
+// available for tests / callers that need an explicit version, but no
+// default runtime path goes through 0.1.0 any more (no old projects exist
+// per user — no migration layer is shipped).
 
-// Re-export 0.1.0 STATE_ORDER for backward compatibility with existing
-// imports of the runtime constant. This always reflects the default profile
-// (currently 0.1.0).
-export const STATE_ORDER: readonly StateId[] = STATE_ORDER_010;
+// Re-export STATE_ORDER for backward compatibility with existing imports of
+// the runtime constant. Always reflects the default profile.
+export const STATE_ORDER: readonly StateId[] = STATE_ORDER_020;
 
 export type SopProfileVersion = "0.1.0" | "0.2.0";
 
@@ -57,9 +58,7 @@ interface ProfileSource {
   readonly defaultConfigYaml: string;
   readonly stateOrder: readonly StateId[];
   readonly stepsByState: Readonly<Record<StateId, readonly (StepDef010 | StepDef020)[]>>;
-  readonly requiredSectionsByStep: Readonly<
-    Record<string, readonly RequiredSectionDef[]>
-  >;
+  readonly requiredSectionsByStep: Readonly<Record<string, readonly RequiredSectionDef[]>>;
 }
 
 const PROFILE_SOURCES: Readonly<Record<SopProfileVersion, ProfileSource>> = {
@@ -134,8 +133,7 @@ function buildProfile(source: ProfileSource): SopProfile {
       source.stepsByState[stateId].map((s) => s.stepId),
     nextStep: (_stateId: StateId, stepId: string): StepLocation | null =>
       nextStepIndex.get(stepId) ?? null,
-    artifactPathForStep: (stepId: string): string | null =>
-      artifactPathIndex.get(stepId) ?? null,
+    artifactPathForStep: (stepId: string): string | null => artifactPathIndex.get(stepId) ?? null,
   };
 }
 
@@ -151,24 +149,24 @@ function getProfile(version: SopProfileVersion): SopProfile {
 }
 
 /**
- * Default runtime profile — pinned to 0.1.0 in SOP 0.2.0 PR 3 (DEC-023).
- * The runtime does not flip to 0.2.0 here; flipping the init default is
- * reserved for PR 4.
+ * Default runtime profile — flipped to 0.2.0 in SOP 0.2.0 PR 4 (DEC-023).
+ * Every runtime path (init, status, brief, check, gate, advance, MCP) reads
+ * this loader by default and therefore sees 0.2.0 from this commit forward.
  */
+export const DEFAULT_SOP_PROFILE_VERSION: SopProfileVersion = "0.2.0";
+
 export function loadSopProfile(): SopProfile {
-  return getProfile("0.1.0");
+  return getProfile(DEFAULT_SOP_PROFILE_VERSION);
 }
 
 /**
  * Explicit version-aware profile loader. Used by:
- *   - the gate runner when an explicit `profile` override is passed in
- *     (PR 3 introduces this path; default callers still go through
- *     `loadSopProfile()` and therefore still see 0.1.0)
- *   - unit tests that pin the 0.2.0 enforcement contract
- *   - PR 4 / PR 5 when the runtime default eventually flips
+ *   - tests that pin a specific profile version
+ *   - the gate runner when callers want to validate against a non-default
+ *     profile
  *
- * Deterministic and typed. Throws via TypeScript at compile time for any
- * version outside the SopProfileVersion union.
+ * Deterministic and typed. Compile-time error for any version outside the
+ * SopProfileVersion union.
  */
 export function loadSopProfileByVersion(version: SopProfileVersion): SopProfile {
   return getProfile(version);

@@ -3,10 +3,7 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { runGate } from "../../src/core/gate/gate-runner.js";
 import { initProject } from "../../src/core/init.js";
-import {
-  loadSopProfile,
-  loadSopProfileByVersion,
-} from "../../src/core/sop/loader.js";
+import { loadSopProfile, loadSopProfileByVersion } from "../../src/core/sop/loader.js";
 import {
   REQUIRED_SECTIONS_BY_STEP,
   STATE_DEFS,
@@ -44,9 +41,7 @@ function deriveSteps(): readonly StepInfo[] {
   for (const state of STATE_DEFS) {
     for (const step of STEPS_BY_STATE[state.id]) {
       if (step.artifactPath === null) continue;
-      const docType = step.stepId
-        .replace(/^step_/, "")
-        .replace(/_/g, "-") as DocType;
+      const docType = step.stepId.replace(/^step_/, "").replace(/_/g, "-") as DocType;
       out.push({
         stepId: step.stepId,
         stateId: state.id,
@@ -470,40 +465,42 @@ describe("SOP 0.2.0 gate runner — all 19 generated templates pass", () => {
   });
 });
 
-describe("SOP 0.2.0 gate runner — runtime default is unchanged (0.1.0)", () => {
-  it("loadSopProfile() still returns 0.1.0", () => {
+describe("SOP 0.2.0 gate runner — runtime default IS 0.2.0 (PR 4 cutover)", () => {
+  it("loadSopProfile() returns 0.2.0", () => {
     const def = loadSopProfile();
-    expect(def.version).toBe("0.1.0");
+    expect(def.version).toBe("0.2.0");
     expect(def.id).toBe("default-ai-coding-sop");
   });
 
-  it("loadSopProfileByVersion('0.2.0') is a different profile (19 wired steps total)", () => {
-    const v020 = loadSopProfileByVersion("0.2.0");
-    expect(v020.version).toBe("0.2.0");
-    let total = 0;
-    for (const stateId of v020.stateOrder) {
-      total += v020.stepsForState(stateId).length;
-    }
-    expect(total).toBe(19);
-  });
-
-  it("default loadSopProfile() returns the same 10-step shape as 0.1.0", () => {
+  it("default profile has 19 wired steps total", () => {
     const def = loadSopProfile();
     let total = 0;
     for (const stateId of def.stateOrder) {
       total += def.stepsForState(stateId).length;
     }
+    // 0.2.0: 1 (discovery) + 3 (spec) + 5 (design) + 2 (plan) + 3 (build)
+    //        + 5 (verify) + 0 (ship) + 0 (reflect) = 19
+    expect(total).toBe(19);
+  });
+
+  it("loadSopProfileByVersion('0.1.0') is still importable and exposes the legacy 10-step shape", () => {
+    const v010 = loadSopProfileByVersion("0.1.0");
+    expect(v010.version).toBe("0.1.0");
+    let total = 0;
+    for (const stateId of v010.stateOrder) {
+      total += v010.stepsForState(stateId).length;
+    }
     // 0.1.0: 2 (discovery) + 2 (spec) + 5 (design) + 1 (plan) + 0 + 0 + 0 + 0 = 10
     expect(total).toBe(10);
   });
 
-  it("runGate without an explicit profile still uses 0.1.0 (regression: empty PRD body without 0.1.0 sections fails for step_prd)", async () => {
+  it("runGate without an explicit profile uses 0.2.0 (empty PRD body must report 0.2.0 required sections)", async () => {
     const project = await createTempProject("ocn-sop020-gate-default-");
     try {
       await initProject({ cwd: project.cwd, tier: "minimal" });
-      // Seed to step_prd, write an empty file. Default (0.1.0) gate must
-      // block on the 0.1.0 PRD required sections — proves the default
-      // profile is unchanged in PR 3.
+      // Seed to step_prd, write an empty file. Default (0.2.0) gate must
+      // block on the 0.2.0 PRD required sections — proves the default
+      // profile cut over in PR 4.
       await seedState(project.cwd, {
         currentStateId: "state_spec",
         currentStepId: "step_prd",
@@ -518,15 +515,14 @@ describe("SOP 0.2.0 gate runner — runtime default is unchanged (0.1.0)", () =>
         const data = result.data as {
           missingRequiredSectionIds: readonly string[];
         };
-        // 0.1.0 PRD required: section_problem, section_goals, section_users,
-        // section_scenarios, section_requirements. None are present, so all
-        // five must be reported.
         expect(data.missingRequiredSectionIds).toEqual([
-          "section_problem",
-          "section_goals",
-          "section_users",
-          "section_scenarios",
-          "section_requirements",
+          "section_product_form",
+          "section_user_roles",
+          "section_user_flow",
+          "section_core_features",
+          "section_non_functional_requirements",
+          "section_acceptance_preconditions",
+          "section_non_goals",
         ]);
       }
     } finally {

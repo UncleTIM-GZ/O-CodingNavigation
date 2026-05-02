@@ -3,7 +3,6 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { runGate } from "../../src/core/gate/gate-runner.js";
 import { initProject } from "../../src/core/init.js";
-import { FixtureFiles } from "../helpers/fixtures.js";
 import { seedState, seedToStepPrd } from "../helpers/seed-state.js";
 import { createTempProject, type TempProject } from "../helpers/temp-project.js";
 
@@ -30,22 +29,27 @@ describe("runGate", () => {
         artifactPath?: string;
       };
       expect(data.status).toBe("blocked");
+      // SOP 0.2.0 PR 4 (DEC-023) — runtime default is 0.2.0; project_brief
+      // requires all 7 sections.
       expect(data.missingRequiredSectionIds).toEqual([
         "section_problem",
         "section_goal",
         "section_users",
         "section_success_criteria",
+        "section_constraints",
+        "section_risks",
+        "section_non_goals",
       ]);
       expect(data.artifactPath).toBe("docs/00-project-brief.md");
     }
   });
 
-  it("returns pass when the current step's artifact has all required sections", async () => {
+  it("returns pass when the current step's artifact has all required sections (full template)", async () => {
+    // Use the bundled prd template — covers all 0.2.0 PRD required sections.
     await seedToStepPrd(project.cwd);
-    await fs.copyFile(
-      FixtureFiles.prdWithScenarios(),
-      join(project.cwd, "docs", "02-prd.md"),
-    );
+    const { getTemplate } = await import("../../src/core/templates/index.js");
+    const entry = getTemplate("prd");
+    await fs.writeFile(join(project.cwd, "docs", "02-prd.md"), entry.template, "utf8");
     const result = await runGate({ cwd: project.cwd, command: "gate" });
     expect(result.ok).toBe(true);
     if (result.ok) {
@@ -55,19 +59,26 @@ describe("runGate", () => {
     }
   });
 
-  it("returns blocked when PRD missing Scenarios", async () => {
+  it("returns blocked with the 0.2.0 PRD required sections when PRD body is empty", async () => {
+    // Under 0.2.0 the PRD requires Product Form / User Roles / etc., not
+    // Scenarios. The legacy "missing Scenarios" assertion no longer applies.
     await seedToStepPrd(project.cwd);
-    await fs.copyFile(
-      FixtureFiles.prdMissingScenarios(),
-      join(project.cwd, "docs", "02-prd.md"),
-    );
+    await fs.writeFile(join(project.cwd, "docs", "02-prd.md"), "# PRD\n", "utf8");
     const result = await runGate({ cwd: project.cwd, command: "gate" });
     expect(result.ok).toBe(false);
     if (!result.ok) {
       const data = result.data as {
         missingRequiredSectionIds: readonly string[];
       };
-      expect(data.missingRequiredSectionIds).toEqual(["section_scenarios"]);
+      expect(data.missingRequiredSectionIds).toEqual([
+        "section_product_form",
+        "section_user_roles",
+        "section_user_flow",
+        "section_core_features",
+        "section_non_functional_requirements",
+        "section_acceptance_preconditions",
+        "section_non_goals",
+      ]);
     }
   });
 
@@ -111,8 +122,7 @@ describe("runGate", () => {
       .filter((l) => l.length > 0)
       .map((line) => JSON.parse(line));
     const gateEvents = events.filter(
-      (e) =>
-        e.eventType === "artifact_gate_run" || e.eventType === "artifact_gate_blocked",
+      (e) => e.eventType === "artifact_gate_run" || e.eventType === "artifact_gate_blocked",
     );
     expect(gateEvents.length).toBeGreaterThan(0);
     for (const e of gateEvents) {

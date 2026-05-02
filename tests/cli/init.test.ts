@@ -27,7 +27,8 @@ describe("ocn init", () => {
     expect(state.currentStepId).toBe("step_project_brief");
     expect(state.project.tier).toBe("minimal");
     expect(state.project.sopProfileId).toBe("default-ai-coding-sop");
-    expect(state.project.sopProfileVersion).toBe("0.1.0");
+    // SOP 0.2.0 PR 4 (DEC-023) — fresh init pins to 0.2.0.
+    expect(state.project.sopProfileVersion).toBe("0.2.0");
 
     await fs.access(join(project.cwd, ".ocoding", "sop.yaml"));
     await fs.access(join(project.cwd, ".ocoding", "gates.yaml"));
@@ -67,6 +68,16 @@ describe("ocn init", () => {
       "step_api_contract",
       "step_test_strategy",
       "step_mvp_plan",
+      // SOP 0.2.0 PR 4 — wired build/verify steps must persist.
+      "step_build_plan",
+      "step_implementation_log",
+      "step_change_evidence",
+      "step_integration_notes",
+      "step_verification_report",
+      "step_acceptance_mapping",
+      "step_failure_fix_log",
+      "step_regression_evidence",
+      "step_final_build_verdict",
     ];
     for (const stepId of steps) {
       expect(sopYaml).toContain(`- ${stepId}`);
