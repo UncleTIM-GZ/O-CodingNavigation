@@ -120,11 +120,11 @@ type MCPToolResult<T> =
   | { ok: false; code: string; message: { en: string; zh: string }; error: { code: string; en: string; zh: string } };
 ```
 
-`code` values map 1:1 to OCN's CLI error codes (`OK`, `ERR_GATE_FAILED`, `ERR_IO_OR_CONFIG`, `ERR_STATE_MACHINE`, `ERR_ARTIFACT_INVALID`, `ERR_VALIDATION`).
+`code` values map 1:1 to OCN's CLI error codes (`OK`, `ERR_GATE_FAILED`, `ERR_ARTIFACT_INVALID`, `ERR_STATE_MACHINE`, `ERR_IO_OR_CONFIG`, `ERR_SOP_VERSION`). Invalid tool input (zod parse failure, missing / malformed `projectRoot`) is surfaced through the same envelope using one of these codes — most commonly `ERR_IO_OR_CONFIG` for `projectRoot` validation failures and `ERR_ARTIFACT_INVALID` for malformed tool arguments. There is no separate `ERR_VALIDATION` code in the shipped enum.
 
 | # | Tool | Purpose | Mutates state? | Mutates filesystem? |
 |---|------|---------|----------------|---------------------|
-| 1 | `navigator.where_am_i` | Snapshot of current state (state id, step id, locked SOP, last gate result) | No | No |
+| 1 | `navigator.where_am_i` | Snapshot of current state (project info, current state id, current step id, current artifact path, next-action hint) | No | No |
 | 2 | `navigator.brief` | Render a next-step brief for the current step | No | No |
 | 3 | `navigator.run_gate` | Aggregate the artifact gate for the current step (read-only — does NOT advance) | No | Audit only |
 | 4 | `navigator.create_artifact` | Create a doc from the 5-type template registry (`project-brief`, `scope`, `prd`, `acceptance-criteria`, `technical-architecture`) | No (state) | Yes (writes the doc + audit) |
@@ -151,7 +151,7 @@ type MCPToolResult<T> =
 { projectRoot: string; type: "dev" | "research" | "decision"; message: string }
 ```
 
-Invalid input never throws — the handler returns an `ERR_VALIDATION` envelope with bilingual messages.
+Invalid input never throws — the handler returns a structured `MCPToolResult` envelope with `ok=false` and one of the shipped error codes (typically `ERR_IO_OR_CONFIG` for `projectRoot` validation failures and `ERR_ARTIFACT_INVALID` for other malformed tool arguments). Both `message` and `error` carry bilingual `en` / `zh` strings.
 
 ---
 
@@ -188,7 +188,7 @@ If you need to surface audit-fallback warnings in your MCP host, set a custom lo
 ## 5. Operational guarantees
 
 1. **No tool ever throws across the MCP boundary.** All handlers return a `MCPToolResult` envelope.
-2. **No tool ever bypasses the OCN state lock.** Read-only tools don't acquire the lock; mutating tools (`create_artifact`, `capture_log`) take the lock for the duration of the file write only.
+2. **No tool ever advances `state.json`.** Read-only tools don't acquire the OCN `.ocoding/.lock`; the OCN state lock is reserved for `state.json` mutation, which only the CLI `ocn advance` flow performs. Mutating MCP tools (`create_artifact`, `capture_log`) write to `docs/` only, using filesystem-level atomicity primitives instead of the OCN state lock: `create_artifact` performs an atomic exclusive create (`O_EXCL`) when `overwrite=false` and a tmp-file + atomic `rename(2)` when `overwrite=true`; `capture_log` materialises the markdown header via an atomic link-into-place dance and appends each entry with a single `O_APPEND` write that the kernel serialises atomically.
 3. **No tool ever advances state.** `navigator.advance_phase` is not registered; `navigator.run_gate` is read-only by construction.
 4. **Bilingual messages everywhere.** Every `code` carries an `en` + `zh` string.
 5. **Stable IDs.** Every state, step, section, and artifact ID is a stable string (`state_*`, `step_*`, `section_*`, `artifact_*`) — no numeric pointer leakage.

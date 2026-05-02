@@ -180,7 +180,7 @@ All commands accept `--json` to emit a machine-readable `CommandResult` envelope
 | Command | Purpose | Reads / writes | Audit emission |
 |---|---|---|---|
 | `ocn init [--tier minimal] [--json]` | Initialise an OCN project in the current directory. | Writes `.ocoding/`, `docs/`, the dual-track audit files. | `project_initialized` + state-write events |
-| `ocn status [--json]` | Show current state, step, last gate result. | Read-only. | None (avoids log spam — pull-mode) |
+| `ocn status [--json]` | Show current state, current step, the relative path of the current step's artifact, and the next-action hint. | Read-only. | None (avoids log spam — pull-mode) |
 | `ocn brief [--json]` | Print the current-step brief for an AI coding session: required sections, governance reminders, uncertainty policy. | Read-only. | None (pull-mode) |
 | `ocn doc create <type> [--overwrite] [--json]` | Create one of the 5 supported artifacts from its bundled template. | Writes the artifact under `docs/`. | `artifact_created` |
 | `ocn check [--json]` | Check the current step's artifact against its required sections. | Read-only. | `artifact_gate_run` + `artifact_gate_passed` / `artifact_gate_blocked` |
