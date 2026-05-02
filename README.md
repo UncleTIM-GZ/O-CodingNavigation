@@ -2,7 +2,7 @@
 
 > Local-first, MCP-first, state-machine-driven **AI coding workflow operating system**.
 > CLI: `ocn` · MCP: `ocn-mcp` · License: Apache-2.0
-> **Phase**: Phase 2 Complete · **Status**: internal alpha · **Public**: not yet on npm
+> **Phase**: Phase 2 Complete + beta candidate prep complete · **Status**: pre-GA beta · **Public**: on npm as `@beta` → [`0.1.0-beta.0`](https://www.npmjs.com/package/o-coding-navigation) · GitHub pre-release: [`v0.1.0-beta.0`](https://github.com/UncleTIM-GZ/O-CodingNavigation/releases/tag/v0.1.0-beta.0)
 
 OCN turns AI coding from continuous-chat improvisation into a navigable, gated, auditable, reviewable systems-engineering process. It is a *navigator*, not an IDE, not a SaaS, not a project-management board.
 
@@ -38,7 +38,7 @@ OCN treats these as the same problem: *the AI coding loop has no rigorous notion
 
 ---
 
-## 3. Current status (Phase 2 Complete + alpha published)
+## 3. Current status (Phase 2 Complete + beta published)
 
 | | |
 |---|---|
@@ -58,11 +58,13 @@ OCN treats these as the same problem: *the AI coding loop has no rigorous notion
 - **State safety**: `.ocoding/.lock` (5s timeout + stale recovery), `state.json.bak` rolling backup, atomic temp-rename writes.
 - **Audit**: dual-track persistence, 16 event types, `correlationId` threading across the entire `ocn advance` event chain.
 - **MCP safe tools**: 7 read/prepare/create/log tools over stdio; 4 forbidden tools never registered (full list in §7); `projectRoot` validator + threat model ([`docs/security/mcp-threat-model.md`](./docs/security/mcp-threat-model.md)).
-- **npm alpha**: package metadata, `prepublishOnly` gate, `files` allowlist, alpha publish on the public registry.
+- **Real MCP Host validation**: Claude Desktop on Windows with WSL2 validated end-to-end ([DEC-017](./docs/20-decision-log.md), [report](./docs/reports/2026-04-30-mcp-external-host-validation-report.md)). Cursor and Cline remain unverified.
+- **Executable example**: [`examples/discovery-to-plan/`](./examples/discovery-to-plan/) walks all 10 v1.0 SOP steps end-to-end via `scripts/smoke.sh`. Bundled fixtures derived verbatim from `src/core/templates/*.ts` so they cannot drift.
+- **npm publish discipline**: alpha (`@alpha` → `0.1.0-alpha.2`) and beta (`@beta` → `0.1.0-beta.0`) both publicly published on the npm registry under strict pre-publish checklists, `prepublishOnly` gate, and `files` allowlist. `latest` deliberately unchanged at `0.1.0-alpha.0` per [DEC-020](./docs/20-decision-log.md) / [DEC-021](./docs/20-decision-log.md). Annotated git tag `v0.1.0-beta.0` and matching GitHub pre-release published per [DEC-022](./docs/20-decision-log.md).
 
 ### ❌ Not implemented (deliberately deferred — see §10)
 
-`ocn doctor`, `ocn reset`, `ocn baseline`, SOP versioning / upgrade, `production` / `full` tiers, mini-CRM dogfood, **External MCP Host Validation** (PR D), remote MCP transport, MCP auth, executable `examples/` (only the planning placeholder is in the repo today).
+`ocn doctor`, `ocn reset`, `ocn baseline`, SOP versioning / upgrade, `production` / `full` tiers, mini-CRM dogfood, real-Host validation for Cursor / Cline ([DEC-019](./docs/20-decision-log.md)), remote MCP transport, MCP auth.
 
 ---
 
@@ -155,6 +157,20 @@ Expected outputs:
 
 A more detailed walkthrough lives in [`docs/quickstart.md`](./docs/quickstart.md), including the expected file tree and common errors.
 
+### Try the example｜运行示例
+
+For an executable end-to-end example that walks all 10 v1.0 SOP steps against a hermetic temp project, see [`examples/discovery-to-plan/`](./examples/discovery-to-plan/) and run:
+
+```bash
+npm run build
+bash examples/discovery-to-plan/scripts/smoke.sh
+```
+
+The smoke prints the final state and exits with `Discovery-to-plan smoke completed.` It does not modify your environment.
+
+> **中文说明｜Chinese summary**
+> 仓库自带一个端到端可执行示例 [`examples/discovery-to-plan/`](./examples/discovery-to-plan/)：先 `npm run build`，然后 `bash examples/discovery-to-plan/scripts/smoke.sh`，会在临时目录里跑完 v1.0 SOP 的全部 10 个 step，最后打印 `Discovery-to-plan smoke completed.`，不会污染你的环境。
+
 ---
 
 ## 6. Core CLI commands
@@ -245,7 +261,7 @@ OCN ships its own design baseline under `docs/`. Two governance points worth kno
 - **Canonical decision log**: [`docs/20-decision-log.md`](./docs/20-decision-log.md). Some historical references say `docs/19-decision-log.md` — those refer to the same file before the path move recorded in [AM-002](./docs/amendments/2026-04-28-decision-log-path-amendment.md).
 - **Amendment index**: [`docs/amendments/README.md`](./docs/amendments/README.md). Active divergences from the frozen `docs/00-08` design baseline are recorded as amendments rather than inline edits ([DEC-004](./docs/20-decision-log.md#dec-004frozen-design-docs-amendment-policy)).
 - **Frozen design baseline**: `docs/00-project-brief.md` through `docs/08-mvp-plan.md` are Phase-2 design contracts, treated as historical artifacts. New projects initialised via `ocn init` get the SOP v1.1 step layout from the bundled default profile; the OCN repository itself runs against a project-level override per [DEC-003](./docs/20-decision-log.md#dec-003documentation-numbering-policy-after-sop-v11-technical-architecture-insertion).
-- **Reports**: [`docs/reports/2026-04-28-phase2-completion-report.md`](./docs/reports/2026-04-28-phase2-completion-report.md) records Phase 2 closure, the per-PR timeline, and the GA Prep gap matrix.
+- **Reports**: [`docs/reports/`](./docs/reports/) — Phase 2 closure, post-alpha P1 fix train (4 reports), Claude Desktop MCP Host validation, alpha.0 / alpha.1 / alpha.2 / beta.0 publish reports, examples F2/F3, beta release marker, bilingual install flow, doc audits. Phase 2 baseline lives in [`docs/reports/2026-04-28-phase2-completion-report.md`](./docs/reports/2026-04-28-phase2-completion-report.md).
 - **Plans**: [`docs/plans/`](./docs/plans/) holds the planning artifacts for each PR. The active GA Prep plan is [`docs/plans/2026-04-28-ga-prep-gap-review-plan.md`](./docs/plans/2026-04-28-ga-prep-gap-review-plan.md).
 - **MCP usage**: [`docs/mcp-usage.md`](./docs/mcp-usage.md).
 
@@ -257,7 +273,7 @@ OCN ships its own design baseline under `docs/`. Two governance points worth kno
 npm install
 npm run lint           # ESLint (TypeScript-eslint)
 npm run typecheck      # tsc --noEmit
-npm run test           # vitest run — 312 tests, ~3s
+npm run test           # vitest run — 449 tests, ~3s
 npm run test:coverage  # adds coverage report
 npm run build          # tsc + chmod +x on bin entries
 ```
@@ -266,16 +282,16 @@ The pre-commit hook (Husky 9) runs `lint + typecheck + test` on every commit. CI
 
 ---
 
-## 10. Roadmap (GA Prep — not yet implemented)
+## 10. Roadmap
 
-The GA Prep phase is a documentation, packaging, and operational-readiness audit. **No GA Prep work changes runtime behaviour today.** Tracked in [`docs/plans/2026-04-28-ga-prep-gap-review-plan.md`](./docs/plans/2026-04-28-ga-prep-gap-review-plan.md):
+The GA Prep phase was a documentation, packaging, and operational-readiness audit that ran from Phase 2 closure through the beta candidate preparation track. Most GA Prep PRs are now complete; their evidence lives in [`docs/reports/`](./docs/reports/) and [`docs/20-decision-log.md`](./docs/20-decision-log.md). Original plan: [`docs/plans/2026-04-28-ga-prep-gap-review-plan.md`](./docs/plans/2026-04-28-ga-prep-gap-review-plan.md).
 
-- ✅ **PR A** — Docs numbering reconciliation + amendments index (merged).
-- 🟡 **PR B** — README first-5-minutes + CLI help copy audit (this PR).
-- ⬜ **PR C** — MCP `projectRoot` path-traversal audit + threat-model doc.
+- ✅ **PR A** — Docs numbering reconciliation + amendments index.
+- ✅ **PR B** — README first-5-minutes + CLI help copy audit. Iterated through multiple passes; latest bilingual install-flow refresh: [`docs/reports/2026-05-02-readme-install-flow-completion.md`](./docs/reports/2026-05-02-readme-install-flow-completion.md).
+- ✅ **PR C** — MCP `projectRoot` path-traversal audit + threat-model doc. [`docs/security/mcp-threat-model.md`](./docs/security/mcp-threat-model.md) is in the repo; `projectRoot` validator hardened by [P1-001](./docs/reports/2026-04-30-post-alpha-codex-audit.md) (`validateInitializedProjectRoot`).
 - 🟢 **PR D** — External MCP Host validation. Claude Desktop on Windows with WSL2 validated (see [`docs/reports/2026-04-30-mcp-external-host-validation-report.md`](./docs/reports/2026-04-30-mcp-external-host-validation-report.md) and [DEC-017](./docs/20-decision-log.md)). Cursor and Cline remain unverified in separate future work.
-- ⬜ **PR E** — npm publish gating plan + CI stability audit.
-- ⬜ **PR F** — `examples/` directory plan.
+- ✅ **PR E** — npm publish gating plan + CI stability audit. Publish discipline: [DEC-008](./docs/20-decision-log.md) / [DEC-012](./docs/20-decision-log.md) / [DEC-015](./docs/20-decision-log.md) / [DEC-016](./docs/20-decision-log.md) / [DEC-021](./docs/20-decision-log.md) / [DEC-022](./docs/20-decision-log.md). CI matrix expanded to Node 20 + Node 22 ([report](./docs/reports/2026-05-01-ci-node-22-matrix-expansion.md)). Lock-observability flake hardened ([report](./docs/reports/2026-05-01-state-store-lock-observability-flake-hardening.md)).
+- 🟢 **PR F** — `examples/` directory plan. F1 + F2 + F3 complete: [`examples/discovery-to-plan/`](./examples/discovery-to-plan/) is an executable smoke that walks all 10 v1.0 SOP steps ([report](./docs/reports/2026-05-01-examples-discovery-to-plan.md)). F4 (top-level "Try the example" link) is the example reference under §5.
 
 Beyond GA Prep, the following are **deliberately not part of any current plan** and require their own DEC entry before implementation begins:
 
@@ -284,7 +300,9 @@ Beyond GA Prep, the following are **deliberately not part of any current plan** 
 - Production / full tier artifact-set enforcement
 - Mini-CRM dogfood (Tier 2 GA success criterion)
 - HTTP / SSE MCP transport, MCP auth, MCP session management
-- Public npm publish
+- Cursor / Cline real-Host validation (each Host needs its own DEC-017-style report)
+- `latest`-tag movement DEC (currently `latest = 0.1.0-alpha.0` per DEC-020 / DEC-021; will only move when a future DEC authorises it)
+- GA promotion DEC (final gate tying together Host scope, `latest` movement, multi-OS / Node 24+ CI, dogfood evidence)
 
 ---
 
