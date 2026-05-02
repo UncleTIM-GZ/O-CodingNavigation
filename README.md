@@ -2,7 +2,7 @@
 
 > Local-first, MCP-first, state-machine-driven **AI coding workflow operating system**.
 > CLI: `ocn` · MCP: `ocn-mcp` · License: Apache-2.0
-> **Phase**: SOP 0.2.0 Plan → Build → Verify mainline · **Status**: pre-GA beta · **Public**: on npm as `latest` and `@beta` → [`0.2.0-beta.0`](https://www.npmjs.com/package/o-coding-navigation) · GitHub pre-release: [`v0.2.0-beta.0`](https://github.com/UncleTIM-GZ/O-CodingNavigation/releases/tag/v0.2.0-beta.0)
+> **Phase**: SOP 0.2.0 Plan → Build → Verify mainline · **Status**: pre-GA beta · **Public**: on npm as `latest` and `@beta` → [`0.2.0-beta.1`](https://www.npmjs.com/package/o-coding-navigation) · GitHub pre-release: [`v0.2.0-beta.1`](https://github.com/UncleTIM-GZ/O-CodingNavigation/releases/tag/v0.2.0-beta.1)
 
 > 📑 This README has two parts:
 > **Part 1 — English** (sections 1 – 11) · **Part 2 — 中文版** (§§ A – K)
@@ -24,6 +24,8 @@ OCN turns AI coding from continuous-chat improvisation into a navigable, gated, 
 **Use OCN**
 4. [Install](#4-install)
 5. [First 5 minutes](#5-first-5-minutes)
+   - 5.4 [Full walkthrough: how it looks inside Claude Code](#54-full-walkthrough-how-it-looks-inside-claude-code)
+   - 5.5 [Adopting OCN mid-project](#55-adopting-ocn-mid-project)
 6. [Core CLI commands](#6-core-cli-commands)
 7. [MCP tools](#7-mcp-tools)
 
@@ -70,7 +72,7 @@ OCN treats these as the same problem: *the AI coding loop has no rigorous notion
 | Phase | **SOP 0.2.0 Plan → Build → Verify mainline** — runtime cutover complete; plan-to-verify smoke covers all 19 steps |
 | Tests | full vitest suite green on Node 20 + Node 22 |
 | Coverage | meets the publish-time gate |
-| npm | `latest` → `0.2.0-beta.0`; `beta` → `0.2.0-beta.0`; `alpha` → `0.1.0-alpha.2` (historical; preserved) |
+| npm | `latest` → `0.2.0-beta.1`; `beta` → `0.2.0-beta.1`; `alpha` → `0.1.0-alpha.2` (historical; preserved) |
 | Maturity | **pre-GA beta** — not stable, not GA, not production-ready |
 | External host validation | Validated with Claude Desktop on Windows with WSL2. Cursor and Cline are not yet verified. |
 | MCP transport | stdio only (HTTP/SSE not started) |
@@ -85,7 +87,7 @@ OCN treats these as the same problem: *the AI coding loop has no rigorous notion
 - **MCP safe tools**: 7 read/prepare/create/log tools over stdio; 4 forbidden tools never registered (full list in §7); `projectRoot` validator + threat model ([`docs/security/mcp-threat-model.md`](./docs/security/mcp-threat-model.md)).
 - **Real MCP Host validation**: Claude Desktop on Windows with WSL2 validated end-to-end ([DEC-017](./docs/20-decision-log.md), [report](./docs/reports/2026-04-30-mcp-external-host-validation-report.md)). Cursor and Cline remain unverified.
 - **Executable example**: [`examples/discovery-to-plan/`](./examples/discovery-to-plan/) walks all 10 v1.0 SOP steps end-to-end via `scripts/smoke.sh`. Bundled fixtures derived verbatim from `src/core/templates/*.ts` so they cannot drift.
-- **npm publish discipline**: SOP 0.2.0 mainline published as `o-coding-navigation@0.2.0-beta.0` under strict pre-publish checklists, `prepublishOnly` gate, and `files` allowlist. `latest` and `beta` both point to `0.2.0-beta.0`; `alpha` is preserved at `0.1.0-alpha.2` for historical use. Annotated git tag `v0.2.0-beta.0` and matching GitHub pre-release published.
+- **npm publish discipline**: SOP 0.2.0 mainline published as `o-coding-navigation@0.2.0-beta.1` under strict pre-publish checklists, `prepublishOnly` gate, and `files` allowlist. `latest` and `beta` both point to `0.2.0-beta.1`; `alpha` is preserved at `0.1.0-alpha.2` for historical use. Annotated git tag `v0.2.0-beta.1` and matching GitHub pre-release published.
 
 **Not implemented (deliberately deferred — see §10)**
 
@@ -103,12 +105,12 @@ OCN treats these as the same problem: *the AI coding loop has no rigorous notion
 npm install -g o-coding-navigation
 ```
 
-As of v0.2.0-beta.0, npm latest and beta both point to the SOP 0.2.0 Plan → Build → Verify release.
+As of v0.2.0-beta.1, npm latest and beta both point to the SOP 0.2.0 Plan → Build → Verify release.
 
 Verify:
 
 ```bash
-ocn --version       # 0.2.0-beta.0
+ocn --version       # 0.2.0-beta.1
 ocn --help
 ocn-mcp             # starts the MCP stdio server; press Ctrl+C to exit
 ```
@@ -125,8 +127,8 @@ To uninstall: `npm uninstall -g o-coding-navigation`.
 
 | Channel | Version | npm tag | Notes |
 |---|---|---|---|
-| `latest` (recommended) | `0.2.0-beta.0` | `latest` | SOP 0.2.0 Plan → Build → Verify mainline. |
-| Beta (explicit prerelease pin) | `0.2.0-beta.0` | `beta` | Same artifact as `latest`; use `@beta` when you want to pin the prerelease channel explicitly. |
+| `latest` (recommended) | `0.2.0-beta.1` | `latest` | SOP 0.2.0 Plan → Build → Verify mainline. |
+| Beta (explicit prerelease pin) | `0.2.0-beta.1` | `beta` | Same artifact as `latest`; use `@beta` when you want to pin the prerelease channel explicitly. |
 | Alpha (still available) | `0.1.0-alpha.2` | `alpha` | Prior pre-GA channel; preserved for historical use only. |
 
 Package home: https://www.npmjs.com/package/o-coding-navigation
@@ -194,6 +196,283 @@ bash examples/discovery-to-plan/scripts/smoke.sh
 
 The smoke prints the final state and exits with `Discovery-to-plan smoke completed.` It does not modify your environment.
 
+#### 5.4 Full walkthrough: how it looks inside Claude Code
+
+OCN is MCP-first by design. Inside Claude Code (or any other MCP host wired to `ocn-mcp` — Claude Desktop is the validated path per §7.1), **you almost never need to remember an OCN command**. You speak natural language; the AI calls the right OCN MCP tool; the flow runs itself. **The one and only step that must be typed by you in a terminal is the state-advance step** — that is OCN's design guardrail, not a bug.
+
+> Prerequisite: `ocn-mcp` wired into your MCP host as in §7.1. The validated host is Claude Desktop on Windows + WSL2 ([DEC-017](./docs/20-decision-log.md)); other MCP hosts behave the same but are not yet validated ([DEC-019](./docs/20-decision-log.md)).
+
+Below is the full flow in 8 steps. For each step you get three things: **what you say → what the AI does behind the scenes → what you see back**.
+
+---
+
+##### Phase 1: one-time setup (do once per project)
+
+**Step 1. Initialise OCN**
+
+- **You say**: *"Initialise OCN in the current directory."*
+- **AI does**: shells out via Bash to run `ocn init` (init is not an MCP tool — it must be a shell call).
+- **You see**: `.ocoding/` and `docs/` created; project initialised at `state_discovery / step_project_brief`.
+
+**Step 2. Confirm location**
+
+- **You say**: *"Which step is OCN on?"*
+- **AI does**: calls MCP tool `navigator.where_am_i`.
+- **You see**: current state, current step, artifact path, suggested next action.
+
+---
+
+##### Phase 2: the per-step loop (repeat for every step)
+
+> Assume you're sitting on `step_project_brief`. Steps 3–8 close out one step; the next step uses the same loop.
+
+**Step 3. Pull this step's brief**
+
+- **You say**: *"Tell me what to do for the current step."*
+- **AI does**: calls MCP tool `navigator.brief`.
+- **You see**: required sections, governance reminders, uncertainty policy. These enter the AI's context so it follows the rules when writing the artifact.
+
+**Step 4. Create the artifact template**
+
+- **You say**: *"Create the template for the current step's artifact."*
+- **AI does**: calls MCP tool `navigator.create_artifact` with type `project-brief`.
+- **You see**: `docs/00-project-brief.md` written from the bundled template, with bilingual section headings in place.
+
+**Step 5. Fill out the artifact**
+
+- **You say**: *"Fill out the artifact according to the brief. Our project is [your description]."*
+- **AI does**: based on the brief's required sections + your description, edits `docs/00-project-brief.md` directly via its Edit tool to fill Problem / Goal / Users / Success Criteria.
+- **You see**: a filled-in markdown. Iterate until you're satisfied.
+
+**Step 6. Verify the artifact**
+
+- **You say**: *"Check whether the current artifact passes the gate."*
+- **AI does**: calls MCP tool `navigator.run_gate`.
+- **You see**: pass → AI says "gate passed"; fail → AI lists the missing sections and offers to fix them. On fail, return to Step 5.
+
+**Step 7. You type `ocn advance` yourself**
+
+> ⚠️ This is **the one step in the entire flow that you must do yourself**. The AI cannot do it for you.
+
+After Step 6 passes, a disciplined AI will tell you:
+
+> *"Gate passed. To advance, please run `ocn advance` in your terminal."*
+
+Why won't the AI just run it? Two reasons, both load-bearing:
+
+1. **MCP does not expose advance.** `navigator.advance_phase` is one of the four tools in §7.3 that is **never** registered. From the MCP path, the AI literally has no advance tool.
+2. **OCN's AI governance rules reserve advance for humans.** State advancement = project milestone = the sentence *"we are now in the next phase"* must be spoken by a human. Letting the AI say it would degrade OCN into one more autonomous scaffolder — exactly the failure mode OCN exists to prevent.
+
+So open a terminal and run:
+
+```bash
+ocn advance
+```
+
+`advance` re-runs the gate internally, and on pass writes `state.json` under a lock with rolling backup and emits the full `correlationId`-tagged audit chain.
+
+> If you don't want to switch to a terminal, you can **explicitly** ask the AI to run it for you:
+> *"Run `ocn advance` for me."*
+> That still counts as **your** decision — the AI is just pressing the button on your behalf. The crucial difference: the AI **cannot** auto-run advance the moment Step 6 passes. It must wait until you say so.
+
+**Step 8. Loop back to Step 3**
+
+- **You say**: *"Where is OCN now?"*
+- **AI does**: calls `navigator.where_am_i`.
+- **You see**: the new step (e.g., `step_scope`).
+
+Then return to **Step 3** for the new step: pull its brief, create its artifact, write, verify, advance. Every step uses this same loop until OCN reports the project has run out of steps.
+
+---
+
+##### Cheat sheet: what you say → which tool runs
+
+| What you say | What the AI uses | Mutates `state.json`? |
+|---|---|---|
+| "Where is OCN?" | `navigator.where_am_i` (MCP, read-only) | No |
+| "Pull the current step's brief" | `navigator.brief` (MCP, read-only) | No |
+| "Create the artifact template" | `navigator.create_artifact` (MCP) | No (writes `docs/`) |
+| "Fill out the artifact" | AI's own Edit tool on `docs/` | No |
+| "Verify the artifact" | `navigator.run_gate` (MCP, read-only) | No |
+| **"I'll run `ocn advance` myself"** | **`ocn advance` CLI (Bash, you trigger)** | **✅ Yes** |
+
+---
+
+##### Two hard rules
+
+**(1) `navigator.run_gate` passing ≠ state advancement.**
+`run_gate` is read-only; a pass result does not move OCN to the next step. Only `ocn advance` (CLI) advances. If an AI runs `run_gate` and then claims *"we're in the next step"*, it is lying — `state.json` is unchanged.
+
+**(2) The AI never advances on its own initiative.**
+By design. After Step 6 passes, a disciplined Claude Code will say only *"Gate passed; please run `ocn advance`"*. If it goes ahead and runs `ocn advance` without you asking, it has bypassed OCN's discipline guardrail — exactly the *drift* failure mode OCN exists to prevent.
+
+This is the discipline OCN sells.
+
+#### 5.5 Adopting OCN mid-project
+
+> Scenario: your project is already running — half the code is written, the PRD lives on Notion, ACs are scattered across Slack threads, decisions exist only in your memory. You want to retrofit OCN's discipline now.
+
+---
+
+##### The fact you have to accept first: OCN does not start from "where you actually are"
+
+OCN's state machine **always** starts at `state_discovery / step_project_brief`. The current release does **not** ship `--skip-to`, `--start-at`, or an `--override` flag on advance.
+
+This is by design, not a limitation. OCN's value is forcing you to explicitly answer *"what are we building?"* and *"what counts as done?"*. Skipping to BUILD makes brief, gate, and audit groundless — you might as well not install it.
+
+So the only right path for mid-project adoption is **backfill**. The good news: you already have the content. You're just routing it into OCN's structure.
+
+---
+
+##### `ocn init` and existing files: hard guarantees
+
+The most common worry when adopting OCN mid-project: *"will `ocn init` overwrite my existing code or docs?"*
+
+Answer: **no**. Two source-level guarantees (verified against `src/core/init.ts` and `src/core/artifact/template-writer.ts`):
+
+1. **`ocn init` only writes OCN's own state files under `.ocoding/`** (`state.json`, `sop.yaml`, `gates.yaml`, `artifacts.yaml`, `config.yaml`) and `mkdir`s `docs/`. It does **not** write any `docs/XX-*.md` artifact templates, and it does not touch `src/`, `README.md`, or any other path.
+2. **If the project is already initialised** (`.ocoding/state.json` exists), `ocn init` **refuses to run** and returns exit 4 (`ERR_IO_OR_CONFIG`) with the message *"OCN is already initialized in this directory. / 当前目录已经初始化过 OCN。"* — never overwrites your existing OCN state.
+
+Similarly, **`ocn doc create <type>`** refuses to overwrite by default: on a name collision it returns exit 4 with *"`<type>` already exists at `<path>`. Use `--overwrite` to replace it."* You must explicitly pass `--overwrite` to replace.
+
+So you can safely run them in an existing project root. Worst case: you already have a `docs/00-project-brief.md` — `ocn doc create project-brief` will refuse to write. Two options:
+- **Manually merge** your existing content into the OCN template (preserve OCN's bilingual section headings `Title｜标题` — they are the gate's match anchors).
+- **Rename your file as backup** (e.g. `docs/00-project-brief.legacy.md`), let `ocn doc create project-brief` write the fresh template, then paste your content back into the OCN-shaped sections.
+
+---
+
+##### Recommended path: backfill early steps using material you already have
+
+**Step 1. Initialise in your project root**
+
+- **You say**: *"Initialise OCN in this directory."*
+- **AI does**: runs `ocn init` via Bash.
+- **You see**: `.ocoding/` created (`docs/` is `mkdir`-ed); state at `state_discovery / step_project_brief`. Your existing code and docs are untouched.
+
+**Step 2. Feed the AI your project context in one shot**
+
+- **You say**: *"Here's the project context. The PRD is at [Notion URL / file path]. ACs pasted below. Code is in `src/`; [X module] is done, [Y] still pending. Architecture: [brief]. I want to backfill this into OCN's early steps."*
+- **AI does**: ingests the context for use across all subsequent steps.
+- **You see**: the AI restates the situation to confirm it has the picture.
+
+**Step 3. Backfill the steps one at a time**
+
+Each step uses the §5.4 Steps 3–8 loop (pull brief → create template → AI fills using your material → `run_gate` → **you** type `ocn advance`). The difference from a greenfield project: because the content already exists, the AI mostly reorganises and aligns formats rather than inventing.
+
+SOP 0.2.0 ships `doc create` templates for all 19 steps. The table below maps every step to its artifact path and **where to mine the content from your existing project**:
+
+**DISCOVERY phase**
+
+| Step | Artifact | Where to mine it from your existing project |
+|---|---|---|
+| `step_project_brief` | `docs/00-project-brief.md` | Original project pitch, Notion landing page, the one-pager you sent investors / leadership |
+| `step_scope` | `docs/01-scope.md` | Roadmap, Linear / Jira epic list, internal "what v1 / v2 will not do" doc |
+
+**SPEC phase**
+
+| Step | Artifact | Where to mine it from your existing project |
+|---|---|---|
+| `step_prd` | `docs/02-prd.md` | The PRD on Notion / Lark / Confluence — reorganise it into OCN's section structure |
+| `step_acceptance_criteria` | `docs/03-acceptance-criteria.md` | Slack AC threads, "should…" lines in bug tickets, QA test-case descriptions — convert to Given/When/Then |
+
+**DESIGN phase**
+
+| Step | Artifact | Where to mine it from your existing project |
+|---|---|---|
+| `step_technical_architecture` | `docs/04-technical-architecture.md` | `package.json` / `requirements.txt` / `go.mod`, deployment diagrams, tech-selection notes |
+| `step_information_architecture` | `docs/05-information-architecture.md` | Existing sitemap, URL routing tables, menu hierarchy, product screenshots |
+| `step_data_model` | `docs/06-data-model.md` | `schema.sql`, Prisma schema, ORM models, ER diagrams, DB migration files |
+| `step_api_contract` | `docs/07-api-contract.md` | OpenAPI / Swagger spec, Postman collections, router code, `@RestController` annotations |
+| `step_test_strategy` | `docs/08-test-strategy.md` | `tests/` directory layout, CI config (`.github/workflows/`), coverage targets, E2E framework choice |
+
+**PLAN phase**
+
+| Step | Artifact | Where to mine it from your existing project |
+|---|---|---|
+| `step_mvp_plan` | `docs/09-mvp-plan.md` | Existing roadmap, kanban, Linear/Jira epics, Phase 0/1/2 split |
+| `step_build_plan` | `docs/10-build-plan.md` | Current sprint plan, todo list, near-term PR plan |
+
+**BUILD phase (typically retroactive backfill)**
+
+| Step | Artifact | Where to mine it from your existing project |
+|---|---|---|
+| `step_implementation_log` | `docs/11-implementation-log.md` | `git log`, merged PR titles and summaries |
+| `step_change_evidence` | `docs/12-change-evidence.md` | Deployed changes, `CHANGELOG.md`, draft release notes |
+| `step_integration_notes` | `docs/13-integration-notes.md` | Third-party integration notes, SDK call samples, integration test results |
+
+**VERIFY phase**
+
+| Step | Artifact | Where to mine it from your existing project |
+|---|---|---|
+| `step_verification_report` | `docs/14-verification-report.md` | Past QA reports, performance test results, user acceptance records |
+| `step_acceptance_mapping` | `docs/15-acceptance-mapping.md` | AC-to-code/test mapping table (often needs fresh assembly) |
+| `step_failure_fix_log` | `docs/16-failure-fix-log.md` | Bug fix records, incident reports, postmortems |
+| `step_regression_evidence` | `docs/17-regression-evidence.md` | Regression test results, CI green-history records |
+| `step_final_build_verdict` | `docs/18-final-build-verdict.md` | Final release verdict (typically newly written) |
+
+**Step 4. Once you reach the step you're "actually" on, snap to it**
+
+When backfill catches up to your real position (say you've written half the code and you're at `step_implementation_log`), you don't start from a blank — your already-written code and merged PRs are the source material for that step. From here on, **new** work goes through OCN's discipline: every new feature gets a step, an artifact, then code.
+
+The pre-OCN "anarchy period" is preserved as a faithful historical snapshot inside the backfilled artifacts.
+
+---
+
+##### Three common "can I…" questions
+
+**Q: Can I skip the early steps and start at BUILD?**
+A: The current release does not expose a skip mechanism. Two options:
+- **Honest backfill** (recommended) — fill the early steps from material you already have.
+- **Thin placeholder** (not recommended) — write minimal content that just satisfies the required sections so the gate passes. This makes the gate rubber-stamp anything, which defeats the point of installing OCN.
+
+**Q: Will my existing `docs/` numbering collide with OCN's?**
+A: OCN reserves `00-project-brief.md` through `18-final-build-verdict.md`. On a name collision, `ocn doc create` **refuses to write and returns exit 4** — your existing content is never overwritten. Recommended fix: rename your existing file as backup (e.g. `docs/02-prd.legacy.md`), run `ocn doc create prd`, then merge your content into the OCN template. The bilingual section headings (`Title｜标题`) in the OCN template are the gate's match anchors and must be preserved.
+
+**Q: Can I have the AI run all the early steps in one go?**
+A: Technically yes. You can say:
+
+> *"Backfill `step_project_brief` through `step_technical_architecture` from the material I provided. After each gate passes, tell me; I'll type `ocn advance` myself."*
+
+The AI will loop through `doc create → fill → run_gate`. After each step's `run_gate` passes, it **stops and waits for you to type `ocn advance`** (or to explicitly tell it to). Every advance remains your decision — by design, bulk backfill cannot replace the human *"we are now in the next phase"* call.
+
+---
+
+##### A minimal backfill example
+
+Suppose you have:
+- A 3-month-old React + Node.js project with code in `src/`
+- A half-page Notion project pitch
+- Scattered AC discussions in Slack
+
+Bringing this into OCN looks like (real conversation will be denser; this shows the skeleton):
+
+> **You**: "Initialise OCN in this directory."
+> **AI**: runs `ocn init`. State: `state_discovery / step_project_brief`. `src/` and your existing files are untouched.
+>
+> **You**: "Project context: [paste the Notion pitch]. Fill `docs/00-project-brief.md` per the brief."
+> **AI**: calls `navigator.brief` → gets required sections (Problem / Goal / Users / Success Criteria) → edits `docs/00-project-brief.md`.
+>
+> **You**: "Verify."
+> **AI**: calls `navigator.run_gate` → pass.
+> **AI** (disciplined): "Gate passed. Please run `ocn advance`."
+>
+> **You** (terminal): `ocn advance`.
+>
+> **You**: "Scope: v1 has shipped [X/Y/Z], [A] is in progress, explicitly out of scope: [B/C]. Fill `docs/01-scope.md`."
+> **AI**: loop…
+>
+> **You**: "Reorganise the Notion PRD into `docs/02-prd.md`: [link]."
+> **AI**: loop…
+>
+> **You**: "ACs from these Slack excerpts: [paste], converted to Given/When/Then."
+> **AI**: loop…
+>
+> *(DESIGN phase: data-model from `prisma/schema.prisma`, api-contract from router code, technical-architecture from `package.json` + deployment diagram.)*
+>
+> *(BUILD phase: implementation-log assembled from `git log`, change-evidence from merged PRs.)*
+
+Once the backfill catches up, **all new work** comes in through OCN's next step — every new feature has a brief, a gate, and an audit trail.
+
 ### 6. Core CLI commands
 
 All commands accept `--json` to emit a machine-readable `CommandResult` envelope. Exit codes are stable:
@@ -212,12 +491,17 @@ All commands accept `--json` to emit a machine-readable `CommandResult` envelope
 | `ocn init [--tier minimal] [--json]` | Initialise an OCN project in the current directory. | Writes `.ocoding/`, `docs/`, the dual-track audit files. | `project_initialized` + state-write events |
 | `ocn status [--json]` | Show current state, current step, the relative path of the current step's artifact, and the next-action hint. | Read-only. | None (avoids log spam — pull-mode) |
 | `ocn brief [--json]` | Print the current-step brief for an AI coding session: required sections, governance reminders, uncertainty policy. | Read-only. | None (pull-mode) |
-| `ocn doc create <type> [--overwrite] [--json]` | Create one of the 5 supported artifacts from its bundled template. | Writes the artifact under `docs/`. | `artifact_created` |
+| `ocn doc create <type> [--overwrite] [--json]` | Create one of the 19 supported artifacts from its bundled template (refuses to overwrite an existing file unless `--overwrite` is passed). | Writes the artifact under `docs/`. | `artifact_created` |
 | `ocn check [--json]` | Check the current step's artifact against its required sections. | Read-only. | `artifact_gate_run` + `artifact_gate_passed` / `artifact_gate_blocked` |
 | `ocn gate [--json]` | Read-only artifact gate aggregation for the current step. Same emission as `check`; never mutates state. | Read-only. | `artifact_gate_*` (no `correlationId`) |
 | `ocn advance [--json]` | Run gate, then advance to the next step on pass. Lock-protected; never partial. | Writes `state.json` (atomic). | Full advance chain with shared `correlationId` |
 
-`<type>` for `doc create`: `project-brief`, `scope`, `prd`, `acceptance-criteria`, `technical-architecture`.
+`<type>` for `doc create` (SOP 0.2.0 ships templates for all 19 step artifacts):
+`project-brief`, `scope`, `prd`, `acceptance-criteria`, `technical-architecture`,
+`information-architecture`, `data-model`, `api-contract`, `test-strategy`, `mvp-plan`,
+`build-plan`, `implementation-log`, `change-evidence`, `integration-notes`,
+`verification-report`, `acceptance-mapping`, `failure-fix-log`, `regression-evidence`,
+`final-build-verdict`.
 
 `--tier` for `init` accepts `minimal`, `production`, `full` — only `minimal` is enforced today (production / full are accepted but their artifact sets are not yet differentiated).
 
@@ -345,6 +629,8 @@ CLI：`ocn`；MCP server：`ocn-mcp`；许可：Apache-2.0。
 **使用 OCN**
 - §D. [安装](#d-安装)
 - §E. [5 分钟上手](#e-5-分钟上手)
+   - §E.4 [完整操作流程：在 Claude Code 里走完一遍](#e4-完整操作流程在-claude-code-里走完一遍)
+   - §E.5 [把 OCN 加入一个进行中的项目](#e5-把-ocn-加入一个进行中的项目)
 - §F. [核心 CLI 命令](#f-核心-cli-命令)
 - §G. [MCP 工具](#g-mcp-工具)
 
@@ -391,7 +677,7 @@ OCN 把这四个问题视为同一个问题：*AI 编程闭环缺乏严肃的"�
 | 阶段 | **SOP 0.2.0 Plan → Build → Verify 主干**——runtime 已切换；plan-to-verify smoke 覆盖全部 19 步 |
 | 测试 | 完整 vitest 套件在 Node 20 + Node 22 全部通过 |
 | 覆盖率 | 满足发布门 |
-| npm | `latest` → `0.2.0-beta.0`；`beta` → `0.2.0-beta.0`；`alpha` → `0.1.0-alpha.2`（历史保留） |
+| npm | `latest` → `0.2.0-beta.1`；`beta` → `0.2.0-beta.1`；`alpha` → `0.1.0-alpha.2`（历史保留） |
 | 成熟度 | **pre-GA beta**——非稳定、非 GA、非生产可用 |
 | 已验证 Host | 已在 Claude Desktop on Windows + WSL2 验证。Cursor 与 Cline 暂未验证。 |
 | MCP 传输 | 仅 stdio（HTTP/SSE 尚未启动） |
@@ -406,7 +692,7 @@ OCN 把这四个问题视为同一个问题：*AI 编程闭环缺乏严肃的"�
 - **MCP 安全工具**：stdio 上 7 个只读/准备/创建/日志类工具，4 个禁用工具不会被注册（详见 §G）；`projectRoot` 校验器 + 威胁模型（[`docs/security/mcp-threat-model.md`](./docs/security/mcp-threat-model.md)）。
 - **真实 Host 验证**：Claude Desktop on Windows + WSL2 已完成端到端验证（[DEC-017](./docs/20-decision-log.md)、[报告](./docs/reports/2026-04-30-mcp-external-host-validation-report.md)）。
 - **可执行示例**：[`examples/discovery-to-plan/`](./examples/discovery-to-plan/)，`scripts/smoke.sh` 跑完 v1.0 SOP 全部 10 个 step；fixture 直接来源于 `src/core/templates/*.ts`，避免漂移。
-- **npm 发布纪律**：SOP 0.2.0 主干以 `o-coding-navigation@0.2.0-beta.0` 形式发布，遵循严格的预发布清单与 `prepublishOnly` 门，`files` allowlist 收敛到 `dist/` + LICENSE + README + `docs/quickstart.md` + `docs/mcp-usage.md`；`latest` 与 `beta` 都指向 `0.2.0-beta.0`，`alpha` 仍保留在 `0.1.0-alpha.2`；`v0.2.0-beta.0` 为带注释的 git tag + GitHub pre-release。
+- **npm 发布纪律**：SOP 0.2.0 主干以 `o-coding-navigation@0.2.0-beta.1` 形式发布，遵循严格的预发布清单与 `prepublishOnly` 门，`files` allowlist 收敛到 `dist/` + LICENSE + README + `docs/quickstart.md` + `docs/mcp-usage.md`；`latest` 与 `beta` 都指向 `0.2.0-beta.1`，`alpha` 仍保留在 `0.1.0-alpha.2`；`v0.2.0-beta.1` 为带注释的 git tag + GitHub pre-release。
 
 **尚未实现（刻意延后，详见 §J）**
 
@@ -424,12 +710,12 @@ OCN 把这四个问题视为同一个问题：*AI 编程闭环缺乏严肃的"�
 npm install -g o-coding-navigation
 ```
 
-从 v0.2.0-beta.0 开始，npm latest 与 beta 均指向 SOP 0.2.0 的 Plan → Build → Verify 闭环版本。
+从 v0.2.0-beta.1 开始，npm latest 与 beta 均指向 SOP 0.2.0 的 Plan → Build → Verify 闭环版本。
 
 安装后验证：
 
 ```bash
-ocn --version       # 0.2.0-beta.0
+ocn --version       # 0.2.0-beta.1
 ocn --help
 ocn-mcp             # 启动 MCP stdio server；按 Ctrl+C 退出
 ```
@@ -446,8 +732,8 @@ npm install -g o-coding-navigation@beta
 
 | 渠道 | 版本 | npm tag | 说明 |
 |---|---|---|---|
-| `latest`（推荐） | `0.2.0-beta.0` | `latest` | SOP 0.2.0 Plan → Build → Verify 主干。 |
-| Beta（显式预发布通道） | `0.2.0-beta.0` | `beta` | 与 `latest` 同一份产物；想明确固定在预发布通道时使用 `@beta`。 |
+| `latest`（推荐） | `0.2.0-beta.1` | `latest` | SOP 0.2.0 Plan → Build → Verify 主干。 |
+| Beta（显式预发布通道） | `0.2.0-beta.1` | `beta` | 与 `latest` 同一份产物；想明确固定在预发布通道时使用 `@beta`。 |
 | Alpha（仍可用） | `0.1.0-alpha.2` | `alpha` | 之前的 pre-GA 通道；仅作历史保留。 |
 
 包主页：https://www.npmjs.com/package/o-coding-navigation
@@ -513,6 +799,283 @@ bash examples/discovery-to-plan/scripts/smoke.sh
 
 该 smoke 在临时目录里走完 v1.0 SOP 全部 10 个 step，最后打印 `Discovery-to-plan smoke completed.`，不会污染你的环境。
 
+#### E.4 完整操作流程：在 Claude Code 里走完一遍
+
+OCN 是 MCP-first 设计。在 Claude Code（或其它接好 `ocn-mcp` 的 MCP host，如 Claude Desktop）里，你**几乎不需要记命令**——你说自然语言，AI 调对应的 OCN MCP 工具，流程自动跑通。**整个流程里唯一必须你亲自敲终端的是状态推进那一步**——这是 OCN 设计上的护栏，不是 bug。
+
+> 前提：已按 §G.1 把 `ocn-mcp` 接入。当前经过端到端验证的 host 路径是 Claude Desktop on Windows + WSL2（[DEC-017](./docs/20-decision-log.md)）；其它 MCP host 流程相同但暂未独立验证（[DEC-019](./docs/20-decision-log.md)）。
+
+下面把整个流程拆成 8 步。每一步给你三件事：**你说什么 → AI 背后做什么 → 你看到什么**。
+
+---
+
+##### 阶段一：一次性初始化（每个项目做一次）
+
+**第 1 步：初始化 OCN**
+
+- **你说**：「帮我在当前目录初始化 OCN 项目。」
+- **AI 做**：用 Bash 工具跑 `ocn init`（init 不是 MCP 工具，必须 shell out）。
+- **你看到**：`.ocoding/` 与 `docs/` 已创建；项目初始化在 `state_discovery / step_project_brief`。
+
+**第 2 步：确认位置**
+
+- **你说**：「OCN 现在在哪一步？」
+- **AI 做**：调 MCP 工具 `navigator.where_am_i`。
+- **你看到**：当前 state、当前 step、产物路径、下一步建议动作。
+
+---
+
+##### 阶段二：单 step 循环（每个 step 重复一遍）
+
+> 假设当前停在 `step_project_brief`。第 3–8 步走完才进入下一个 step；下一 step 也是同一套循环。
+
+**第 3 步：拿这一步的 brief**
+
+- **你说**：「告诉我现在这一步该做什么。」
+- **AI 做**：调 MCP 工具 `navigator.brief`。
+- **你看到**：当前 step 的必填章节、AI 治理提醒、不确定性策略——这些会进入 AI 的上下文，后面它写产物时会自觉遵守。
+
+**第 4 步：建产物模板**
+
+- **你说**：「帮我建当前 step 的产物模板。」
+- **AI 做**：调 MCP 工具 `navigator.create_artifact`，type=`project-brief`。
+- **你看到**：`docs/00-project-brief.md` 已写出，含双语章节占位。
+
+**第 5 步：把产物写完**
+
+- **你说**：「按 brief 要求，把这一步的产物写好。我们项目是 [简单介绍]。」
+- **AI 做**：根据 brief 的必填章节 + 你的描述，直接用 Edit 工具改 `docs/00-project-brief.md`，把 Problem / Goal / Users / Success Criteria 四个章节填满。
+- **你看到**：填好的 markdown。让它继续改，直到你满意。
+
+**第 6 步：验产物合不合格**
+
+- **你说**：「验证一下这一步的产物。」
+- **AI 做**：调 MCP 工具 `navigator.run_gate`。
+- **你看到**：通过 → AI 告诉你「门禁通过」；不通过 → AI 列出缺哪些章节，问你要不要它补。不通过就回第 5 步，直到通过。
+
+**第 7 步：你亲自敲 `ocn advance`**
+
+> ⚠️ 这是整套流程里 **唯一必须你自己做** 的事，AI 帮不了你。
+
+第 6 步通过后，一个守纪律的 AI 会告诉你：
+
+> 「门禁通过。要推进，请你在终端运行：`ocn advance`」
+
+为什么 AI 不直接帮你跑？两条原因，缺一不可：
+
+1. **MCP 不暴露 advance。** `navigator.advance_phase` 是 §G.3 列出的 4 个**永不暴露**的工具之一。从 MCP 这条路，AI 没有这个工具。
+2. **OCN 的 AI 治理规则把 advance 锁成人类专属。** 状态推进 = 项目里程碑 = 「我们正式进入下一阶段」——这种话只能由人来说。让 AI 自己说，OCN 就退化成另一个会幻觉的脚手架。
+
+所以你打开终端，打：
+
+```bash
+ocn advance
+```
+
+`advance` 内部会再跑一次门禁、通过则带锁 + 备份 + 原子写更新 `state.json`、写入完整带 `correlationId` 的审计事件链。
+
+> 如果你不想切到终端，**显式**让 AI 替你按按钮也可以：
+> 「替我跑 `ocn advance`。」
+> 这仍然是 **你的决策**，AI 只是替你执行 Bash。**关键差异**：AI 不能在第 6 步通过后**自己接着跑**——它必须等你明确开口。
+
+**第 8 步：回到第 3 步**
+
+- **你说**：「OCN 现在在哪一步？」
+- **AI 做**：调 `navigator.where_am_i`。
+- **你看到**：新 step（如 `step_scope`）。
+
+然后从 **第 3 步** 重复：拿新 step 的 brief、建产物、写、验、advance。每个 step 都是这一套，直到 OCN 报告项目走完。
+
+---
+
+##### 速查表：你说的话对应哪个工具
+
+| 你说什么 | AI 背后用 | 是否改 state.json |
+|---|---|---|
+| "OCN 在哪一步？" | `navigator.where_am_i`（MCP，只读） | 否 |
+| "拿一下当前 step 的 brief" | `navigator.brief`（MCP，只读） | 否 |
+| "建产物模板" | `navigator.create_artifact`（MCP） | 否（只写 `docs/`） |
+| "把这一步的产物写好" | AI 自己的 Edit 工具改 `docs/` | 否 |
+| "验证一下产物" | `navigator.run_gate`（MCP，只读） | 否 |
+| **"我自己跑 `ocn advance`"** | **`ocn advance` CLI（Bash，你触发）** | **✅ 是** |
+
+---
+
+##### 两条硬规则
+
+**(1) `navigator.run_gate` pass ≠ 状态推进。**
+`run_gate` 只读，跑出 pass 不会让 OCN 自动进入下一 step。推进只能靠你敲 `ocn advance`。如果 AI 跑完 `run_gate` 就宣称「我们进入下一步了」——它在骗你，`state.json` 根本没动。
+
+**(2) AI 永远不会主动 advance。**
+这是设计。一个守纪律的 Claude Code 在第 6 步通过后只会说：「门禁通过了，请你跑 `ocn advance`。」如果它没说就自己跑了——它绕过了 OCN 的纪律护栏。这种「自己往前冲」的行为，恰好就是 OCN 想消灭的「失控（drift）」失效模式。
+
+这就是 OCN 卖的东西——**纪律**。
+
+#### E.5 把 OCN 加入一个进行中的项目
+
+> 适用场景：项目已经在跑——代码写了一半、PRD 在 Notion 上、AC 散在 Slack 里、决策记录靠回忆。现在你想把 OCN 的纪律层补上。
+
+---
+
+##### 一个必须先承认的事实：OCN 不从你"现在的真实进度"开始
+
+OCN 的状态机起点**永远**是 `state_discovery / step_project_brief`。当前版本**没有** `--skip-to` 或 `--start-at` 选项，也不暴露 advance 时的 `--override`。
+
+这是设计，不是限制。OCN 的价值在于强迫你显式回答「我们到底要做什么」「什么算完成」——如果让你直接跳到 BUILD，那 OCN 的 brief、门禁、审计就全是无源之水，跟没装一样。
+
+所以加入中途的项目，**唯一正路是回填**。好消息是：内容你都有，只是搬到 OCN 的结构里。
+
+---
+
+##### `ocn init` 与已有文件：硬保证
+
+加入中途项目最容易担心的一件事：**`ocn init` 会不会覆盖我现有的代码或文档？**
+
+答：**不会**。源码层面的两条硬保证（已对照 `src/core/init.ts` 与 `src/core/artifact/template-writer.ts` 验证）：
+
+1. **`ocn init` 只在 `.ocoding/` 下写 OCN 自己的状态文件**（`state.json`、`sop.yaml`、`gates.yaml`、`artifacts.yaml`、`config.yaml`），并 `mkdir docs/`。它**不写**任何 `docs/XX-*.md` 产物文件，也不动你的 `src/`、`README.md`、其它任何路径。
+2. **如果项目已经初始化过**（`.ocoding/state.json` 已存在），`ocn init` 会**拒绝执行**并返回 exit 4（`ERR_IO_OR_CONFIG`），消息：「OCN is already initialized in this directory. / 当前目录已经初始化过 OCN。」——绝不覆盖你已有的 OCN 状态。
+
+类似地，**`ocn doc create <type>`** 也默认拒绝覆盖：撞名时返回 exit 4，消息：「`<type>` already exists at `<path>`. Use `--overwrite` to replace it.」要替换必须显式加 `--overwrite`。
+
+所以你可以放心在已有项目根目录直接跑。最坏情况是你已经有 `docs/00-project-brief.md`——这时 `ocn doc create project-brief` 会拒绝写，你有两个选择：
+- 把已有内容**手动合并**进 OCN 模板（保留 OCN 模板的双语章节标题 `Title｜标题`——它们是门禁的匹配锚点）。
+- 给已有文件改名备份（如 `docs/00-project-brief.legacy.md`），再跑 `ocn doc create project-brief` 让 OCN 写新模板，然后把原内容粘回 OCN 模板章节里。
+
+---
+
+##### 推荐路径：把已有材料"灌入" OCN 的早期 step
+
+**第 1 步：在项目根目录初始化**
+
+- **你说**：「在当前目录初始化 OCN。」
+- **AI 做**：用 Bash 跑 `ocn init`。
+- **你看到**：`.ocoding/` 创建（`docs/` 也被 mkdir）；状态在 `state_discovery / step_project_brief`。你现有的代码和文档原封不动。
+
+**第 2 步：把项目上下文一次性喂给 AI**
+
+- **你说**：「这是我们项目现状。PRD 在 [Notion 链接 / 文件路径]。AC 我贴在下面。当前代码在 `src/`，已经做完 [X 模块] 还要做 [Y]。架构是 [简述]。我现在要把这些灌进 OCN 的早期 step。」
+- **AI 做**：吸收上下文，准备后面每个 step 直接复用。
+- **你看到**：AI 复述项目状况，确认它理解到位。
+
+**第 3 步：逐 step 回填**
+
+每个 step 都走 §E.4 第 3–8 步循环（拿 brief → 建模板 → AI 据已有材料填 → `run_gate` → **你**敲 `ocn advance`）。区别是：因为内容已存在，AI 主要做"重组"和"格式对齐"，不是"创造"。
+
+SOP 0.2.0 的 19 个 step 全有 `doc create` 模板。下表把每个 step 对应的产物路径，以及**在你已有项目里去哪找这部分内容**列出来：
+
+**DISCOVERY 阶段**
+
+| step | 产物 | 在你已有项目里去哪找 |
+|---|---|---|
+| `step_project_brief` | `docs/00-project-brief.md` | 项目立项 PRD、Notion 项目主页、给投资人 / 老板的一页纸介绍 |
+| `step_scope` | `docs/01-scope.md` | 路线图、Linear / Jira 的 epic 列表、"v1 / v2 不做什么"的内部对齐文档 |
+
+**SPEC 阶段**
+
+| step | 产物 | 在你已有项目里去哪找 |
+|---|---|---|
+| `step_prd` | `docs/02-prd.md` | Notion / 飞书 / Confluence 上的 PRD，重新组织进 OCN 章节结构 |
+| `step_acceptance_criteria` | `docs/03-acceptance-criteria.md` | Slack 上的 AC 讨论、bug ticket 里的"应该…"、QA 测试用例描述，整理成 Given/When/Then |
+
+**DESIGN 阶段**
+
+| step | 产物 | 在你已有项目里去哪找 |
+|---|---|---|
+| `step_technical_architecture` | `docs/04-technical-architecture.md` | `package.json` / `requirements.txt` / `go.mod`、部署架构图、技术选型记录 |
+| `step_information_architecture` | `docs/05-information-architecture.md` | 已有 sitemap、URL 路由表、菜单层级、产品截图 |
+| `step_data_model` | `docs/06-data-model.md` | `schema.sql`、Prisma schema、ORM models、ER 图、数据库迁移文件 |
+| `step_api_contract` | `docs/07-api-contract.md` | OpenAPI / Swagger spec、Postman collection、router 代码、`@RestController` 注解 |
+| `step_test_strategy` | `docs/08-test-strategy.md` | `tests/` 目录结构、CI 配置（`.github/workflows/`）、覆盖率目标、E2E 框架选择 |
+
+**PLAN 阶段**
+
+| step | 产物 | 在你已有项目里去哪找 |
+|---|---|---|
+| `step_mvp_plan` | `docs/09-mvp-plan.md` | 已有路线图、kanban、Linear/Jira epic、Phase 0/1/2 划分 |
+| `step_build_plan` | `docs/10-build-plan.md` | 当前 sprint 计划、待办列表、近期 PR 计划 |
+
+**BUILD 阶段（通常是回顾性回填）**
+
+| step | 产物 | 在你已有项目里去哪找 |
+|---|---|---|
+| `step_implementation_log` | `docs/11-implementation-log.md` | `git log`、已合并的 PR 标题与摘要 |
+| `step_change_evidence` | `docs/12-change-evidence.md` | 已部署的变更、CHANGELOG.md、release notes 草稿 |
+| `step_integration_notes` | `docs/13-integration-notes.md` | 第三方 API 接入笔记、SDK 调用样例、集成测试结果 |
+
+**VERIFY 阶段**
+
+| step | 产物 | 在你已有项目里去哪找 |
+|---|---|---|
+| `step_verification_report` | `docs/14-verification-report.md` | 已跑过的 QA 报告、性能测试结果、用户验收记录 |
+| `step_acceptance_mapping` | `docs/15-acceptance-mapping.md` | AC 与代码 / 测试的对应表（往往要新整理） |
+| `step_failure_fix_log` | `docs/16-failure-fix-log.md` | bug 修复记录、incident 报告、postmortem |
+| `step_regression_evidence` | `docs/17-regression-evidence.md` | 回归测试结果、CI 历史绿灯记录 |
+| `step_final_build_verdict` | `docs/18-final-build-verdict.md` | 最终发布判定（一般要新写） |
+
+**第 4 步：到了你"真实的"当前位置**
+
+回填到你"真正在做"的 step 时（比如你已经写了一半代码，正在 `step_implementation_log`），你不是从空白开始——已写的代码、已合并的 PR 就是这一步的产物来源。从这里开始，**新**的工作全部走 OCN 的纪律：每个新功能先有 step、再有产物、再写代码。
+
+之前的"无政府期"作为历史快照，被忠实地保留在回填的 artifact 里。
+
+---
+
+##### 三个常见的「我能不能…」
+
+**Q：能不能跳过早期 step，直接从 BUILD 开始？**
+A：当前版本不暴露这种跳跃。两个选择：
+- **诚实回填**（推荐）——把前面 step 用已有材料填好。
+- **薄占位**（不推荐）——写仅满足必填章节的最小占位让门禁过。这等于让 OCN 闭眼放行，等于你白装。
+
+**Q：我已有的 docs/ 编号会不会跟 OCN 撞？**
+A：OCN 占用 `00-project-brief.md` 到 `18-final-build-verdict.md` 这一段编号。撞名时 `ocn doc create` 会**拒绝写并返回 exit 4**，不会覆盖你已有内容。处理方式：把已有文件改名备份（如 `docs/02-prd.legacy.md`），再 `ocn doc create prd`，把原内容合并进 OCN 模板。OCN 模板里的双语章节标题（`Title｜标题`）必须保留——它们是门禁的匹配锚点。
+
+**Q：能不能让 AI 一次性把全部早期 step 跑完？**
+A：技术上可以。你说一句：
+
+> 「按我提供的材料，把 `step_project_brief` 到 `step_technical_architecture` 全部 artifact 填好并验证。每个 step 验证通过后告诉我，我自己敲 advance。」
+
+AI 会循环走 `doc create → 编辑 → run_gate`，每个 step 跑完 `run_gate` pass 后**停下来等你敲 `ocn advance`**。每一次 advance 仍是你的决策——这是设计，批量回填不能让 AI 替代人的"我们进入下一阶段"决策。
+
+---
+
+##### 一个最小回填例子
+
+假设你已有：
+- 一个跑了 3 个月的 React + Node.js 项目，代码在 `src/`
+- 半页 Notion 立项文档
+- Slack 里散落的 AC 讨论
+
+灌入 OCN 大概这样跑（实际对话节奏会更密，下面只展示骨架）：
+
+> **你**：「把当前目录初始化为 OCN 项目。」
+> **AI**：跑 `ocn init`。状态：`state_discovery / step_project_brief`。`src/` 和已有文件没动。
+>
+> **你**：「项目背景：[贴 Notion 立项文档]。请按 brief 填 `docs/00-project-brief.md`。」
+> **AI**：调 `navigator.brief` → 拿必填章节（Problem / Goal / Users / Success Criteria）→ 用 Edit 改 `docs/00-project-brief.md`。
+>
+> **你**：「验证。」
+> **AI**：调 `navigator.run_gate` → pass。
+> **AI**（守纪律）：「门禁通过。请你跑 `ocn advance`。」
+>
+> **你**（终端）：`ocn advance`。
+>
+> **你**：「scope 这步：v1 已经做完 [X/Y/Z]，还在做 [A]，明确不做 [B/C]。填 `docs/01-scope.md`。」
+> **AI**：循环……
+>
+> **你**：「prd 用 Notion 那份重组进来：[贴链接]。」
+> **AI**：循环……
+>
+> **你**：「ac 用这些 Slack 摘录：[贴]。Given/When/Then 化。」
+> **AI**：循环……
+>
+> *（DESIGN 阶段：data-model 用 `prisma/schema.prisma`、api-contract 用 router 代码、technical-architecture 用 `package.json` + 部署图。）*
+>
+> *（BUILD 阶段：implementation-log 让 AI 从 `git log` 摘。change-evidence 从 PR 摘。）*
+
+走完后，新的工作全部从 OCN 的下一 step 开始——**每个新功能都有 brief、有门禁、有审计**。
+
 ### F. 核心 CLI 命令
 
 所有命令都接受 `--json`，输出机器可读的 `CommandResult`。退出码是稳定契约：
@@ -531,12 +1094,17 @@ bash examples/discovery-to-plan/scripts/smoke.sh
 | `ocn init [--tier minimal] [--json]` | 在当前目录初始化 OCN 项目。 | 写 `.ocoding/`、`docs/` 与双轨审计文件。 | `project_initialized` + state-write 事件 |
 | `ocn status [--json]` | 显示当前 state、当前 step、当前 step 产物的相对路径，以及下一步动作提示。 | 只读。 | 无（避免 pull 模式刷日志） |
 | `ocn brief [--json]` | 输出当前 step 的 brief：必填章节、治理提醒、不确定性策略。 | 只读。 | 无（pull 模式） |
-| `ocn doc create <type> [--overwrite] [--json]` | 用模板生成 5 类产物之一。 | 在 `docs/` 写产物。 | `artifact_created` |
+| `ocn doc create <type> [--overwrite] [--json]` | 用内置模板生成 19 类产物之一（撞名时拒绝写入，需显式 `--overwrite` 才覆盖）。 | 在 `docs/` 写产物。 | `artifact_created` |
 | `ocn check [--json]` | 检查当前 step 的产物是否满足必填章节。 | 只读。 | `artifact_gate_run` + `artifact_gate_passed` / `artifact_gate_blocked` |
 | `ocn gate [--json]` | 当前 step 的只读门禁聚合。和 `check` 输出相同；不改状态。 | 只读。 | `artifact_gate_*`（无 `correlationId`） |
 | `ocn advance [--json]` | 跑门禁，通过后推进到下一 step。带锁保护，永不部分写入。 | 原子写 `state.json`。 | 完整 advance 事件链，共享 `correlationId` |
 
-`doc create` 的 `<type>`：`project-brief`、`scope`、`prd`、`acceptance-criteria`、`technical-architecture`。
+`doc create` 的 `<type>`（SOP 0.2.0 为全部 19 个 step 产物都提供了模板）：
+`project-brief`、`scope`、`prd`、`acceptance-criteria`、`technical-architecture`、
+`information-architecture`、`data-model`、`api-contract`、`test-strategy`、`mvp-plan`、
+`build-plan`、`implementation-log`、`change-evidence`、`integration-notes`、
+`verification-report`、`acceptance-mapping`、`failure-fix-log`、`regression-evidence`、
+`final-build-verdict`。
 
 `init` 的 `--tier`：`minimal`、`production`、`full`，目前只对 `minimal` 强制约束（`production` / `full` 接受参数但产物集合尚未差异化）。
 

@@ -44,7 +44,7 @@ Install OCN globally from npm:
 npm install -g o-coding-navigation
 ```
 
-As of v0.2.0-beta.0, npm latest and beta both point to the SOP 0.2.0 Plan → Build → Verify release. Use @beta when you want to pin the prerelease channel explicitly:
+As of v0.2.0-beta.1, npm latest and beta both point to the SOP 0.2.0 Plan → Build → Verify release. Use @beta when you want to pin the prerelease channel explicitly:
 
 ```bash
 npm install -g o-coding-navigation@beta
@@ -301,7 +301,7 @@ State-advancement, decision-capture, reset, and force-release-lock will **never*
 npm install -g o-coding-navigation
 ```
 
-从 v0.2.0-beta.0 开始，npm latest 与 beta 均指向 SOP 0.2.0 的 Plan → Build → Verify 闭环版本。如果希望明确固定在 beta 预发布通道，可以使用 @beta：
+从 v0.2.0-beta.1 开始，npm latest 与 beta 均指向 SOP 0.2.0 的 Plan → Build → Verify 闭环版本。如果希望明确固定在 beta 预发布通道，可以使用 @beta：
 
 ```bash
 npm install -g o-coding-navigation@beta
