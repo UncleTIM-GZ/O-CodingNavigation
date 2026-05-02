@@ -2646,3 +2646,99 @@ A future focused release-marker action — separate from this DEC, not authorise
 The next ongoing-alpha-line patch (if one is needed before GA) would either get its own tag/release per a successor DEC-022-style policy (consistent), or stay tag-less per a successor "alpha patches don't get markers" DEC (also consistent — the asymmetry is acceptable as long as it's documented). DEC-022 only authorises **`v0.1.0-beta.0`** specifically.
 
 External MCP Host Validation closed for Claude Desktop. Cursor and Cline remain unverified.
+
+---
+
+## DEC-023｜SOP 0.2.0 Strong-Gated Build and Verify Scope
+
+**Status**: Accepted for planning.
+
+**Context**:
+
+- OCN v0.1.0-beta.0 (current published `beta` dist-tag) only strong-gates the DISCOVERY → PLAN mainline (docs `00–09`). Of those, only `00–04` carry required-section gates; `05–09` pass on file-existence alone (see `docs/reports/2026-05-02-pdf-vs-shipped-sop-consistency-audit.md` §6).
+- The original PDF SOP (`docs/AI Coding 最佳实践开发 SOP完整版.pdf`) mainline extends past PLAN into BUILD and VERIFY: real-data wiring, configuration externalisation, reproducibility, rollback, validation, debugging, baseline, acceptance verdict. In the shipped 0.1.0 profile these surface as cross-cutting reminders, **not** as `step_*` ids with `artifactPath` and `requiredSections` (`STEPS_BY_STATE.state_build = []`, `state_verify = []` in `src/sops/default-ai-coding-sop/0.1.0/data.ts`).
+- The user has **not** started dogfood on v0.1.0-beta.0 yet and has explicitly stated that the full Plan → Build → Verify mainline must close before dogfood begins.
+- Without strong gates for BUILD and VERIFY, the planning value produced by docs `00–09` cannot convert into either code evidence or verification evidence — the gate engine stops exactly at the moment the project would otherwise start writing code.
+- Therefore, closure of the SOP mainline (00–18) must precede dogfood; otherwise dogfood would itself be the test of an unfinished SOP.
+
+中文要点：现状是 PLAN 之后 OCN 的强门禁就停了，PDF SOP 的 BUILD / VERIFY 主链路没有被 wire 成 step。用户还没开始 dogfood，并且明确要求先把 Plan → Build → Verify 主链路补完，再 dogfood。
+
+**Decision**:
+
+SOP 0.2.0 will (a) tighten the existing required-section gates for docs `00–09`, and (b) introduce strong-gated BUILD and VERIFY steps for docs `10–18`.
+
+- Positioning: OCN v0.2.0 = **"Strong-Gated Verified Build Engine"** (closes the development SOP loop end-to-end).
+- Not: full PDF 0–25 implementation — SHIP / REFLECT (docs `19–25`) remain out of scope for this version.
+- This DEC authorises **planning only**, not implementation. No source, test, package, npm, latest, tag, release, or workflow change is permitted under this DEC; each implementation PR will be a separate DEC-bound action.
+
+**Scope** — steps wired in SOP 0.2.0:
+
+DISCOVERY:
+- `step_project_brief` → `docs/00-project-brief.md`
+- `step_scope` → `docs/01-scope.md`
+
+SPEC:
+- `step_prd` → `docs/02-prd.md`
+- `step_acceptance_criteria` → `docs/03-acceptance-criteria.md`
+
+DESIGN:
+- `step_technical_architecture` → `docs/04-technical-architecture.md`
+- `step_information_architecture` → `docs/05-information-architecture.md`
+- `step_data_model` → `docs/06-data-model.md`
+- `step_api_contract` → `docs/07-api-contract.md`
+- `step_test_strategy` → `docs/08-test-strategy.md`
+
+PLAN:
+- `step_mvp_plan` → `docs/09-mvp-plan.md`
+- `step_real_data_wiring` → `docs/10-real-data-wiring.md`
+- `step_config_and_env` → `docs/11-config-and-env.md`
+- `step_reproducibility` → `docs/12-reproducibility.md`
+- `step_rollback_plan` → `docs/13-rollback-plan.md`
+
+BUILD:
+- `step_dev_log` → `docs/14-dev-log.md`
+- `step_research_log` → `docs/15-research-log.md`
+
+VERIFY:
+- `step_validation_report` → `docs/16-validation-report.md`
+- `step_debug_report` → `docs/17-debug-report.md`
+- `step_final_build_verdict` → `docs/18-final-build-verdict.md`
+
+**Required principles**:
+
+- Every step MUST have a stable `stepId`.
+- Every step MUST have an `artifactPath`.
+- Every step MUST ship a bundled template that satisfies the gate.
+- Every step MUST declare `requiredSections` matching the canonical PDF structure (no file-existence-only gates for `05–18` unless the planning doc explicitly justifies the exception).
+- Every step MUST be wired into the gate runner (`runGate` / `ocn check` / `ocn advance`).
+- Every step MUST be covered by tests at unit + CLI level minimum.
+- Every step MUST appear in the example smoke (extended `discovery-to-plan` becomes `plan-to-verify`).
+- Every step MUST be reflected in user-facing docs (`README`, `quickstart`, `mcp-usage`).
+- BUILD and VERIFY steps MUST NOT be mere reminders — they MUST produce **evidence** (dev log entries, validation matrix rows, debug fix records, baseline snapshot, final verdict).
+
+**Non-goals**:
+
+- No SHIP / REFLECT (docs `19–25`) implementation under this DEC.
+- No `npm publish` under this DEC PR.
+- No `npm dist-tag` change; `latest` does NOT move.
+- No GA promotion; the version remains pre-GA.
+- No Cursor / Cline support claim — DEC-019 boundary stands.
+- No source / test / package / workflow change under this DEC PR.
+
+**Options considered**:
+
+- **Option A** — Dogfood the current `0.1.0-beta.0` first, then iterate on the SOP based on dogfood findings. **Rejected**: the user has explicitly requested the full mainline before dogfood; dogfood without BUILD / VERIFY would itself be the test of an unfinished SOP, and the failure modes the SOP exists to prevent (false BUILD completion, missing verification evidence) cannot be observed without those steps wired.
+- **Option B** — Only tighten the existing `00–09` required-section gates without adding `10–18`. **Rejected**: addresses the audit's "shipped gates are looser than PDF guidance" finding (§6) but leaves the post-PLAN void intact; OCN would still stop gating at exactly the moment a project transitions from documents to code/verification.
+- **Option C** — Implement the full PDF 0–25 immediately (BUILD + VERIFY + SHIP + REFLECT) in a single SOP version. **Rejected**: scope too large for one cycle; SHIP / REFLECT are post-delivery concerns that should land after the dev loop is itself proven; mixing dev-loop and post-delivery in one bump risks instability across all eight states.
+- **Option D** — SOP 0.2.0 covers `0–18` strong-gated (Plan → Build → Verify mainline), deferring `19–25` to a later 0.3.x or 1.0.0. **Accepted**: closes the development SOP mainline without overloading scope, lets dogfood happen against a real end-to-end gate engine, and keeps SHIP / REFLECT as a separate, well-isolated future bump.
+
+**Follow-up — implementation PR sequence (each its own DEC-bound action)**:
+
+1. SOP 0.2.0 data model and artifacts: `src/sops/default-ai-coding-sop/0.2.0/data.ts`, `render.ts`, `gates.ts`, `artifacts.ts`, `sop.ts`, `config.ts`, `README.md`, `CHANGELOG.md`. Tighten `00–09` required sections to PDF parity. Register stable ids for `step_real_data_wiring`, `step_config_and_env`, `step_reproducibility`, `step_rollback_plan`, `step_dev_log`, `step_research_log`, `step_validation_report`, `step_debug_report`, `step_final_build_verdict`.
+2. Templates for steps `00–18` under `src/core/templates/`. Each template MUST include all canonical required sections so the bundled template self-passes the gate.
+3. Gate runner / required-section enforcement updates so the new sections are matched (canonical + bilingual aliases) by `computeArtifactGateStatus`.
+4. Advance path through BUILD and VERIFY: confirm `runGate` and `advanceState` thread the new step ids; confirm the terminal step in 0.2.0 is `step_final_build_verdict` (or the chosen terminal in BUILD/VERIFY scope), and that `state_ship` / `state_reflect` remain explicit stubs with no wired steps.
+5. Examples — extend `examples/discovery-to-plan/` into a `plan-to-verify` smoke covering the new steps end-to-end.
+6. Docs update — `README.md` step inventory, `docs/quickstart.md` extended walkthrough, `docs/mcp-usage.md` new step reminders, `CHANGELOG.md`.
+7. Local install smoke — verify a tarball install of the new profile boots cleanly.
+8. **Optional** beta.1 publish after validation — separate DEC required (DEC-020 / DEC-021 / DEC-022 style); not authorised here.
