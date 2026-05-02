@@ -4,15 +4,16 @@ This directory contains small, inspectable OCN example projects.
 
 ## Current status
 
-- **`discovery-to-plan/`** — present. Compact, executable example that walks an OCN project from `state_discovery` through `state_plan` using the documented CLI surface. See [`discovery-to-plan/README.md`](./discovery-to-plan/README.md) and the smoke script under `discovery-to-plan/scripts/smoke.sh`.
+- **`plan-to-verify/`** — present. **Primary SOP 0.2.0 example.** Compact, executable walkthrough that covers all 19 wired SOP 0.2.0 steps from `step_project_brief` through `step_final_build_verdict` (docs 00–18) — i.e. the full Plan → Build → Verify mainline. See [`plan-to-verify/README.md`](./plan-to-verify/README.md) and the smoke under `plan-to-verify/scripts/smoke.sh`.
+- **`discovery-to-plan/`** — present. Legacy demo retained for continuity. Walks docs 00–09 only and was authored against the original SOP 0.1.0 wired-step set; the smoke still passes against the SOP 0.2.0 runtime because the 0.2.0 templates / fixtures contain the additive headings 0.1.0 expected. New users should prefer `plan-to-verify/` for end-to-end coverage.
 - MCP Host validation is **scoped**: Claude Desktop on Windows with WSL2 is validated per [DEC-017](../docs/20-decision-log.md) and [`docs/reports/2026-04-30-mcp-external-host-validation-report.md`](../docs/reports/2026-04-30-mcp-external-host-validation-report.md). **Cursor and Cline are not yet verified** per [DEC-019](../docs/20-decision-log.md). Examples in this directory must not claim support for unverified Hosts.
 
 ## Planned next examples
 
-Per the original PR F plan, the next examples (out of scope for the current implementation PR) are:
+Future examples (out of scope for the current implementation PR) are:
 
-- A second flow-style example walking SPEC → BUILD once `state_build` step IDs land in a future SOP profile version.
 - A domain-flavoured "real" example after a Cursor or Cline validation closure DEC widens the Host support boundary.
+- A SHIP / REFLECT walkthrough once those states acquire wired steps in a future SOP profile version.
 
 Each future example requires its own implementation PR with the same constraints (no `.ocoding/` committed; Host claims scoped to validated Hosts only; no `npm publish` side effects).
 
