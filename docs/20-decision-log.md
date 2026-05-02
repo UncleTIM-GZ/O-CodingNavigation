@@ -42,6 +42,7 @@ SOP Profile Version：`0.1.0`
 | DEC-019 | 2026-05-01 | Beta Host Support Boundary — first beta scoped to Claude Desktop on Windows with WSL2; Cursor and Cline explicitly unverified and not blockers | ✅ Approved |
 | DEC-020 | 2026-05-01 | npm `latest` tag strategy before beta — keep `latest` unchanged during alpha; canonical pre-beta install path remains `@alpha`; future beta promotion DEC must explicitly decide `latest` movement | ✅ Approved |
 | DEC-021 | 2026-05-01 | Authorise first beta promotion (`0.1.0-beta.0` under `--tag beta` only; `latest` stays at `0.1.0-alpha.0`; Host scope = Claude Desktop on Windows with WSL2; Cursor / Cline still unverified; future publish PR must follow the 18-step checklist) | ✅ Approved |
+| DEC-022 | 2026-05-01 | GitHub tag and pre-release policy for beta — authorise a future focused release-marker action that creates annotated git tag `v0.1.0-beta.0` + a GitHub **pre-release**; release notes must use DEC-019's scoped Host wording verbatim; no npm command authorised; no `latest` movement | ✅ Approved |
 
 ---
 
@@ -2462,5 +2463,186 @@ The future beta publish PR (separate from this DEC; not authorised to start unti
 - not remove the DEC-017 caveat scoping
 
 A separate follow-up docs PR may update active install commands from `@alpha` to `@beta` (or include both) **only after** the beta publish PR succeeds and `npm view o-coding-navigation@beta` returns `0.1.0-beta.0`.
+
+External MCP Host Validation closed for Claude Desktop. Cursor and Cline remain unverified.
+
+---
+
+## DEC-022｜GitHub Tag and Release Policy for Beta
+
+Date: 2026-05-01
+
+### Status
+
+Accepted.
+
+### Context
+
+OCN's first beta is live on npm (PR #42 / DEC-021):
+
+```
+o-coding-navigation@0.1.0-beta.0
+```
+
+Current dist-tag layout (verified at this DEC's authoring time via `npm view o-coding-navigation dist-tags version name --json`):
+
+```
+dist-tags:
+  alpha:  0.1.0-alpha.2
+  beta:   0.1.0-beta.0
+  latest: 0.1.0-alpha.0
+```
+
+Active install docs now recommend (post-PR-#43):
+
+```
+npm install -g o-coding-navigation@beta
+```
+
+with `@alpha` retained as a still-available secondary channel and untagged `npm install -g o-coding-navigation` explicitly forbidden in active-doc recommendations while `latest` remains intentionally unchanged (DEC-020 / DEC-021).
+
+What does **not** yet exist:
+
+- **No git tag** for `v0.1.0-beta.0` (verified via `git tag --list` returning empty).
+- **No GitHub Release** for `v0.1.0-beta.0` (verified via `gh release list --limit 10` returning empty).
+
+OCN has so far avoided git tags and GitHub Releases entirely, per the publish-discipline DECs (DEC-008 / DEC-012 / DEC-015 / DEC-016 / DEC-021), which all explicitly forbade tag/release creation as part of the publish PR. That discipline kept publish PRs narrow and reviewable; it also left the project without a source-control marker that downstream consumers (dependabot, GitHub release-notification feeds, third-party tooling that watches the `Releases` tab) can key off of.
+
+The project now needs an explicit policy for whether the npm beta should also have a source-control release marker, and if so, what shape it takes.
+
+### Decision
+
+**Adopt a source-control release marker for `0.1.0-beta.0`, and execute it in a separate focused release-marker action — not in this DEC.**
+
+The intended release marker (authorised by this DEC, executed by a future PR / maintainer action):
+
+| Field | Value |
+| --- | --- |
+| Git tag | `v0.1.0-beta.0` (annotated, not lightweight) |
+| Tag target | the `main` commit that contains `package.json` version `0.1.0-beta.0` AND `docs/reports/2026-05-01-npm-beta-0-publish-report.md` AND `docs/reports/2026-05-01-post-beta-install-docs.md` (currently `9f1ced5` or its successor at the time the marker is created) |
+| GitHub Release type | **pre-release** (the GitHub-side `prerelease: true` flag must be set) |
+| GitHub Release title | `O'CodingNavigator v0.1.0-beta.0` |
+| Release notes | drafted per §"Release notes required wording" below |
+
+**This DEC does not create the tag.** **This DEC does not create the GitHub Release.** **This DEC does not move npm `latest`.** **This DEC does not publish to npm.** It is the authorisation gate; execution is a separate focused action.
+
+### Release notes required wording
+
+The GitHub Release notes for `v0.1.0-beta.0` MUST include the canonical scoped Host wording from DEC-019 / DEC-021 verbatim:
+
+> Validated with Claude Desktop on Windows with WSL2. Cursor and Cline are not yet verified.
+
+The notes MUST include the install command currently recommended by `README.md` and `docs/quickstart.md`:
+
+```
+npm install -g o-coding-navigation@beta
+```
+
+The notes MUST link to:
+
+- `docs/reports/2026-05-01-npm-beta-0-publish-report.md` (publish evidence)
+- `docs/reports/2026-04-30-mcp-external-host-validation-report.md` (Host validation evidence)
+- DEC-021 (beta promotion authorisation)
+- DEC-022 (this DEC — release marker authorisation)
+
+The notes MUST NOT claim:
+
+- GA or general availability
+- production-ready
+- Cursor support / Cursor verified
+- Cline support / Cline verified
+- untagged `npm install -g o-coding-navigation` as the recommended install path
+- npm `latest` as the recommended channel
+
+### Required release-marker checklist
+
+Before creating the tag / GitHub Release, the future release-marker action must confirm:
+
+1. `package.json` version is `0.1.0-beta.0` on the target commit (`node -p "require('./package.json').version"` → `0.1.0-beta.0`).
+2. `docs/reports/2026-05-01-npm-beta-0-publish-report.md` is on `main`.
+3. `docs/reports/2026-05-01-post-beta-install-docs.md` is on `main`.
+4. `npm view o-coding-navigation dist-tags version name --json` shows:
+   - `dist-tags.beta = 0.1.0-beta.0`
+   - `dist-tags.alpha = 0.1.0-alpha.2`
+   - `dist-tags.latest = 0.1.0-alpha.0`
+5. Active docs recommend `npm install -g o-coding-navigation@beta` (verified via `grep -n "npm install -g o-coding-navigation@beta" README.md docs/quickstart.md`).
+6. **No existing `v0.1.0-beta.0` git tag** exists (`git tag --list "v0.1.0-beta.0"` returns empty). If a tag already exists, the action stops and reports — do **not** force-overwrite.
+7. **No existing GitHub Release** for `v0.1.0-beta.0` exists (`gh release view v0.1.0-beta.0` returns "release not found"). If a release already exists, the action stops and reports — do **not** delete and recreate.
+8. **CI on `main` is green.** The matrix-expanded CI (Node 20 + Node 22) must show success on the target commit before the marker is created.
+
+If any step fails, the action stops and writes a failure report. Do not partially complete (e.g. create the tag without the release, or vice versa).
+
+### Options considered
+
+#### Option A — Do not create any git tag or GitHub Release for beta
+
+Rejected.
+
+Reason:
+The npm beta is live and documented; downstream consumers (dependabot, release-notification feeds, third-party tooling, security scanners that key off `Releases` to map versions to commits) all benefit from a source-control marker. Continuing to ship without tags makes traceability between npm versions and source-tree commits weaker than it needs to be. The publish-discipline DECs forbade in-publish-PR tag creation; they did not forbid tags entirely.
+
+#### Option B — Create git tag only, no GitHub Release
+
+Rejected for the first beta.
+
+Reason:
+A bare git tag is sufficient for `git checkout v0.1.0-beta.0` workflows but provides no place to communicate scoped Host support, the `@beta` install command, the unverified-Hosts list, or links to the evidence reports. A GitHub Release is the correct surface for those. For ongoing alpha-line patches a tag-only policy would be cheaper, but the **first beta** crossing the alpha → beta semver line earns the explicit communication channel.
+
+#### Option C — Create git tag + GitHub pre-release
+
+Accepted.
+
+Reason:
+Gives downstream consumers a source-control marker that maps npm version → commit, and gives the project a place to communicate scoped support without implying GA. The GitHub `prerelease: true` flag visibly distinguishes beta from a future GA release in GitHub's `Releases` UI and in third-party tooling that filters on prerelease status. Aligned with how the install docs already frame `@beta` as the recommended pre-GA channel.
+
+#### Option D — Create a normal (non-prerelease) GitHub Release
+
+Rejected.
+
+Reason:
+This is beta, not GA. A non-prerelease GitHub Release would visually equate beta with a stable release in the GitHub UI — exactly the framing DEC-018 / DEC-019 / DEC-021 carefully avoided. Even though npm's `dist-tags.latest` is independent of GitHub's `Releases.latest`, the optics matter: GitHub's "Latest release" badge is what casual visitors see. Reserving that badge for an actual GA release preserves a meaningful signal.
+
+### Consequences
+
+Positive:
+
+- npm beta has a matching source-control marker (`v0.1.0-beta.0`) that downstream consumers can key off of.
+- GitHub Release notes provide a single, durable URL that captures: install command, scoped Host support, version, links to evidence reports.
+- The `prerelease: true` flag visibly distinguishes beta from GA in the GitHub Releases UI and in third-party tooling.
+- Future beta / GA decisions inherit a clean, traceable baseline.
+
+Negative:
+
+- Adds a release-governance step beyond the publish PR (one more focused PR or maintainer action).
+- The release-marker action must be careful never to imply GA or broad MCP Host support — both the title (`O'CodingNavigator v0.1.0-beta.0`) and the `prerelease: true` flag are load-bearing.
+- Existing OCN audit-trail discipline says nothing was tagged before; adding tags introduces a new convention that future patches will need to follow consistently. (The first ongoing-alpha-line patch that doesn't get a tag would be a visible inconsistency.)
+
+### Follow-up
+
+A future focused release-marker action — separate from this DEC, not authorised to start until DEC-022 lands on `main` — must:
+
+1. Verify all 8 items in §Required release-marker checklist.
+2. Create an annotated git tag:
+   ```
+   git tag -a v0.1.0-beta.0 <target-commit-sha> -m "O'CodingNavigator v0.1.0-beta.0 (pre-release)"
+   git push origin v0.1.0-beta.0
+   ```
+3. Create the GitHub pre-release:
+   ```
+   gh release create v0.1.0-beta.0 \
+     --title "O'CodingNavigator v0.1.0-beta.0" \
+     --notes-file <path-to-drafted-notes> \
+     --prerelease \
+     --target main
+   ```
+4. The release notes must include:
+   - The npm install command: `npm install -g o-coding-navigation@beta`.
+   - The Host scoping wording: *"Validated with Claude Desktop on Windows with WSL2. Cursor and Cline are not yet verified."*
+   - Links to `docs/reports/2026-05-01-npm-beta-0-publish-report.md`, `docs/reports/2026-04-30-mcp-external-host-validation-report.md`, DEC-021, DEC-022.
+5. The release notes must NOT claim GA, production-readiness, Cursor support, Cline support, untagged install as recommended, or `latest` as recommended.
+6. After creation, capture evidence (`gh release view v0.1.0-beta.0`, `git tag --list "v*"`, the rendered release URL) in a follow-up report `docs/reports/<DATE>-github-beta-release-marker.md`.
+7. The release-marker action does **not** publish to npm, does **not** move `latest`, does **not** modify `package.json`, and does **not** modify active install docs. Those are independent decisions.
+
+The next ongoing-alpha-line patch (if one is needed before GA) would either get its own tag/release per a successor DEC-022-style policy (consistent), or stay tag-less per a successor "alpha patches don't get markers" DEC (also consistent — the asymmetry is acceptable as long as it's documented). DEC-022 only authorises **`v0.1.0-beta.0`** specifically.
 
 External MCP Host Validation closed for Claude Desktop. Cursor and Cline remain unverified.
