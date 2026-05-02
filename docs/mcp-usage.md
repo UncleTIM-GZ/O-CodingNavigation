@@ -38,7 +38,19 @@ OCN 自带一个 MCP（Model Context Protocol）server，对外暴露一个**只
 
 ## 1. Start the server
 
-After `npm install` + `npm run build`:
+Install OCN globally from npm:
+
+```bash
+npm install -g o-coding-navigation
+```
+
+As of v0.2.0-beta.0, npm latest and beta both point to the SOP 0.2.0 Plan → Build → Verify release. Use @beta when you want to pin the prerelease channel explicitly:
+
+```bash
+npm install -g o-coding-navigation@beta
+```
+
+After install (or after `npm install` + `npm run build` from a source checkout):
 
 ```bash
 # Inside any OCN-initialized project (must contain `.ocoding/`)
@@ -50,6 +62,8 @@ Or via `npx` from a checked-out repo:
 ```bash
 npx ocn-mcp
 ```
+
+Validated with Claude Desktop on Windows with WSL2. Cursor and Cline are not yet verified.
 
 The process speaks JSON-RPC 2.0 over stdin/stdout per the MCP stdio framing. Stderr is reserved for protocol notifications — **OCN guarantees zero application stderr writes on the success path** (audit fallback messages are routed to a silent logger; see PR #5 §11.5).
 
@@ -281,7 +295,19 @@ State-advancement, decision-capture, reset, and force-release-lock will **never*
 
 ## A. 启动 server
 
-跑过 `npm install` + `npm run build` 之后：
+从 npm 全局安装 OCN：
+
+```bash
+npm install -g o-coding-navigation
+```
+
+从 v0.2.0-beta.0 开始，npm latest 与 beta 均指向 SOP 0.2.0 的 Plan → Build → Verify 闭环版本。如果希望明确固定在 beta 预发布通道，可以使用 @beta：
+
+```bash
+npm install -g o-coding-navigation@beta
+```
+
+安装后（或源码 checkout 中跑过 `npm install` + `npm run build` 之后）：
 
 ```bash
 # 在已初始化的 OCN 项目内（必须含 `.ocoding/`）
@@ -293,6 +319,8 @@ ocn-mcp
 ```bash
 npx ocn-mcp
 ```
+
+已在 Claude Desktop on Windows + WSL2 验证。Cursor 与 Cline 暂未验证。
 
 该进程通过 stdin/stdout 走 JSON-RPC 2.0（按 MCP stdio framing）。stderr 留给协议通知——**OCN 保证成功路径上没有任何应用层 stderr 写入**（audit fallback 走 silent logger，详见 PR #5 §11.5）。
 

@@ -2,7 +2,7 @@
 
 > Local-first, MCP-first, state-machine-driven **AI coding workflow operating system**.
 > CLI: `ocn` · MCP: `ocn-mcp` · License: Apache-2.0
-> **Phase**: Phase 2 Complete + beta candidate prep complete · **Status**: pre-GA beta · **Public**: on npm as `@beta` → [`0.1.0-beta.0`](https://www.npmjs.com/package/o-coding-navigation) · GitHub pre-release: [`v0.1.0-beta.0`](https://github.com/UncleTIM-GZ/O-CodingNavigation/releases/tag/v0.1.0-beta.0)
+> **Phase**: SOP 0.2.0 Plan → Build → Verify mainline · **Status**: pre-GA beta · **Public**: on npm as `latest` and `@beta` → [`0.2.0-beta.0`](https://www.npmjs.com/package/o-coding-navigation) · GitHub pre-release: [`v0.2.0-beta.0`](https://github.com/UncleTIM-GZ/O-CodingNavigation/releases/tag/v0.2.0-beta.0)
 
 > 📑 This README has two parts:
 > **Part 1 — English** (sections 1 – 11) · **Part 2 — 中文版** (§§ A – K)
@@ -63,16 +63,16 @@ Working with an AI coding agent for any non-trivial task tends to fail in four w
 
 OCN treats these as the same problem: *the AI coding loop has no rigorous notion of "where we are" and "what counts as done"*. OCN supplies both as code, not as exhortation.
 
-### 3. Current status (Phase 2 Complete + beta published)
+### 3. Current status (SOP 0.2.0 Plan → Build → Verify mainline)
 
 | | |
 |---|---|
-| Phase | **Phase 2 Complete** ([DEC-002](./docs/20-decision-log.md#dec-002phase-2-complete-after-mcp-safe-tools)) + **beta candidate prep complete** ([DEC-018](./docs/20-decision-log.md), [DEC-021](./docs/20-decision-log.md)) |
-| Tests | 393 → **459** passed across 71 files (default suite, post-Codex P1/P2 fix train) |
-| Coverage | **~83.5%** lines (matches the publish-time gate) |
-| npm | currently published — `@beta` → `0.1.0-beta.0` ([report](./docs/reports/2026-05-01-npm-beta-0-publish-report.md)); `@alpha` → `0.1.0-alpha.2` (post-P1-fix-train); `latest` deliberately unchanged at `0.1.0-alpha.0` per [DEC-020](./docs/20-decision-log.md) / [DEC-021](./docs/20-decision-log.md) |
+| Phase | **SOP 0.2.0 Plan → Build → Verify mainline** — runtime cutover complete; plan-to-verify smoke covers all 19 steps |
+| Tests | full vitest suite green on Node 20 + Node 22 |
+| Coverage | meets the publish-time gate |
+| npm | `latest` → `0.2.0-beta.0`; `beta` → `0.2.0-beta.0`; `alpha` → `0.1.0-alpha.2` (historical; preserved) |
 | Maturity | **pre-GA beta** — not stable, not GA, not production-ready |
-| External host validation | **completed for Claude Desktop on Windows with WSL2** ([DEC-017](./docs/20-decision-log.md), [report](./docs/reports/2026-04-30-mcp-external-host-validation-report.md)). Cursor and Cline remain unverified ([DEC-019](./docs/20-decision-log.md)) |
+| External host validation | Validated with Claude Desktop on Windows with WSL2. Cursor and Cline are not yet verified. |
 | MCP transport | stdio only (HTTP/SSE not started) |
 
 **Implemented**
@@ -85,7 +85,7 @@ OCN treats these as the same problem: *the AI coding loop has no rigorous notion
 - **MCP safe tools**: 7 read/prepare/create/log tools over stdio; 4 forbidden tools never registered (full list in §7); `projectRoot` validator + threat model ([`docs/security/mcp-threat-model.md`](./docs/security/mcp-threat-model.md)).
 - **Real MCP Host validation**: Claude Desktop on Windows with WSL2 validated end-to-end ([DEC-017](./docs/20-decision-log.md), [report](./docs/reports/2026-04-30-mcp-external-host-validation-report.md)). Cursor and Cline remain unverified.
 - **Executable example**: [`examples/discovery-to-plan/`](./examples/discovery-to-plan/) walks all 10 v1.0 SOP steps end-to-end via `scripts/smoke.sh`. Bundled fixtures derived verbatim from `src/core/templates/*.ts` so they cannot drift.
-- **npm publish discipline**: alpha (`@alpha` → `0.1.0-alpha.2`) and beta (`@beta` → `0.1.0-beta.0`) both publicly published on the npm registry under strict pre-publish checklists, `prepublishOnly` gate, and `files` allowlist. `latest` deliberately unchanged at `0.1.0-alpha.0` per [DEC-020](./docs/20-decision-log.md) / [DEC-021](./docs/20-decision-log.md). Annotated git tag `v0.1.0-beta.0` and matching GitHub pre-release published per [DEC-022](./docs/20-decision-log.md).
+- **npm publish discipline**: SOP 0.2.0 mainline published as `o-coding-navigation@0.2.0-beta.0` under strict pre-publish checklists, `prepublishOnly` gate, and `files` allowlist. `latest` and `beta` both point to `0.2.0-beta.0`; `alpha` is preserved at `0.1.0-alpha.2` for historical use. Annotated git tag `v0.2.0-beta.0` and matching GitHub pre-release published.
 
 **Not implemented (deliberately deferred — see §10)**
 
@@ -97,18 +97,26 @@ OCN treats these as the same problem: *the AI coding loop has no rigorous notion
 
 ### 4. Install
 
-#### 4.1 Recommended: install the beta from npm
+#### 4.1 Recommended: install from npm
 
 ```bash
-npm install -g o-coding-navigation@beta
+npm install -g o-coding-navigation
 ```
+
+As of v0.2.0-beta.0, npm latest and beta both point to the SOP 0.2.0 Plan → Build → Verify release.
 
 Verify:
 
 ```bash
-ocn --version       # 0.1.0-beta.0
+ocn --version       # 0.2.0-beta.0
 ocn --help
 ocn-mcp             # starts the MCP stdio server; press Ctrl+C to exit
+```
+
+Use @beta when you want to pin the prerelease channel explicitly:
+
+```bash
+npm install -g o-coding-navigation@beta
 ```
 
 To uninstall: `npm uninstall -g o-coding-navigation`.
@@ -117,17 +125,15 @@ To uninstall: `npm uninstall -g o-coding-navigation`.
 
 | Channel | Version | npm tag | Notes |
 |---|---|---|---|
-| Beta (recommended pre-GA) | `0.1.0-beta.0` | `beta` | Authorised by [DEC-021](./docs/20-decision-log.md); evidence in [`docs/reports/2026-05-01-npm-beta-0-publish-report.md`](./docs/reports/2026-05-01-npm-beta-0-publish-report.md). |
-| Alpha (still available) | `0.1.0-alpha.2` | `alpha` | Prior pre-GA channel; ships the same post-P1-fix-train bits. Use only if you need the alpha-line specifically. |
-| `latest` (do **not** rely on this for OCN) | `0.1.0-alpha.0` | `latest` | Deliberately unchanged from the historical first publish per [DEC-020](./docs/20-decision-log.md) / [DEC-021](./docs/20-decision-log.md). Will only move when a future GA-or-later DEC authorises it. |
+| `latest` (recommended) | `0.2.0-beta.0` | `latest` | SOP 0.2.0 Plan → Build → Verify mainline. |
+| Beta (explicit prerelease pin) | `0.2.0-beta.0` | `beta` | Same artifact as `latest`; use `@beta` when you want to pin the prerelease channel explicitly. |
+| Alpha (still available) | `0.1.0-alpha.2` | `alpha` | Prior pre-GA channel; preserved for historical use only. |
 
 Package home: https://www.npmjs.com/package/o-coding-navigation
 
 **Prerequisites**: Node.js ≥ 20 (see `engines` in `package.json`).
 
-> **Note on dist-tags**: per [DEC-020](./docs/20-decision-log.md) and [DEC-021](./docs/20-decision-log.md), `latest` remains intentionally unchanged at `0.1.0-alpha.0` while `beta` (recommended) resolves to `0.1.0-beta.0` and `alpha` (prior pre-GA channel) resolves to `0.1.0-alpha.2`. **Do NOT use untagged `npm install -g o-coding-navigation`** — `latest` is intentionally stale and will only move when a future DEC authorises it. Always install with an explicit selector (`@beta` for the recommended channel, `@alpha` if you need the alpha line specifically). Smoke evidence: [`docs/reports/2026-05-01-npm-global-install-smoke.md`](./docs/reports/2026-05-01-npm-global-install-smoke.md).
-
-> **Pre-GA caveat**: this is a **pre-GA beta** release. The package is not stable, not GA, and not production-ready. **MCP Host validation completed for Claude Desktop on Windows with WSL2** (per [DEC-017](./docs/20-decision-log.md) and [`docs/reports/2026-04-30-mcp-external-host-validation-report.md`](./docs/reports/2026-04-30-mcp-external-host-validation-report.md)); **Cursor and Cline remain unverified** in this release. See [DEC-005](./docs/20-decision-log.md#dec-005defer-external-mcp-host-validation-until-a-real-host-is-available) for the historical caveat.
+> **Pre-GA caveat**: this is a **pre-GA beta** release. The package is not stable, not GA, and not production-ready. Validated with Claude Desktop on Windows with WSL2. Cursor and Cline are not yet verified.
 
 #### 4.3 Alternative: local development from source
 
@@ -315,8 +321,7 @@ The GA Prep phase was a documentation, packaging, and operational-readiness audi
 - Mini-CRM dogfood (Tier 2 GA success criterion)
 - HTTP / SSE MCP transport, MCP auth, MCP session management
 - Cursor / Cline real-Host validation (each Host needs its own DEC-017-style report)
-- `latest`-tag movement DEC (currently `latest = 0.1.0-alpha.0` per DEC-020 / DEC-021; will only move when a future DEC authorises it)
-- GA promotion DEC (final gate tying together Host scope, `latest` movement, multi-OS / Node 24+ CI, dogfood evidence)
+- GA promotion DEC (final gate tying together Host scope, multi-OS / Node 24+ CI, dogfood evidence)
 
 ### 11. License
 
@@ -379,16 +384,16 @@ OCN **不是**：代码生成器、IDE、SaaS、项目管理工具、笔记应�
 
 OCN 把这四个问题视为同一个问题：*AI 编程闭环缺乏严肃的"我们在哪"和"什么算完成"*。OCN 用代码而不是嘴上嘱咐去回答这两个问题。
 
-### C. 当前状态（Phase 2 完成 + beta 已发布）
+### C. 当前状态（SOP 0.2.0 Plan → Build → Verify 主干）
 
 | 项目 | 状态 |
 |---|---|
-| 阶段 | **Phase 2 已完成**（[DEC-002](./docs/20-decision-log.md#dec-002phase-2-complete-after-mcp-safe-tools)）+ **beta 候选准备完成**（[DEC-018](./docs/20-decision-log.md)、[DEC-021](./docs/20-decision-log.md)） |
-| 测试 | 71 个测试文件、**459** 个用例全部通过 |
-| 覆盖率 | 行覆盖 **约 83.5%**（与发布门一致） |
-| npm | 已公开发布——`@beta` → `0.1.0-beta.0`；`@alpha` → `0.1.0-alpha.2`；`latest` 故意保持在 `0.1.0-alpha.0`（详见 [DEC-020](./docs/20-decision-log.md)/[DEC-021](./docs/20-decision-log.md)） |
+| 阶段 | **SOP 0.2.0 Plan → Build → Verify 主干**——runtime 已切换；plan-to-verify smoke 覆盖全部 19 步 |
+| 测试 | 完整 vitest 套件在 Node 20 + Node 22 全部通过 |
+| 覆盖率 | 满足发布门 |
+| npm | `latest` → `0.2.0-beta.0`；`beta` → `0.2.0-beta.0`；`alpha` → `0.1.0-alpha.2`（历史保留） |
 | 成熟度 | **pre-GA beta**——非稳定、非 GA、非生产可用 |
-| 已验证 Host | **Claude Desktop on Windows + WSL2** 已端到端验证（[DEC-017](./docs/20-decision-log.md)、[报告](./docs/reports/2026-04-30-mcp-external-host-validation-report.md)）。Cursor 与 Cline 暂未验证（[DEC-019](./docs/20-decision-log.md)） |
+| 已验证 Host | 已在 Claude Desktop on Windows + WSL2 验证。Cursor 与 Cline 暂未验证。 |
 | MCP 传输 | 仅 stdio（HTTP/SSE 尚未启动） |
 
 **已实现**
@@ -401,7 +406,7 @@ OCN 把这四个问题视为同一个问题：*AI 编程闭环缺乏严肃的"�
 - **MCP 安全工具**：stdio 上 7 个只读/准备/创建/日志类工具，4 个禁用工具不会被注册（详见 §G）；`projectRoot` 校验器 + 威胁模型（[`docs/security/mcp-threat-model.md`](./docs/security/mcp-threat-model.md)）。
 - **真实 Host 验证**：Claude Desktop on Windows + WSL2 已完成端到端验证（[DEC-017](./docs/20-decision-log.md)、[报告](./docs/reports/2026-04-30-mcp-external-host-validation-report.md)）。
 - **可执行示例**：[`examples/discovery-to-plan/`](./examples/discovery-to-plan/)，`scripts/smoke.sh` 跑完 v1.0 SOP 全部 10 个 step；fixture 直接来源于 `src/core/templates/*.ts`，避免漂移。
-- **npm 发布纪律**：alpha 与 beta 都通过严格的预发布清单和 `prepublishOnly` 门发布；`files` allowlist 收敛到 `dist/` + LICENSE + README + `docs/quickstart.md` + `docs/mcp-usage.md`；`v0.1.0-beta.0` 为带注释的 git tag + GitHub pre-release（[DEC-022](./docs/20-decision-log.md)）。
+- **npm 发布纪律**：SOP 0.2.0 主干以 `o-coding-navigation@0.2.0-beta.0` 形式发布，遵循严格的预发布清单与 `prepublishOnly` 门，`files` allowlist 收敛到 `dist/` + LICENSE + README + `docs/quickstart.md` + `docs/mcp-usage.md`；`latest` 与 `beta` 都指向 `0.2.0-beta.0`，`alpha` 仍保留在 `0.1.0-alpha.2`；`v0.2.0-beta.0` 为带注释的 git tag + GitHub pre-release。
 
 **尚未实现（刻意延后，详见 §J）**
 
@@ -413,18 +418,26 @@ OCN 把这四个问题视为同一个问题：*AI 编程闭环缺乏严肃的"�
 
 ### D. 安装
 
-#### D.1 推荐：从 npm 安装 beta
+#### D.1 推荐：从 npm 安装
 
 ```bash
-npm install -g o-coding-navigation@beta
+npm install -g o-coding-navigation
 ```
+
+从 v0.2.0-beta.0 开始，npm latest 与 beta 均指向 SOP 0.2.0 的 Plan → Build → Verify 闭环版本。
 
 安装后验证：
 
 ```bash
-ocn --version       # 0.1.0-beta.0
+ocn --version       # 0.2.0-beta.0
 ocn --help
 ocn-mcp             # 启动 MCP stdio server；按 Ctrl+C 退出
+```
+
+如果希望明确固定在 beta 预发布通道，可以使用 @beta：
+
+```bash
+npm install -g o-coding-navigation@beta
 ```
 
 卸载：`npm uninstall -g o-coding-navigation`。
@@ -433,17 +446,15 @@ ocn-mcp             # 启动 MCP stdio server；按 Ctrl+C 退出
 
 | 渠道 | 版本 | npm tag | 说明 |
 |---|---|---|---|
-| Beta（推荐 pre-GA） | `0.1.0-beta.0` | `beta` | 由 [DEC-021](./docs/20-decision-log.md) 授权；证据见 [`docs/reports/2026-05-01-npm-beta-0-publish-report.md`](./docs/reports/2026-05-01-npm-beta-0-publish-report.md)。 |
-| Alpha（仍可用） | `0.1.0-alpha.2` | `alpha` | 之前的 pre-GA 通道；和 beta 同步 P1 修复。**仅当你确实需要 alpha 线时才用它。** |
-| `latest`（**不要**对 OCN 直接依赖） | `0.1.0-alpha.0` | `latest` | 按 [DEC-020](./docs/20-decision-log.md)/[DEC-021](./docs/20-decision-log.md) 故意冻结在历史首发版本，仅在未来某个 GA 级 DEC 授权时才会移动。 |
+| `latest`（推荐） | `0.2.0-beta.0` | `latest` | SOP 0.2.0 Plan → Build → Verify 主干。 |
+| Beta（显式预发布通道） | `0.2.0-beta.0` | `beta` | 与 `latest` 同一份产物；想明确固定在预发布通道时使用 `@beta`。 |
+| Alpha（仍可用） | `0.1.0-alpha.2` | `alpha` | 之前的 pre-GA 通道；仅作历史保留。 |
 
 包主页：https://www.npmjs.com/package/o-coding-navigation
 
 **前置依赖**：Node.js ≥ 20（参见 `package.json` 的 `engines`）。
 
-> **关于 dist-tag**：按 DEC-020/DEC-021，`latest` 故意停留在 `0.1.0-alpha.0`，`beta`（推荐）解析到 `0.1.0-beta.0`，`alpha` 解析到 `0.1.0-alpha.2`。**不要使用不带 tag 的 `npm install -g o-coding-navigation`**——`latest` 是故意陈旧的，未来某个 DEC 授权时才会移动。一律用显式选择器：`@beta` 是推荐通道，`@alpha` 仅在你确实要 alpha 线时使用。Smoke 证据：[`docs/reports/2026-05-01-npm-global-install-smoke.md`](./docs/reports/2026-05-01-npm-global-install-smoke.md)。
-
-> **pre-GA 警告**：当前是 **pre-GA beta**，不稳定、非 GA、非生产可用。**MCP Host 验证仅完成于 Claude Desktop on Windows + WSL2**（[DEC-017](./docs/20-decision-log.md)、[报告](./docs/reports/2026-04-30-mcp-external-host-validation-report.md)）；**Cursor 与 Cline 尚未验证**。历史背景见 [DEC-005](./docs/20-decision-log.md#dec-005defer-external-mcp-host-validation-until-a-real-host-is-available)。
+> **pre-GA 警告**：当前是 **pre-GA beta**，不稳定、非 GA、非生产可用。已在 Claude Desktop on Windows + WSL2 验证。Cursor 与 Cline 暂未验证。
 
 #### D.3 备选：从源码本地开发
 
@@ -629,8 +640,7 @@ GA Prep 阶段是从 Phase 2 收口走到 beta candidate 准备的一段文档/�
 - mini-CRM dogfood（Tier 2 GA 成功条件）
 - HTTP / SSE MCP 传输、MCP 鉴权、MCP 会话管理
 - Cursor / Cline 真实 Host 验证（每个 Host 都需要 DEC-017 模式的独立验证报告）
-- `latest` tag 移动 DEC（当前 `latest = 0.1.0-alpha.0`，按 DEC-020/DEC-021 冻结，仅在未来某个 DEC 授权时移动）
-- GA promotion DEC（最终把 Host 范围、`latest` 移动、多 OS / Node 24+ CI 矩阵、dogfood 证据捆在一起的门）
+- GA promotion DEC（最终把 Host 范围、多 OS / Node 24+ CI 矩阵、dogfood 证据捆在一起的门）
 
 ### K. 许可
 
