@@ -79,11 +79,11 @@ describe("advanceState — concurrent advance race", () => {
       expect(failure.code).toBe("ERR_STATE_MACHINE");
     }
 
-    // Final on-disk state must be the single legitimate next step
-    // (state_discovery / step_scope), not the original `from` and not a
-    // skipped target.
+    // Final on-disk state must be the single legitimate next step. Under
+    // SOP 0.2.0 PR 4, project_brief in state_discovery advances to
+    // state_spec/step_scope (state_discovery now has only one step).
     const finalState = await readState(project.cwd);
-    expect(finalState.currentStateId).toBe("state_discovery");
+    expect(finalState.currentStateId).toBe("state_spec");
     expect(finalState.currentStepId).toBe("step_scope");
   });
 

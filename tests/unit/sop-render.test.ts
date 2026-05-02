@@ -12,12 +12,13 @@ import {
   renderGatesYaml,
   renderSopYaml,
 } from "../../src/sops/default-ai-coding-sop/0.1.0/render.js";
-import { loadSopProfile } from "../../src/core/sop/loader.js";
+import { loadSopProfileByVersion } from "../../src/core/sop/loader.js";
 
-// P1-003 — these tests pin the canonical SOP renderer to the runtime profile
-// so the persisted .ocoding/*.yaml can never drift from what the loader
-// claims to know about. If a step is added to data.ts, every assertion
-// below has to be updated in the same PR — that is the point.
+// P1-003 — these tests pin the canonical SOP renderer to the 0.1.0 profile
+// data so the rendered output stays deterministic for the historical
+// version. After the SOP 0.2.0 PR 4 (DEC-023) cutover the runtime default
+// is 0.2.0; these assertions still target 0.1.0 explicitly via
+// `loadSopProfileByVersion("0.1.0")` rather than the default loader.
 
 const ALL_V1_STEPS = [
   "step_project_brief",
@@ -61,9 +62,7 @@ describe("sop/render — canonical YAML emission", () => {
     for (let i = 1; i < indices.length; i++) {
       const prev = indices[i - 1] ?? -1;
       const curr = indices[i] ?? -1;
-      expect(curr, `state ${ALL_V1_STATES[i]} after ${ALL_V1_STATES[i - 1]}`).toBeGreaterThan(
-        prev,
-      );
+      expect(curr, `state ${ALL_V1_STATES[i]} after ${ALL_V1_STATES[i - 1]}`).toBeGreaterThan(prev);
     }
   });
 
@@ -105,8 +104,8 @@ describe("sop/render — canonical YAML emission", () => {
     }
   });
 
-  it("loadSopProfile() reuses the rendered YAML strings", () => {
-    const profile = loadSopProfile();
+  it("loadSopProfileByVersion('0.1.0') reuses the 0.1.0 rendered YAML strings", () => {
+    const profile = loadSopProfileByVersion("0.1.0");
     expect(profile.sopYaml).toBe(renderSopYaml());
     expect(profile.gatesYaml).toBe(renderGatesYaml());
     expect(profile.artifactsYaml).toBe(renderArtifactsYaml());

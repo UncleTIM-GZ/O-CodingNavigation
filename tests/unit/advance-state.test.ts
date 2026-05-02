@@ -54,16 +54,18 @@ describe("advanceState", () => {
     expect(failEv.correlationId).toBe(startEv.correlationId);
   });
 
-  it("advances to step_scope when project_brief gate passes", async () => {
+  it("advances to state_spec/step_scope when project_brief gate passes (under 0.2.0)", async () => {
+    // SOP 0.2.0 PR 4 (DEC-023) — project_brief is the only step in
+    // state_discovery; its successor is state_spec/step_scope.
     await createArtifact({ cwd: project.cwd, type: "project-brief" });
     const result = await advanceState({ cwd: project.cwd });
     expect(result.ok).toBe(true);
     const state = await readState(project.cwd);
-    expect(state.currentStateId).toBe("state_discovery");
+    expect(state.currentStateId).toBe("state_spec");
     expect(state.currentStepId).toBe("step_scope");
   });
 
-  it("crosses state boundary: scope → state_spec/step_prd", async () => {
+  it("crosses state boundary: scope → state_spec/step_prd (within state_spec under 0.2.0)", async () => {
     await createArtifact({ cwd: project.cwd, type: "project-brief" });
     await advanceState({ cwd: project.cwd });
     await createArtifact({ cwd: project.cwd, type: "scope" });
@@ -88,52 +90,51 @@ describe("advanceState", () => {
     expect(types).toContain("advance_succeeded");
   });
 
-  it("returns ERR_STATE_MACHINE at the terminal step (state_plan / step_mvp_plan)", async () => {
-    // Walk all the way to step_mvp_plan via templates.
-    const types: ReadonlyArray<{ type: string }> = [
-      { type: "project-brief" },
-      { type: "scope" },
-      { type: "prd" },
-      { type: "acceptance-criteria" },
-      { type: "technical-architecture" },
+  it("returns ERR_STATE_MACHINE at the terminal step (state_verify / step_final_build_verdict)", async () => {
+    // SOP 0.2.0 PR 4 (DEC-023) — runtime cutover. Walk all 19 steps via the
+    // bundled templates. Every step now has required sections; using the
+    // bundled template guarantees a passing gate.
+    const types: readonly string[] = [
+      "project-brief",
+      "scope",
+      "prd",
+      "acceptance-criteria",
+      "technical-architecture",
+      "information-architecture",
+      "data-model",
+      "api-contract",
+      "test-strategy",
+      "mvp-plan",
+      "build-plan",
+      "implementation-log",
+      "change-evidence",
+      "integration-notes",
+      "verification-report",
+      "acceptance-mapping",
+      "failure-fix-log",
+      "regression-evidence",
+      "final-build-verdict",
     ];
-    for (const t of types) {
-      await createArtifact({ cwd: project.cwd, type: t.type });
+    // For each step, create the artifact then advance. The 19th advance
+    // attempts to leave step_final_build_verdict and should fail with
+    // ERR_STATE_MACHINE because SHIP/REFLECT remain stubs.
+    for (let i = 0; i < types.length - 1; i++) {
+      await createArtifact({ cwd: project.cwd, type: types[i]! });
       const r = await advanceState({ cwd: project.cwd });
-      expect(r.ok).toBe(true);
+      expect(r.ok, `advance after ${types[i]}`).toBe(true);
     }
-    // Now at state_design / step_information_architecture. Walk the rest of
-    // state_design + state_plan/step_mvp_plan (steps with empty required
-    // sections — gate auto-passes once an artifact exists).
-    const remainingPaths = [
-      "docs/05-information-architecture.md",
-      "docs/06-data-model.md",
-      "docs/07-api-contract.md",
-      "docs/08-test-strategy.md",
-      "docs/09-mvp-plan.md",
-    ];
-    for (let i = 0; i < remainingPaths.length - 1; i++) {
-      const p = remainingPaths[i]!;
-      await fs.writeFile(join(project.cwd, p), "# placeholder\n", "utf8");
-      const r = await advanceState({ cwd: project.cwd });
-      expect(r.ok).toBe(true);
-    }
-    // Now at state_plan / step_mvp_plan. Create the final artifact then
-    // attempt one more advance — should fail because there is no next step
-    // (BUILD/VERIFY/SHIP/REFLECT have no steps in PR #4).
-    await fs.writeFile(
-      join(project.cwd, remainingPaths[remainingPaths.length - 1]!),
-      "# placeholder\n",
-      "utf8",
-    );
+
+    // Now at state_verify / step_final_build_verdict. Create the artifact
+    // then attempt one more advance.
+    await createArtifact({ cwd: project.cwd, type: types[types.length - 1]! });
     const stateBeforeTerminal = await readState(project.cwd);
-    expect(stateBeforeTerminal.currentStateId).toBe("state_plan");
-    expect(stateBeforeTerminal.currentStepId).toBe("step_mvp_plan");
+    expect(stateBeforeTerminal.currentStateId).toBe("state_verify");
+    expect(stateBeforeTerminal.currentStepId).toBe("step_final_build_verdict");
 
     const terminalAdvance = await advanceState({ cwd: project.cwd });
     expect(terminalAdvance.ok).toBe(false);
     if (!terminalAdvance.ok) {
       expect(terminalAdvance.code).toBe("ERR_STATE_MACHINE");
     }
-  }, 60_000);
+  }, 120_000);
 });

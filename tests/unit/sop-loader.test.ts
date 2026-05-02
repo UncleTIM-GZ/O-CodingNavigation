@@ -1,24 +1,35 @@
 import { describe, expect, it } from "vitest";
-import { loadSopProfile } from "../../src/core/sop/loader.js";
+import {
+  DEFAULT_SOP_PROFILE_VERSION,
+  loadSopProfile,
+  loadSopProfileByVersion,
+} from "../../src/core/sop/loader.js";
+
+// SOP 0.2.0 PR 4 (DEC-023) — runtime cutover. The default `loadSopProfile()`
+// now returns 0.2.0; 0.1.0 remains importable via `loadSopProfileByVersion`
+// for tests that explicitly pin the legacy profile, but no default runtime
+// path goes through 0.1.0 any more.
 
 describe("sop/loader.loadSopProfile", () => {
-  it("returns the default profile with id and version", () => {
+  it("returns the default profile pinned to 0.2.0", () => {
     const profile = loadSopProfile();
     expect(profile.id).toBe("default-ai-coding-sop");
-    expect(profile.version).toBe("0.1.0");
+    expect(profile.version).toBe("0.2.0");
+    expect(DEFAULT_SOP_PROFILE_VERSION).toBe("0.2.0");
   });
 
   it("provides yaml strings for sop / gates / artifacts / config", () => {
     const profile = loadSopProfile();
     expect(profile.sopYaml).toMatch(/profile: default-ai-coding-sop/);
-    expect(profile.gatesYaml).toMatch(/section_scenarios/);
+    expect(profile.sopYaml).toMatch(/version: 0\.2\.0/);
+    expect(profile.gatesYaml).toMatch(/section_product_form/);
     expect(profile.artifactsYaml).toMatch(/02-prd\.md/);
+    expect(profile.artifactsYaml).toMatch(/18-final-build-verdict\.md/);
     expect(profile.defaultConfigYaml).toMatch(/tier: minimal/);
+    expect(profile.defaultConfigYaml).toMatch(/version: 0\.2\.0/);
   });
 
-  // P1-003 — runtime profile and persisted YAML are now derived from the
-  // same data.ts. These assertions pin both surfaces to the same step set so
-  // the historical Skeleton-Spike-only snapshot can never come back.
+  // Ensures runtime profile + persisted snapshot share the same (0.2.0) shape.
   it("rendered sop.yaml covers every state and step the runtime claims", () => {
     const profile = loadSopProfile();
     const expectedStates = [
@@ -45,6 +56,15 @@ describe("sop/loader.loadSopProfile", () => {
       "step_api_contract",
       "step_test_strategy",
       "step_mvp_plan",
+      "step_build_plan",
+      "step_implementation_log",
+      "step_change_evidence",
+      "step_integration_notes",
+      "step_verification_report",
+      "step_acceptance_mapping",
+      "step_failure_fix_log",
+      "step_regression_evidence",
+      "step_final_build_verdict",
     ];
     for (const stepId of expectedSteps) {
       expect(profile.sopYaml).toContain(`- ${stepId}`);
@@ -64,6 +84,15 @@ describe("sop/loader.loadSopProfile", () => {
       ["step_api_contract", "docs/07-api-contract.md"],
       ["step_test_strategy", "docs/08-test-strategy.md"],
       ["step_mvp_plan", "docs/09-mvp-plan.md"],
+      ["step_build_plan", "docs/10-build-plan.md"],
+      ["step_implementation_log", "docs/11-implementation-log.md"],
+      ["step_change_evidence", "docs/12-change-evidence.md"],
+      ["step_integration_notes", "docs/13-integration-notes.md"],
+      ["step_verification_report", "docs/14-verification-report.md"],
+      ["step_acceptance_mapping", "docs/15-acceptance-mapping.md"],
+      ["step_failure_fix_log", "docs/16-failure-fix-log.md"],
+      ["step_regression_evidence", "docs/17-regression-evidence.md"],
+      ["step_final_build_verdict", "docs/18-final-build-verdict.md"],
     ];
     for (const [stepId, runtimePath] of checks) {
       expect(profile.artifactPathForStep(stepId)).toBe(runtimePath);
@@ -71,15 +100,17 @@ describe("sop/loader.loadSopProfile", () => {
     }
   });
 
-  it("returns 5 required sections for step_prd", () => {
+  it("returns 7 required sections for step_prd under 0.2.0", () => {
     const profile = loadSopProfile();
     const required = profile.requiredSectionsForStep("step_prd");
     expect(required.map((r) => r.id)).toEqual([
-      "section_problem",
-      "section_goals",
-      "section_users",
-      "section_scenarios",
-      "section_requirements",
+      "section_product_form",
+      "section_user_roles",
+      "section_user_flow",
+      "section_core_features",
+      "section_non_functional_requirements",
+      "section_acceptance_preconditions",
+      "section_non_goals",
     ]);
   });
 
@@ -88,14 +119,25 @@ describe("sop/loader.loadSopProfile", () => {
     expect(profile.requiredSectionsForStep("step_unknown")).toEqual([]);
   });
 
-  it("scenarios section has all required aliases", () => {
-    const profile = loadSopProfile();
+  it("loadSopProfileByVersion('0.1.0') still returns the legacy profile (10 wired steps, scenarios required)", () => {
+    const profile = loadSopProfileByVersion("0.1.0");
+    expect(profile.version).toBe("0.1.0");
     const required = profile.requiredSectionsForStep("step_prd");
-    const scenarios = required.find((r) => r.id === "section_scenarios");
-    expect(scenarios?.aliases).toContain("Scenarios｜使用场景");
-    expect(scenarios?.aliases).toContain("使用场景");
-    expect(scenarios?.aliases).toContain("Use Cases");
-    expect(scenarios?.aliases).toContain("User Scenarios");
-    expect(scenarios?.aliases).toContain("用户场景");
+    const ids = required.map((r) => r.id);
+    expect(ids).toContain("section_scenarios");
+    let total = 0;
+    for (const stateId of profile.stateOrder) {
+      total += profile.stepsForState(stateId).length;
+    }
+    expect(total).toBe(10);
+  });
+
+  it("loadSopProfileByVersion('0.2.0') is identical to the default", () => {
+    const def = loadSopProfile();
+    const v020 = loadSopProfileByVersion("0.2.0");
+    expect(def.version).toBe(v020.version);
+    expect(def.sopYaml).toBe(v020.sopYaml);
+    expect(def.gatesYaml).toBe(v020.gatesYaml);
+    expect(def.artifactsYaml).toBe(v020.artifactsYaml);
   });
 });

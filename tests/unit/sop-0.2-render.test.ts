@@ -95,10 +95,7 @@ describe("sop 0.2.0 — canonical YAML emission", () => {
     for (let i = 1; i < indices.length; i++) {
       const prev = indices[i - 1] ?? -1;
       const curr = indices[i] ?? -1;
-      expect(
-        curr,
-        `state ${ALL_V2_STATES[i]} after ${ALL_V2_STATES[i - 1]}`,
-      ).toBeGreaterThan(prev);
+      expect(curr, `state ${ALL_V2_STATES[i]} after ${ALL_V2_STATES[i - 1]}`).toBeGreaterThan(prev);
     }
   });
 
@@ -178,23 +175,21 @@ describe("sop 0.2.0 — canonical YAML emission", () => {
   });
 });
 
-describe("sop 0.2.0 — runtime non-change guard", () => {
-  // DEC-023 — PR 1 must not change the runtime default profile. The runtime
-  // switch is deferred to PR 3 / PR 4. If anyone pulls 0.2.0 into the
-  // loader prematurely this assertion fails.
-  it("loadSopProfile() still returns 0.1.0 — 0.2.0 is data-only in PR 1", () => {
+describe("sop 0.2.0 — runtime cutover guard (PR 4 of DEC-023)", () => {
+  // DEC-023 — PR 4 cuts the runtime default over to 0.2.0. These guards
+  // pin that behavior; reverting the loader to 0.1.0 would break them.
+  it("loadSopProfile() returns 0.2.0 by default", () => {
     const profile = loadSopProfile();
     expect(profile.id).toBe("default-ai-coding-sop");
-    expect(profile.version).toBe("0.1.0");
+    expect(profile.version).toBe("0.2.0");
   });
 
-  it("loaded profile YAML is the 0.1.0 rendering, not 0.2.0", () => {
+  it("loaded profile YAML is the 0.2.0 rendering with all 19 wired steps", () => {
     const profile = loadSopProfile();
-    // 0.2.0 introduces step_build_plan / step_implementation_log etc. that
-    // do not exist in 0.1.0 — leakage would surface them in the runtime
-    // sop.yaml string.
-    expect(profile.sopYaml).not.toContain("step_build_plan");
-    expect(profile.sopYaml).not.toContain("step_implementation_log");
-    expect(profile.sopYaml).not.toContain("step_final_build_verdict");
+    // 0.2.0 introduces step_build_plan / step_implementation_log etc. They
+    // MUST appear in the runtime sop.yaml string.
+    expect(profile.sopYaml).toContain("step_build_plan");
+    expect(profile.sopYaml).toContain("step_implementation_log");
+    expect(profile.sopYaml).toContain("step_final_build_verdict");
   });
 });

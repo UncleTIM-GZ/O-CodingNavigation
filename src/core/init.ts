@@ -63,8 +63,11 @@ export async function initProject(opts: InitOptions): Promise<CommandResult<Init
       projectId: opts.projectId ?? "local-project",
       name: opts.projectName ?? "Local OCN Project",
       tier,
-      sopProfileId: "default-ai-coding-sop",
-      sopProfileVersion: "0.1.0",
+      // SOP 0.2.0 PR 4 (DEC-023) — fresh init pins to whatever the runtime
+      // default profile is. Flipping the loader (loader.ts) is the single
+      // source of truth; init never hardcodes a version literal.
+      sopProfileId: profile.id,
+      sopProfileVersion: profile.version,
     },
     // PR #4: init starts at the true beginning of the state machine.
     // Replaces the Skeleton Spike simplification of jumping to state_spec / step_prd.

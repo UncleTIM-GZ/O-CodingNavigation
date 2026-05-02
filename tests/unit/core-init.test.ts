@@ -31,16 +31,22 @@ describe("core/init.initProject", () => {
 
     const sopYaml = await fs.readFile(join(project.cwd, ".ocoding/sop.yaml"), "utf8");
     expect(sopYaml).toMatch(/profile: default-ai-coding-sop/);
-    expect(sopYaml).toMatch(/version: 0\.1\.0/);
+    // SOP 0.2.0 PR 4 (DEC-023) — fresh init writes the 0.2.0 snapshot.
+    expect(sopYaml).toMatch(/version: 0\.2\.0/);
+    expect(state.project.sopProfileVersion).toBe("0.2.0");
     const gatesYaml = await fs.readFile(join(project.cwd, ".ocoding/gates.yaml"), "utf8");
-    expect(gatesYaml).toMatch(/section_scenarios/);
+    // 0.2.0 PRD requires section_product_form (not section_scenarios).
+    expect(gatesYaml).toMatch(/section_product_form/);
     const configYaml = await fs.readFile(join(project.cwd, ".ocoding/config.yaml"), "utf8");
     expect(configYaml).toMatch(/tier: minimal/);
+    expect(configYaml).toMatch(/version: 0\.2\.0/);
 
     // P1-003 — artifacts.yaml is now part of the persisted snapshot.
     const artifactsYaml = await fs.readFile(join(project.cwd, ".ocoding/artifacts.yaml"), "utf8");
     expect(artifactsYaml).toMatch(/artifact_prd:/);
     expect(artifactsYaml).toMatch(/path: docs\/02-prd\.md/);
+    expect(artifactsYaml).toMatch(/artifact_final_build_verdict:/);
+    expect(artifactsYaml).toMatch(/path: docs\/18-final-build-verdict\.md/);
   });
 
   // P1-003 — exercises the full canonical snapshot. If anyone reverts data.ts
@@ -80,6 +86,16 @@ describe("core/init.initProject", () => {
       "step_api_contract",
       "step_test_strategy",
       "step_mvp_plan",
+      // SOP 0.2.0 PR 4 — wired build/verify steps must persist too.
+      "step_build_plan",
+      "step_implementation_log",
+      "step_change_evidence",
+      "step_integration_notes",
+      "step_verification_report",
+      "step_acceptance_mapping",
+      "step_failure_fix_log",
+      "step_regression_evidence",
+      "step_final_build_verdict",
     ];
     for (const stepId of steps) {
       expect(sopYaml, `${stepId} appears in persisted sop.yaml`).toContain(`- ${stepId}`);
@@ -97,6 +113,15 @@ describe("core/init.initProject", () => {
       "docs/07-api-contract.md",
       "docs/08-test-strategy.md",
       "docs/09-mvp-plan.md",
+      "docs/10-build-plan.md",
+      "docs/11-implementation-log.md",
+      "docs/12-change-evidence.md",
+      "docs/13-integration-notes.md",
+      "docs/14-verification-report.md",
+      "docs/15-acceptance-mapping.md",
+      "docs/16-failure-fix-log.md",
+      "docs/17-regression-evidence.md",
+      "docs/18-final-build-verdict.md",
     ];
     for (const path of artifactPaths) {
       expect(artifactsYaml, `${path} mapped in artifacts.yaml`).toContain(`path: ${path}`);

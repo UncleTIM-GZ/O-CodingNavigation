@@ -1,14 +1,13 @@
 import { promises as fs } from "node:fs";
 import type { CommandResult } from "../../types/result.js";
-import { canonicalSopSnapshotSignals } from "../../sops/default-ai-coding-sop/0.1.0/render.js";
+// SOP 0.2.0 PR 4 (DEC-023) — runtime cutover means the canonical snapshot
+// signals must come from the 0.2.0 renderer; otherwise drift detection
+// would still measure against the 0.1.0 snapshot shape.
+import { canonicalSopSnapshotSignals } from "../../sops/default-ai-coding-sop/0.2.0/render.js";
 import { msg } from "../i18n.js";
 import { Paths } from "../paths.js";
 import { blocked, ok } from "../result.js";
-import {
-  StateInvalidError,
-  StateNotFoundError,
-  readState,
-} from "../state/state-store.js";
+import { StateInvalidError, StateNotFoundError, readState } from "../state/state-store.js";
 import { loadSopProfile } from "./loader.js";
 
 export interface DetectSopVersionOptions {

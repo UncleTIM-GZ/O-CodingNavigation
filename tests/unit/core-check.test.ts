@@ -3,24 +3,38 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { checkCurrentArtifact } from "../../src/core/check.js";
 import { initProject } from "../../src/core/init.js";
-import { FixtureFiles } from "../helpers/fixtures.js";
 import { seedState, seedToStepPrd } from "../helpers/seed-state.js";
 import { createTempProject, type TempProject } from "../helpers/temp-project.js";
 
+// SOP 0.2.0 PR 4 (DEC-023) — runtime cutover. Project brief now requires
+// 7 sections (Problem, Goal, Users, Success Criteria, Constraints, Risks,
+// Non-goals). PRD requires the 0.2.0 set (Product Form / User Roles / etc),
+// not Scenarios.
 const PROJECT_BRIEF_VALID =
-  "# Project Brief\n\n## Problem\n\nx\n\n## Goal\n\nx\n\n## Users\n\nx\n\n## Success Criteria\n\nx\n";
+  "# Project Brief\n" +
+  "\n## Problem\n\nx\n" +
+  "\n## Goal\n\nx\n" +
+  "\n## Users\n\nx\n" +
+  "\n## Success Criteria\n\nx\n" +
+  "\n## Constraints\n\nx\n" +
+  "\n## Risks\n\nx\n" +
+  "\n## Non-goals\n\nx\n";
 
 const PROJECT_BRIEF_MISSING_SUCCESS_CRITERIA =
-  "# Project Brief\n\n## Problem\n\nx\n\n## Goal\n\nx\n\n## Users\n\nx\n";
+  "# Project Brief\n" +
+  "\n## Problem\n\nx\n" +
+  "\n## Goal\n\nx\n" +
+  "\n## Users\n\nx\n" +
+  "\n## Constraints\n\nx\n" +
+  "\n## Risks\n\nx\n" +
+  "\n## Non-goals\n\nx\n";
 
-describe("core/check.checkCurrentArtifact", () => {
+describe("core/check.checkCurrentArtifact (PRD via 0.2.0)", () => {
   let project: TempProject;
 
   beforeEach(async () => {
     project = await createTempProject();
     await initProject({ cwd: project.cwd, tier: "minimal" });
-    // PR #4 — seed to step_prd; the PRD-specific assertions below mirror the
-    // Skeleton Spike acceptance contract.
     await seedToStepPrd(project.cwd);
   });
 
@@ -28,39 +42,32 @@ describe("core/check.checkCurrentArtifact", () => {
     await project.cleanup();
   });
 
-  // @ac AC-SAG-001 — blocks PRD missing Scenarios
-  it("returns blocked + section_scenarios when PRD missing Scenarios", async () => {
-    await fs.copyFile(FixtureFiles.prdMissingScenarios(), join(project.cwd, "docs", "02-prd.md"));
+  it("blocks when PRD file does not exist (0.2.0 PRD required sections)", async () => {
     const result = await checkCurrentArtifact({ cwd: project.cwd });
     expect(result.ok).toBe(false);
     if (!result.ok) {
       expect(result.code).toBe("ERR_ARTIFACT_INVALID");
-      expect(result.message.en).toBe("PRD is missing required section: Scenarios.");
-      expect(result.message.zh).toBe("PRD 缺少必填章节：Scenarios｜使用场景。");
       const data = result.data as { missingRequiredSectionIds: readonly string[] };
-      expect(data.missingRequiredSectionIds).toEqual(["section_scenarios"]);
+      expect(data.missingRequiredSectionIds).toEqual([
+        "section_product_form",
+        "section_user_roles",
+        "section_user_flow",
+        "section_core_features",
+        "section_non_functional_requirements",
+        "section_acceptance_preconditions",
+        "section_non_goals",
+      ]);
     }
   });
 
-  // @ac AC-SAG-004 — passes PRD with Scenarios
-  it("returns pass + OK when PRD has Scenarios", async () => {
-    await fs.copyFile(FixtureFiles.prdWithScenarios(), join(project.cwd, "docs", "02-prd.md"));
+  it("returns pass + OK when PRD bundled template covers all 0.2.0 required sections", async () => {
+    const { getTemplate } = await import("../../src/core/templates/index.js");
+    const entry = getTemplate("prd");
+    await fs.writeFile(join(project.cwd, "docs", "02-prd.md"), entry.template, "utf8");
     const result = await checkCurrentArtifact({ cwd: project.cwd });
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.message.en).toBe("PRD passed Skeleton Spike artifact check.");
-      expect(result.message.zh).toBe("PRD 已通过 Skeleton Spike 产物检查。");
       expect(result.data?.status).toBe("pass");
-    }
-  });
-
-  it("blocks when PRD file does not exist", async () => {
-    const result = await checkCurrentArtifact({ cwd: project.cwd });
-    expect(result.ok).toBe(false);
-    if (!result.ok) {
-      expect(result.code).toBe("ERR_ARTIFACT_INVALID");
-      const data = result.data as { missingRequiredSectionIds: readonly string[] };
-      expect(data.missingRequiredSectionIds).toContain("section_scenarios");
     }
   });
 });
@@ -135,11 +142,16 @@ describe("core/check.checkCurrentArtifact — current-step generic", () => {
         missingRequiredSectionIds: readonly string[];
       };
       expect(data.artifactPath).toMatch(/00-project-brief\.md$/);
+      // SOP 0.2.0 PR 4 (DEC-023) — runtime cutover. project_brief now
+      // requires 7 sections.
       expect(data.missingRequiredSectionIds).toEqual([
         "section_problem",
         "section_goal",
         "section_users",
         "section_success_criteria",
+        "section_constraints",
+        "section_risks",
+        "section_non_goals",
       ]);
     }
   });

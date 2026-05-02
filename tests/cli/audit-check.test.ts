@@ -3,7 +3,6 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { spawnOcn } from "../helpers/spawn-ocn.js";
 import { createTempProject, type TempProject } from "../helpers/temp-project.js";
-import { FixtureFiles } from "../helpers/fixtures.js";
 import { seedToStepPrd } from "../helpers/seed-state.js";
 import { AuditEvent } from "../../src/types/audit.js";
 
@@ -33,8 +32,10 @@ describe("ocn check — audit trail", () => {
     await project.cleanup();
   });
 
-  it("emits artifact_gate_run + artifact_gate_blocked when PRD missing Scenarios (in order)", async () => {
-    await fs.copyFile(FixtureFiles.prdMissingScenarios(), join(project.cwd, "docs", "02-prd.md"));
+  it("emits artifact_gate_run + artifact_gate_blocked when PRD body is empty (in order)", async () => {
+    // SOP 0.2.0 PR 4 (DEC-023) — PRD requires the 0.2.0 section set; an
+    // empty body fails with all 0.2.0 PRD required sections.
+    await fs.writeFile(join(project.cwd, "docs", "02-prd.md"), "# PRD\n", "utf8");
     const result = await spawnOcn(["check", "--json"], { cwd: project.cwd });
     expect(result.exitCode).toBe(2);
 
@@ -49,11 +50,19 @@ describe("ocn check — audit trail", () => {
     expect(blocked?.result).toBe("blocked");
     const data = blocked?.data as Record<string, unknown>;
     expect(data["status"]).toBe("blocked");
-    expect(data["missingRequiredSectionIds"]).toEqual(["section_scenarios"]);
+    expect(data["missingRequiredSectionIds"]).toEqual([
+      "section_product_form",
+      "section_user_roles",
+      "section_user_flow",
+      "section_core_features",
+      "section_non_functional_requirements",
+      "section_acceptance_preconditions",
+      "section_non_goals",
+    ]);
   }, 30_000);
 
-  it("emits artifact_gate_run + artifact_gate_passed when PRD has all required sections (in order)", async () => {
-    await fs.copyFile(FixtureFiles.prdWithScenarios(), join(project.cwd, "docs", "02-prd.md"));
+  it("emits artifact_gate_run + artifact_gate_passed when PRD has all 0.2.0 required sections (in order)", async () => {
+    await spawnOcn(["doc", "create", "prd"], { cwd: project.cwd });
     const result = await spawnOcn(["check", "--json"], { cwd: project.cwd });
     expect(result.exitCode).toBe(0);
 
@@ -70,7 +79,7 @@ describe("ocn check — audit trail", () => {
   }, 30_000);
 
   it("two consecutive checks emit two gate_run events (no caching/squashing)", async () => {
-    await fs.copyFile(FixtureFiles.prdWithScenarios(), join(project.cwd, "docs", "02-prd.md"));
+    await spawnOcn(["doc", "create", "prd"], { cwd: project.cwd });
     await spawnOcn(["check"], { cwd: project.cwd });
     await spawnOcn(["check"], { cwd: project.cwd });
     const events = await readEvents(project);
