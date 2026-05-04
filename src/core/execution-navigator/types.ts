@@ -507,6 +507,14 @@ export interface VerifyStatusLocalGit {
   readonly head: string | null;
   readonly isDirty: boolean;
   readonly changedFilesCount: number;
+  // True when the local cwd is inside a git work tree. Mirrors
+  // `LocalGitData.isGitRepo` so downstream consumers can distinguish
+  // "no git repo" from "empty repo with no commits" without re-reading git.
+  readonly isGitRepo: boolean;
+  // Diagnostic reason from the local-git reader (`"git-not-found"`,
+  // `"not-a-git-repository"`, `"no-commits"`) or null when the repo is
+  // healthy and a HEAD SHA was found.
+  readonly gitReason: GitReadReason | null;
 }
 
 export interface VerifyStatusLocalEvidence {

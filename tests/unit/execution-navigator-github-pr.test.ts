@@ -215,6 +215,45 @@ describe("github-pr-parse pure parsers", () => {
     expect(r.changesRequested).toBe(1);
     expect(r.commented).toBe(1);
   });
+
+  it("parsePrFiles sorts files by path lex-asc regardless of input order (M3)", () => {
+    const w: string[] = [];
+    const r = parsePrFiles(
+      [
+        { path: "src/zeta.ts", additions: 1, deletions: 0, changeType: "modified" },
+        { path: "src/alpha.ts", additions: 2, deletions: 0, changeType: "modified" },
+        { path: "docs/notes.md", additions: 3, deletions: 0, changeType: "added" },
+      ],
+      w,
+    );
+    expect(r.files.map((f) => f.path)).toEqual(["docs/notes.md", "src/alpha.ts", "src/zeta.ts"]);
+  });
+
+  it("parsePrCommits sorts commits by oid lex-asc regardless of input order (M3)", () => {
+    const w: string[] = [];
+    const r = parsePrCommits(
+      [
+        { oid: "ccc1234", messageHeadline: "third" },
+        { oid: "aaa1234", messageHeadline: "first" },
+        { oid: "bbb1234", messageHeadline: "second" },
+      ],
+      w,
+    );
+    expect(r.map((c) => c.oid)).toEqual(["aaa1234", "bbb1234", "ccc1234"]);
+  });
+
+  it("parsePrChecks sorts items by name lex-asc regardless of input order (M3)", () => {
+    const w: string[] = [];
+    const r = parsePrChecks(
+      [
+        { name: "test", status: "COMPLETED", conclusion: "SUCCESS" },
+        { name: "build", status: "COMPLETED", conclusion: "SUCCESS" },
+        { name: "lint", status: "COMPLETED", conclusion: "SUCCESS" },
+      ],
+      w,
+    );
+    expect(r.items.map((i) => i.name)).toEqual(["build", "lint", "test"]);
+  });
 });
 
 describe("analyzeGithubPr (orchestrator) — happy-path & analysis status", () => {

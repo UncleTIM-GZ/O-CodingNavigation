@@ -18,11 +18,7 @@ import { analyzeGithubPr } from "./github-pr.js";
 import { emptyAcceptanceParseResult, parseAcceptanceCriteria } from "./acceptance-parser.js";
 import { mapEvidence } from "./evidence-map.js";
 import { readPackageScripts } from "./verify-status-package.js";
-import {
-  buildVerification,
-  deriveStatus,
-  type PrSlice,
-} from "./verify-status-verdict.js";
+import { buildVerification, deriveStatus, type PrSlice } from "./verify-status-verdict.js";
 import type { GhRunner } from "./github-pr-runner.js";
 import type {
   AcceptanceParseResult,
@@ -241,6 +237,8 @@ export async function summarizeVerifyStatus(
       head: typeof git.head === "string" ? git.head : null,
       isDirty: git.isDirty === true,
       changedFilesCount: (git.changedFiles ?? []).length,
+      isGitRepo: git.isGitRepo === true,
+      gitReason: git.reason ?? null,
     },
     ocn: ocn satisfies ExecStatusOcnData,
   };

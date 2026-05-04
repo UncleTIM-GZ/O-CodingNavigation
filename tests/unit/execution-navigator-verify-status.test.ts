@@ -473,4 +473,14 @@ describe("summarizeVerifyStatus — risk flags & determinism", () => {
     expect(existsSync(join(dir, ".ocoding"))).toBe(false);
     expect(existsSync(join(dir, ".ocoding", "execution"))).toBe(false);
   });
+
+  it("H1: non-git directory propagates isGitRepo=false and gitReason='not-a-git-repository'", async () => {
+    writePackageJson(dir, { testCoverage: true });
+    writeAcceptance(dir, "## Acceptance Criteria\n\n- AC-001 init\n");
+    const r = await summarizeVerifyStatus({ cwd: dir, mode: "local" });
+    expect(r.ok).toBe(true);
+    if (!r.ok || r.data === undefined) return;
+    expect(r.data.local.git.isGitRepo).toBe(false);
+    expect(r.data.local.git.gitReason).toBe("not-a-git-repository");
+  });
 });

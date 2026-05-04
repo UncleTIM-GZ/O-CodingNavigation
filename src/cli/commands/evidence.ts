@@ -4,6 +4,7 @@ import type { Command } from "commander";
 import { generateEvidenceMap } from "../../core/execution-navigator/evidence-map-runner.js";
 import {
   defaultGhRunner,
+  isReadOnlyInvocation,
   type GhRunner,
 } from "../../core/execution-navigator/github-pr-runner.js";
 import { blocked } from "../../core/result.js";
@@ -38,6 +39,16 @@ function createFixtureRunner(fixturePath: string): GhRunner {
   const parsed = JSON.parse(raw) as { entries: readonly FixtureEntry[] };
   return {
     async run(args: readonly string[]) {
+      // Defence-in-depth: refuse non-allowlisted invocations before consulting
+      // fixtures. A buggy fixture file that describes a write call must be
+      // rejected at the runner boundary regardless of fixture content.
+      if (!isReadOnlyInvocation(args)) {
+        return {
+          ok: false as const,
+          code: "OTHER" as const,
+          message: "refused: gh runner only permits read-only subcommands",
+        };
+      }
       const match = parsed.entries.find(
         (e) => e.args.length === args.length && e.args.every((a, i) => a === args[i]),
       );
@@ -75,7 +86,14 @@ function createFixtureRunner(fixturePath: string): GhRunner {
   };
 }
 
+// The fixture runner activates ONLY in test contexts — either NODE_ENV ===
+// "test" or the explicit OCN_TEST_MODE === "1" opt-in. Production binaries
+// ignore OCN_TEST_GH_RUNNER_FIXTURES entirely and fall through to
+// `defaultGhRunner()`.
 function pickRunnerFromEnv(): GhRunner | undefined {
+  if (process.env["NODE_ENV"] !== "test" && process.env["OCN_TEST_MODE"] !== "1") {
+    return undefined;
+  }
   const fixturePath = process.env["OCN_TEST_GH_RUNNER_FIXTURES"];
   if (typeof fixturePath !== "string" || fixturePath.length === 0) return undefined;
   return createFixtureRunner(fixturePath);
@@ -95,45 +113,43 @@ export function registerEvidenceCommand(program: Command): void {
       "Absolute path to the project root (defaults to current working directory)",
     )
     .option("--pr <number>", "Optional GitHub PR number for additional evidence")
-    .action(
-      async (rawOpts: { json: boolean; projectRoot?: string; pr?: string }) => {
-        if (rawOpts.projectRoot !== undefined && !isAbsolute(rawOpts.projectRoot)) {
+    .action(async (rawOpts: { json: boolean; projectRoot?: string; pr?: string }) => {
+      if (rawOpts.projectRoot !== undefined && !isAbsolute(rawOpts.projectRoot)) {
+        const failure = blocked(
+          "ERR_IO_OR_CONFIG",
+          msg(
+            `--project-root must be an absolute path (got: ${rawOpts.projectRoot}).`,
+            `--project-root 必须是绝对路径（当前值：${rawOpts.projectRoot}）。`,
+          ),
+          { argument: "--project-root", received: "non-absolute-path" },
+        );
+        outputResult(failure, { json: rawOpts.json });
+        return;
+      }
+
+      let prNumber: number | undefined;
+      if (typeof rawOpts.pr === "string") {
+        if (!isValidPrNumber(rawOpts.pr)) {
           const failure = blocked(
-            "ERR_IO_OR_CONFIG",
+            "ERR_ARTIFACT_INVALID",
             msg(
-              `--project-root must be an absolute path (got: ${rawOpts.projectRoot}).`,
-              `--project-root 必须是绝对路径（当前值：${rawOpts.projectRoot}）。`,
+              `Invalid PR number "${rawOpts.pr}". Expected a positive integer (e.g. 42).`,
+              `PR 编号 "${rawOpts.pr}" 无效，必须是正整数（例如 42）。`,
             ),
-            { argument: "--project-root", received: rawOpts.projectRoot },
+            { argument: "--pr", received: rawOpts.pr },
           );
           outputResult(failure, { json: rawOpts.json });
           return;
         }
+        prNumber = Number(rawOpts.pr);
+      }
 
-        let prNumber: number | undefined;
-        if (typeof rawOpts.pr === "string") {
-          if (!isValidPrNumber(rawOpts.pr)) {
-            const failure = blocked(
-              "ERR_ARTIFACT_INVALID",
-              msg(
-                `Invalid PR number "${rawOpts.pr}". Expected a positive integer (e.g. 42).`,
-                `PR 编号 "${rawOpts.pr}" 无效，必须是正整数（例如 42）。`,
-              ),
-              { argument: "--pr", received: rawOpts.pr },
-            );
-            outputResult(failure, { json: rawOpts.json });
-            return;
-          }
-          prNumber = Number(rawOpts.pr);
-        }
-
-        const cwd = rawOpts.projectRoot ?? process.cwd();
-        const runner = pickRunnerFromEnv() ?? defaultGhRunner();
-        const result = await generateEvidenceMap({
-          cwd,
-          ...(prNumber !== undefined ? { prNumber, runner } : {}),
-        });
-        outputResult(result, { json: rawOpts.json });
-      },
-    );
+      const cwd = rawOpts.projectRoot ?? process.cwd();
+      const runner = pickRunnerFromEnv() ?? defaultGhRunner();
+      const result = await generateEvidenceMap({
+        cwd,
+        ...(prNumber !== undefined ? { prNumber, runner } : {}),
+      });
+      outputResult(result, { json: rawOpts.json });
+    });
 }

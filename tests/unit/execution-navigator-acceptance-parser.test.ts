@@ -185,6 +185,88 @@ describe("parseAcceptanceCriteria — normalisation and edge cases", () => {
     expect(r.criteriaCount).toBe(1);
     expect(r.criteria[0]?.id).toBe("AC-001");
   });
+
+  it("H2: AC IDs inside fenced code blocks are ignored", () => {
+    const md = [
+      "## Acceptance Criteria",
+      "",
+      "- AC-001 real criterion outside fence.",
+      "",
+      "```ts",
+      "// AC-099 should NOT register — inside fenced block",
+      "- AC-098 also inside fenced block",
+      "```",
+      "",
+      "- AC-002 second real criterion after fence.",
+    ].join("\n");
+    const r = parseAcceptanceCriteria(md, { path: PATH });
+    const ids = r.criteria.map((c) => c.id);
+    expect(ids).toEqual(["AC-001", "AC-002"]);
+    expect(ids).not.toContain("AC-098");
+    expect(ids).not.toContain("AC-099");
+  });
+
+  it("H2: AC IDs inside ~~~ fences are also ignored", () => {
+    const md = [
+      "## Acceptance Criteria",
+      "",
+      "- AC-001 real criterion.",
+      "",
+      "~~~",
+      "- AC-097 inside tilde fence",
+      "~~~",
+      "",
+      "- AC-002 second real.",
+    ].join("\n");
+    const r = parseAcceptanceCriteria(md, { path: PATH });
+    const ids = r.criteria.map((c) => c.id);
+    expect(ids).toEqual(["AC-001", "AC-002"]);
+    expect(ids).not.toContain("AC-097");
+  });
+
+  it("H2: AC IDs inside HTML comments are ignored, even multi-line", () => {
+    const md = [
+      "## Acceptance Criteria",
+      "",
+      "- AC-001 real criterion.",
+      "<!-- - AC-090 inside single-line comment -->",
+      "<!--",
+      "- AC-091 inside multi-line comment",
+      "- AC-092 also inside multi-line comment",
+      "-->",
+      "- AC-002 second real criterion.",
+    ].join("\n");
+    const r = parseAcceptanceCriteria(md, { path: PATH });
+    const ids = r.criteria.map((c) => c.id);
+    expect(ids).toEqual(["AC-001", "AC-002"]);
+    expect(ids).not.toContain("AC-090");
+    expect(ids).not.toContain("AC-091");
+    expect(ids).not.toContain("AC-092");
+  });
+
+  it("H2: AC IDs in markdown table rows are ignored", () => {
+    const md = [
+      "## Acceptance Criteria",
+      "",
+      "| ID | Description |",
+      "| --- | --- |",
+      "| AC-080 | should not register because it is a table row |",
+      "| AC-081 | also should not register |",
+      "",
+      "- AC-001 real criterion outside the table.",
+    ].join("\n");
+    const r = parseAcceptanceCriteria(md, { path: PATH });
+    const ids = r.criteria.map((c) => c.id);
+    expect(ids).toEqual(["AC-001"]);
+    expect(ids).not.toContain("AC-080");
+    expect(ids).not.toContain("AC-081");
+  });
+
+  it("H2: heading-form AC ID is unaffected (not treated as table row)", () => {
+    const md = ["## AC-001 first heading-form criterion.", ""].join("\n");
+    const r = parseAcceptanceCriteria(md, { path: PATH });
+    expect(r.criteria.map((c) => c.id)).toEqual(["AC-001"]);
+  });
 });
 
 describe("emptyAcceptanceParseResult", () => {

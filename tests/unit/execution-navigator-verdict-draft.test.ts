@@ -1,11 +1,4 @@
-import {
-  existsSync,
-  mkdirSync,
-  mkdtempSync,
-  readdirSync,
-  statSync,
-  writeFileSync,
-} from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import { rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -117,7 +110,12 @@ interface PrJsonOpts {
   readonly isDraft?: boolean;
   readonly state?: string;
   readonly reviews?: readonly { state: string }[];
-  readonly files?: readonly { path: string; additions: number; deletions: number; changeType: string }[];
+  readonly files?: readonly {
+    path: string;
+    additions: number;
+    deletions: number;
+    changeType: string;
+  }[];
 }
 
 function buildPrJson(opts: PrJsonOpts): string {
@@ -246,10 +244,7 @@ describe("generateVerdictDraft — Rule 2 request-changes", () => {
 
   it("request-changes from coverage-missing", async () => {
     writePackageJson(dir, { testCoverage: true });
-    writeAcceptance(
-      dir,
-      "## Acceptance Criteria\n\n- AC-001 the system shall xqzunknownnowhere\n",
-    );
+    writeAcceptance(dir, "## Acceptance Criteria\n\n- AC-001 the system shall xqzunknownnowhere\n");
     const r = await generateVerdictDraft({ cwd: dir, mode: "local" });
     expect(r.ok).toBe(true);
     if (!r.ok || r.data === undefined) return;
@@ -297,9 +292,7 @@ describe("generateVerdictDraft — Rule 4 ready-for-review", () => {
     const r = await generateVerdictDraft({ cwd: dir, mode: "local" });
     expect(r.ok).toBe(true);
     if (!r.ok || r.data === undefined) return;
-    expect([CATEGORY_READY_FOR_REVIEW, CATEGORY_CONTINUE_WORK]).toContain(
-      r.data.verdict.category,
-    );
+    expect([CATEGORY_READY_FOR_REVIEW, CATEGORY_CONTINUE_WORK]).toContain(r.data.verdict.category);
     if (r.data.verdict.category === CATEGORY_READY_FOR_REVIEW) {
       expect(r.data.verdict.nextSuggestedAction).toBe(NEXT_ACTION_READY_FOR_REVIEW);
     }
@@ -402,10 +395,7 @@ describe("generateVerdictDraft — confidence", () => {
 
   it("low confidence on continue-work / request-changes", async () => {
     writePackageJson(dir, { testCoverage: true });
-    writeAcceptance(
-      dir,
-      "## Acceptance Criteria\n\n- AC-001 the system shall xqzunknownnowhere\n",
-    );
+    writeAcceptance(dir, "## Acceptance Criteria\n\n- AC-001 the system shall xqzunknownnowhere\n");
     const r = await generateVerdictDraft({ cwd: dir, mode: "local" });
     expect(r.ok).toBe(true);
     if (!r.ok || r.data === undefined) return;
@@ -442,10 +432,7 @@ describe("generateVerdictDraft — supports / blocks / warnings", () => {
 
   it("blocks contain expected sentences and are sorted lexicographically", async () => {
     writePackageJson(dir, { testCoverage: true });
-    writeAcceptance(
-      dir,
-      "## Acceptance Criteria\n\n- AC-001 the system shall xqzunknownnowhere\n",
-    );
+    writeAcceptance(dir, "## Acceptance Criteria\n\n- AC-001 the system shall xqzunknownnowhere\n");
     const r = await generateVerdictDraft({ cwd: dir, mode: "local" });
     expect(r.ok).toBe(true);
     if (!r.ok || r.data === undefined) return;
@@ -642,5 +629,25 @@ describe("generateVerdictDraft — confidence medium on ready-for-review", () =>
     if (r.data.verdict.category === CATEGORY_READY_FOR_REVIEW) {
       expect([CONFIDENCE_LOW, CONFIDENCE_MEDIUM]).toContain(r.data.verdict.confidence);
     }
+  });
+});
+
+describe("generateVerdictDraft — H1 deriveGitStatus discrimination", () => {
+  let dir: string;
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), "ocn-verdict-git-"));
+  });
+  afterEach(async () => {
+    await rm(dir, { recursive: true, force: true });
+  });
+
+  it("non-git directory reports gitStatus='no-git' (not 'empty-repo')", async () => {
+    // No git init — the working directory is not a git repo at all.
+    writePackageJson(dir, { testCoverage: true });
+    writeAcceptance(dir, "## Acceptance Criteria\n\n- AC-001 init\n");
+    const r = await generateVerdictDraft({ cwd: dir, mode: "local" });
+    expect(r.ok).toBe(true);
+    if (!r.ok || r.data === undefined) return;
+    expect(r.data.inputs.gitStatus).toBe("no-git");
   });
 });

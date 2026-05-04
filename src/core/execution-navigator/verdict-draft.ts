@@ -12,7 +12,7 @@
 // human decide.
 
 import type { CommandResult } from "../../types/result.js";
-import { ok } from "../result.js";
+import { blocked, ok } from "../result.js";
 import { msg } from "../i18n.js";
 import { summarizeVerifyStatus } from "./verify-status.js";
 import type { GhRunner } from "./github-pr-runner.js";
@@ -97,10 +97,7 @@ interface VerdictInputs {
   readonly verifyWarnings: readonly string[];
 }
 
-function hasFlag(
-  inputs: VerdictInputs,
-  flag: VerdictDraftRiskFlag,
-): boolean {
+function hasFlag(inputs: VerdictInputs, flag: VerdictDraftRiskFlag): boolean {
   return (inputs.verify.verification.riskFlags as readonly string[]).includes(flag);
 }
 
@@ -132,11 +129,7 @@ function ruleHold(inputs: VerdictInputs): boolean {
 // Rule 2 — request-changes (priority 2).
 function ruleRequestChanges(inputs: VerdictInputs): boolean {
   if (inputs.verify.verification.status === "blocked") return true;
-  if (
-    inputs.hasPr &&
-    inputs.verify.pr !== null &&
-    inputs.verify.pr.checksSummary === "failure"
-  ) {
+  if (inputs.hasPr && inputs.verify.pr !== null && inputs.verify.pr.checksSummary === "failure") {
     return true;
   }
   if (inputs.verify.acceptance.coverageStatus === "missing") return true;
@@ -149,11 +142,7 @@ function ruleRequestChanges(inputs: VerdictInputs): boolean {
   ) {
     return true;
   }
-  if (
-    inputs.hasPr &&
-    inputs.verify.pr !== null &&
-    inputs.verify.pr.reviews.changesRequested > 0
-  ) {
+  if (inputs.hasPr && inputs.verify.pr !== null && inputs.verify.pr.reviews.changesRequested > 0) {
     return true;
   }
   // Significant missing evidence with source-file changes (source-change-without-test-change
@@ -170,10 +159,7 @@ function ruleRequestChanges(inputs: VerdictInputs): boolean {
 // Rule 3 — continue-work (priority 3).
 function ruleContinueWork(inputs: VerdictInputs): boolean {
   if (inputs.verify.verification.status === "partial") return true;
-  if (
-    inputs.verify.local.git.isDirty &&
-    inputs.verify.verification.status !== "ready"
-  ) {
+  if (inputs.verify.local.git.isDirty && inputs.verify.verification.status !== "ready") {
     return true;
   }
   // No PR provided in combined mode AND local repo has changed files.
@@ -185,10 +171,7 @@ function ruleContinueWork(inputs: VerdictInputs): boolean {
     return true;
   }
   // Evidence exists but important gaps remain (e.g. acceptance partial and PR not yet open).
-  if (
-    inputs.verify.acceptance.coverageStatus === "partial" &&
-    !inputs.hasPr
-  ) {
+  if (inputs.verify.acceptance.coverageStatus === "partial" && !inputs.hasPr) {
     return true;
   }
   return false;
@@ -200,11 +183,7 @@ function ruleReadyForReview(inputs: VerdictInputs): boolean {
   const cs = inputs.verify.acceptance.coverageStatus;
   if (cs !== "complete" && cs !== "partial") return false;
   // No failed checks.
-  if (
-    inputs.hasPr &&
-    inputs.verify.pr !== null &&
-    inputs.verify.pr.checksSummary === "failure"
-  ) {
+  if (inputs.hasPr && inputs.verify.pr !== null && inputs.verify.pr.checksSummary === "failure") {
     return false;
   }
   return true;
@@ -263,8 +242,7 @@ export function deriveConfidence(
   }
   // Medium — ready-for-review or ready-to-merge with up to 2 non-blocking flags.
   if (
-    (category === CATEGORY_READY_FOR_REVIEW ||
-      category === CATEGORY_READY_TO_MERGE) &&
+    (category === CATEGORY_READY_FOR_REVIEW || category === CATEGORY_READY_TO_MERGE) &&
     riskFlagCount <= 2
   ) {
     return CONFIDENCE_MEDIUM;
@@ -274,12 +252,63 @@ export function deriveConfidence(
 
 // ---- Risk flag aggregation ----
 
+// Lookup table covering every VerdictDraftRiskFlag member. Declaring the
+// constant with type `Record<VerdictDraftRiskFlag, true>` forces TypeScript
+// to flag any future addition to the union that isn't represented here.
+const VERDICT_DRAFT_RISK_FLAG_LOOKUP: Readonly<Record<VerdictDraftRiskFlag, true>> = Object.freeze({
+  "working-tree-dirty": true,
+  "not-a-git-repository": true,
+  "no-commits": true,
+  "detached-head": true,
+  "git-not-found": true,
+  "ocn-state-unreadable": true,
+  "acceptance-file-missing": true,
+  "no-acceptance-criteria": true,
+  "coverage-partial": true,
+  "coverage-missing": true,
+  "human-review-required": true,
+  "github-evidence-unavailable": true,
+  "draft-pr": true,
+  "closed-pr": true,
+  "merge-conflict-or-unclean": true,
+  "ci-failing": true,
+  "ci-pending": true,
+  "no-checks-found": true,
+  "changes-requested": true,
+  "no-review-yet": true,
+  "large-diff": true,
+  "many-files-changed": true,
+  "source-change-without-test-change": true,
+  "test-change-without-source-change": true,
+  "docs-only-change": true,
+  "workflow-changed": true,
+  "package-metadata-changed": true,
+  "verification-blocked": true,
+  "verification-partial": true,
+});
+
+// Narrow an arbitrary string into the VerdictDraftRiskFlag union, dropping
+// the value (returning false) if it isn't a member. Drift in the union is
+// caught at compile time by the lookup table above.
+function isVerdictDraftRiskFlag(s: string): s is VerdictDraftRiskFlag {
+  return Object.prototype.hasOwnProperty.call(VERDICT_DRAFT_RISK_FLAG_LOOKUP, s);
+}
+
+function sortLexFlags(values: readonly VerdictDraftRiskFlag[]): readonly VerdictDraftRiskFlag[] {
+  return [...new Set(values)].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+}
+
 function collectRiskFlags(inputs: VerdictInputs): readonly VerdictDraftRiskFlag[] {
-  const flags: string[] = [];
-  for (const f of inputs.verify.verification.riskFlags) flags.push(f);
+  const flags: VerdictDraftRiskFlag[] = [];
+  // verify.verification.riskFlags is the verify-status risk-flag union, which
+  // is a strict subset of the verdict-draft union — narrow each value at the
+  // boundary and drop unknown entries.
+  for (const f of inputs.verify.verification.riskFlags) {
+    if (isVerdictDraftRiskFlag(f)) flags.push(f);
+  }
   if (inputs.verify.verification.status === "blocked") flags.push("verification-blocked");
   if (inputs.verify.verification.status === "partial") flags.push("verification-partial");
-  return sortLex(flags) as readonly VerdictDraftRiskFlag[];
+  return sortLexFlags(flags);
 }
 
 // ---- Supports / blocks / warnings sentence assembly ----
@@ -303,10 +332,7 @@ function collectSupports(inputs: VerdictInputs): readonly string[] {
   // Acceptance complete vs partial-no-missing.
   if (v.acceptance.coverageStatus === "complete") {
     out.push(SUPPORT_ACCEPTANCE_COMPLETE);
-  } else if (
-    v.acceptance.coverageStatus === "partial" &&
-    v.acceptance.missing === 0
-  ) {
+  } else if (v.acceptance.coverageStatus === "partial" && v.acceptance.missing === 0) {
     out.push(SUPPORT_ACCEPTANCE_PARTIAL_NO_MISSING);
   }
   // No reviews requested changes.
@@ -436,12 +462,13 @@ function deriveHumanReviewRequired(
 
 // ---- Inputs slice for the envelope ----
 
-function deriveGitStatus(
-  verify: VerifyStatusData,
-): "clean" | "dirty" | "no-git" | "empty-repo" {
+function deriveGitStatus(verify: VerifyStatusData): "clean" | "dirty" | "no-git" | "empty-repo" {
   const g = verify.local.git;
-  if (g.head === null && g.branch === null) return "empty-repo";
-  if (g.head === null) return "no-git";
+  // Branch on isGitRepo first so we don't collapse "non-git directory" into
+  // "empty repo" — those are distinct evidence states with different next
+  // suggested actions.
+  if (g.isGitRepo === false) return "no-git";
+  if (g.gitReason === "no-commits") return "empty-repo";
   return g.isDirty ? "dirty" : "clean";
 }
 
@@ -487,11 +514,20 @@ export async function generateVerdictDraft(
     ...(opts.runner !== undefined ? { runner: opts.runner } : {}),
   });
   // verify-status never blocks for evidence; if its envelope is somehow
-  // not ok we surface the failure to the caller verbatim.
+  // not ok we construct a properly-typed VerdictDraft failure envelope rather
+  // than smuggle the verify-status envelope through `as unknown`. The failure
+  // message and a small reason payload are surfaced for the caller to inspect.
   if (verifyResult.ok !== true || verifyResult.data === undefined) {
-    // Failure surface — pass through verbatim. CommandResult<T> is union;
-    // cast through unknown to keep the failure data attached.
-    return verifyResult as unknown as CommandResult<VerdictDraftData>;
+    return blocked<VerdictDraftData>(
+      "ERR_IO_OR_CONFIG",
+      verifyResult.message ?? msg("Verify-status failed.", "验证状态汇总失败。"),
+      {
+        command: VERDICT_DRAFT_COMMAND_ID,
+        implemented: true,
+        noMutation: true,
+        reason: "verify-status-failed",
+      },
+    );
   }
 
   const verify = verifyResult.data;

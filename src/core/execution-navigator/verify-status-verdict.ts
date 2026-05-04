@@ -45,9 +45,7 @@ export interface VerdictInputs {
   readonly githubUnavailable: boolean;
 }
 
-export function buildRequiredCommands(
-  scripts: VerifyStatusScriptsPresent,
-): readonly string[] {
+export function buildRequiredCommands(scripts: VerifyStatusScriptsPresent): readonly string[] {
   const cmds: string[] = [];
   if (scripts.lint) cmds.push(COMMAND_LINT);
   if (scripts.typecheck) cmds.push(COMMAND_TYPECHECK);
@@ -65,9 +63,7 @@ function sortLex<T extends string>(values: readonly T[]): readonly T[] {
   return [...new Set(values)].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
 }
 
-function collectMissingSignals(
-  inputs: VerdictInputs,
-): readonly VerifyStatusMissingSignal[] {
+function collectMissingSignals(inputs: VerdictInputs): readonly VerifyStatusMissingSignal[] {
   const signals: VerifyStatusMissingSignal[] = [];
   if (!inputs.scripts.lint) signals.push("no-lint-script");
   if (!inputs.scripts.typecheck) signals.push("no-typecheck-script");
@@ -92,8 +88,53 @@ function collectMissingSignals(
   return sortLex(signals);
 }
 
+// Lookup table covering every VerifyStatusRiskFlag member. Declaring the
+// constant with type `Record<VerifyStatusRiskFlag, true>` forces the
+// TypeScript compiler to flag any future addition to the union that isn't
+// represented here — the `as readonly … RiskFlag[]` cast at the return
+// boundary is replaced by this exhaustive check.
+const VERIFY_STATUS_RISK_FLAG_LOOKUP: Readonly<Record<VerifyStatusRiskFlag, true>> = Object.freeze({
+  "working-tree-dirty": true,
+  "not-a-git-repository": true,
+  "no-commits": true,
+  "detached-head": true,
+  "git-not-found": true,
+  "acceptance-file-missing": true,
+  "no-acceptance-criteria": true,
+  "coverage-partial": true,
+  "coverage-missing": true,
+  "human-review-required": true,
+  "github-evidence-unavailable": true,
+  "draft-pr": true,
+  "closed-pr": true,
+  "merge-conflict-or-unclean": true,
+  "ci-failing": true,
+  "ci-pending": true,
+  "no-checks-found": true,
+  "changes-requested": true,
+  "no-review-yet": true,
+  "large-diff": true,
+  "many-files-changed": true,
+  "source-change-without-test-change": true,
+  "test-change-without-source-change": true,
+  "docs-only-change": true,
+  "workflow-changed": true,
+  "package-metadata-changed": true,
+});
+
+// Narrow an arbitrary string into the VerifyStatusRiskFlag union, dropping
+// the value (returning false) if it isn't a member. Drift in the union is
+// caught at compile time by the lookup table above.
+function isVerifyStatusRiskFlag(s: string): s is VerifyStatusRiskFlag {
+  return Object.prototype.hasOwnProperty.call(VERIFY_STATUS_RISK_FLAG_LOOKUP, s);
+}
+
+function sortLexFlags(values: readonly VerifyStatusRiskFlag[]): readonly VerifyStatusRiskFlag[] {
+  return [...new Set(values)].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+}
+
 function collectRiskFlags(inputs: VerdictInputs): readonly VerifyStatusRiskFlag[] {
-  const flags: string[] = [];
+  const flags: VerifyStatusRiskFlag[] = [];
   if (inputs.git.isGitRepo === false) {
     if (inputs.git.reason === "git-not-found") flags.push("git-not-found");
     else flags.push("not-a-git-repository");
@@ -112,8 +153,13 @@ function collectRiskFlags(inputs: VerdictInputs): readonly VerifyStatusRiskFlag[
   if (inputs.githubRequested && inputs.githubUnavailable) {
     flags.push("github-evidence-unavailable");
   }
-  for (const f of inputs.pr.riskFlags) flags.push(f);
-  return sortLex(flags) as readonly VerifyStatusRiskFlag[];
+  // pr.riskFlags is typed as `readonly string[]` (it carries values from gh
+  // analysis whose source union differs); narrow each entry to the
+  // VerifyStatusRiskFlag union and drop any value that isn't a member.
+  for (const f of inputs.pr.riskFlags) {
+    if (isVerifyStatusRiskFlag(f)) flags.push(f);
+  }
+  return sortLexFlags(flags);
 }
 
 function allRequired(scripts: VerifyStatusScriptsPresent): boolean {
@@ -146,11 +192,7 @@ export function deriveStatus(inputs: VerdictInputs): VerifyStatusOverall {
   if (cs === "pending") return "pending";
 
   // Rule 5 (early) — no verification data at all.
-  if (
-    noLocal &&
-    !prAvailable &&
-    inputs.acceptance.coverageStatus === "no-acceptance-criteria"
-  ) {
+  if (noLocal && !prAvailable && inputs.acceptance.coverageStatus === "no-acceptance-criteria") {
     return "no-verification-data";
   }
 

@@ -30,6 +30,49 @@ const HEADING_RE = /^(#{1,6})\s+(.*?)\s*$/;
 const BULLET_RE = /^(\s*)([-*+])\s+(.*)$/;
 const NUMBERED_RE = /^(\s*)\d+[.)]\s+(.*)$/;
 
+// Fenced-code-block delimiter. Matches `` ``` `` or `~~~` with up to 3 leading
+// spaces (per CommonMark). We track entering/leaving fences across lines so
+// any `AC-001` examples inside fenced blocks are skipped.
+const FENCE_RE = /^\s{0,3}(?:```|~~~)/;
+
+// Markdown table row detector — a leading `|` (with up to 3 leading spaces).
+// Table rows must not register as AC bullets even if they contain an AC ID.
+const TABLE_ROW_RE = /^\s{0,3}\|/;
+
+// Strip HTML comments (`<!-- ... -->`) from raw markdown before line splitting.
+// Comments may span multiple lines; we drop the entire `<!--…-->` span,
+// preserving newlines outside the comment so source-line numbers remain stable
+// for content following the comment.
+function stripHtmlComments(input: string): string {
+  let out = "";
+  let i = 0;
+  const n = input.length;
+  while (i < n) {
+    const open = input.indexOf("<!--", i);
+    if (open === -1) {
+      out += input.slice(i);
+      break;
+    }
+    out += input.slice(i, open);
+    const close = input.indexOf("-->", open + 4);
+    if (close === -1) {
+      // Unterminated comment — drop the rest of the input but keep one newline
+      // for each newline we are dropping so subsequent line numbers stay stable.
+      const dropped = input.slice(open);
+      const newlineCount = (dropped.match(/\n/g) ?? []).length;
+      out += "\n".repeat(newlineCount);
+      break;
+    }
+    // Replace the entire `<!--…-->` span with as many newlines as it contained,
+    // so line numbers for everything after the comment are unaffected.
+    const span = input.slice(open, close + 3);
+    const newlineCount = (span.match(/\n/g) ?? []).length;
+    out += "\n".repeat(newlineCount);
+    i = close + 3;
+  }
+  return out;
+}
+
 // Checklist detector: `[ ]` / `[x]` / `[X]`.
 const CHECKLIST_RE = /^\[([ xX])\]\s*(.*)$/;
 
@@ -274,12 +317,33 @@ export function parseAcceptanceCriteria(
     );
   }
 
-  const lines = markdown.split("\n");
+  // Strip HTML comments (single- or multi-line) before line splitting so AC
+  // IDs that appear inside `<!-- ... -->` are never registered. We preserve
+  // newlines so source-line numbers remain stable for content after comments.
+  const sanitized = stripHtmlComments(markdown);
+
+  const lines = sanitized.split("\n");
+  // Track fenced-code-block state across lines: while inside ``` or ~~~ we
+  // skip every line so AC IDs inside code samples don't register.
+  let inFence = false;
   for (let i = 0; i < lines.length; i += 1) {
     // Strip a trailing CR so CRLF-terminated files parse the same as LF.
     const raw = (lines[i] ?? "").replace(/\r$/, "");
     const sourceLine = i + 1;
+
+    // Fenced-code toggle: a line starting with ``` (or ~~~) flips the state.
+    // The fence-delimiter line itself is also skipped.
+    if (FENCE_RE.test(raw)) {
+      inFence = !inFence;
+      continue;
+    }
+    if (inFence) continue;
+
     if (raw.trim().length === 0) continue;
+
+    // Markdown table rows (leading `|`) — including header / separator / data
+    // rows — never register as AC bullets.
+    if (TABLE_ROW_RE.test(raw)) continue;
 
     if (processHeading(raw, state, sourceLine)) continue;
     processBodyLine(raw, state, sourceLine);
