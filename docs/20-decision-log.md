@@ -2742,3 +2742,124 @@ VERIFY:
 6. Docs update — `README.md` step inventory, `docs/quickstart.md` extended walkthrough, `docs/mcp-usage.md` new step reminders, `CHANGELOG.md`.
 7. Local install smoke — verify a tarball install of the new profile boots cleanly.
 8. **Optional** beta.1 publish after validation — separate DEC required (DEC-020 / DEC-021 / DEC-022 style); not authorised here.
+
+## DEC-024｜Reframe BUILD / VERIFY as Execution Evidence Navigator
+
+**Status**: Accepted for planning.
+
+**Context**:
+
+- SOP 0.2.0 already ships the strong-gated 00–18 mainline end-to-end: profile data, bundled templates, gate runner, runtime cutover (`loadSopProfile()` defaults to 0.2.0, fresh `ocn init` writes `sopProfileVersion: "0.2.0"`), and a `plan-to-verify` example whose smoke walks all 19 wired steps from `step_project_brief` through `step_final_build_verdict` (`docs/plans/2026-05-02-sop-0.2-strong-gated-build-verify-plan.md`, `docs/reports/2026-05-02-sop-0.2-runtime-cutover-full-flow.md`, `docs/reports/2026-05-02-sop-0.2-plan-to-verify-example.md`, `examples/plan-to-verify/scripts/smoke.sh`, `src/sops/default-ai-coding-sop/0.2.0/data.ts`).
+- One real dogfood pass has been conducted against this 00–18 closed loop.
+- Dogfood finding: `00–10` (DISCOVERY → PLAN: project brief, scope, PRD, ACs, technical architecture, IA, data model, API contract, test strategy, MVP plan, real-data wiring) is genuinely useful and produces planning evidence that converts into actionable scope.
+- Dogfood finding: from step 11 onward (config-and-env, reproducibility, rollback, dev log, research log, validation, debug, final verdict), forcing the developer to advance one Markdown artifact at a time is **not** the right primary interaction model after development actually starts. The work is no longer "produce a planning section" — it is "implement a feature, get the PR through CI, fix what reviewers / CI / issues surfaced, prove the AC was met". A linear `ocn advance` over docs/11–18 does not help during the PR / CI / error / fix loop, and instead pulls the developer away from the real evidence chain.
+- Real execution evidence already lives in git, GitHub PR, GitHub Actions, code review comments, GitHub Issues, and commit history. OCN should not duplicate that evidence chain — that would re-introduce the very "form-filling theatre" the SOP exists to prevent.
+- What OCN should do instead is **read** that evidence chain, **summarise** the current execution state against the 00–10 plan and the 03 acceptance criteria, **surface deviations** (scope drift, missing tests, failed checks, unresolved issues, evidence gaps, blocked work items), and **generate the next-Agent guidance** (next prompt for Claude Code / Codex / LFG, repair prompt for an open issue, retry prompt after a verify failure). That role — "Execution Evidence Navigator / Agent Compass" — is materially different from the gate-engine role 00–10 plays.
+
+中文要点：dogfood 之后看清楚了，OCN 在 0–10 里作为强门禁的"计划守门员"是有效的，但 10 之后再继续按文档线性推进 11–18 已经不再贴合真实开发节奏。真正的执行证据天然存在于 git / GitHub PR / CI / review / issue / commit 里，OCN 不应该再造一条文档证据链，而应该读取这条已有证据链，对照 00–10 计划与 03 验收标准，告诉开发者当前执行状态、阻塞点，以及下一轮给 Claude Code / Codex / LFG 的提示词。
+
+**Decision**:
+
+`Keep 0–10 as strong Planning Gates. Reframe 10+ as Execution Evidence Navigation.`
+
+OCN after Build Plan should not primarily be a linear document-advance system. OCN should become an evidence navigator over git / GitHub / PR / CI / issue signals.
+
+10 之后，OCN 不再主要扮演线性文档推进器，而是成为基于 git / GitHub / PR / CI / issue 证据链的执行指南针。
+
+This DEC authorises **planning only**. No source, test, package, npm, latest, tag, release, workflow, or runtime change is performed by this DEC PR. Each implementation PR will be a separate DEC-bound action.
+
+**Product model**:
+
+- `0–10：Planning Gatekeeper`
+- `10+：Execution Evidence Navigator`
+
+**What remains**:
+
+- Keep the strong-gated `00–10` planning chain as-is. Required sections, gate runner, `ocn check` / `ocn gate` / `ocn advance` semantics for 00–10 are unchanged.
+- Keep `11–18` artifacts (`docs/11-config-and-env.md` … `docs/18-final-build-verdict.md`) and their templates.
+- Keep the `plan-to-verify` example.
+- Keep the existing SOP 0.2.0 profile (`src/sops/default-ai-coding-sop/0.2.0/`) — no removal, no rollback.
+- Reinterpret `11–18` as **evidence-derived reports** rather than as the main developer interaction loop: their canonical content should, over time, be filled in from observed git / GitHub / CI evidence, not from a developer manually tabbing through `ocn advance` between code edits.
+- `ocn advance` remains useful for planning (00–10) and for formal closure of a delivery, but it is **not** sufficient as the primary daily-development execution surface.
+
+**Evidence sources** (read-only inputs the navigator will consume):
+
+- Local `git status` (working tree dirty / clean, untracked, staged, unstaged).
+- Local `git diff` (file-level and hunk-level changes vs base).
+- `git log` (recent commits, branch divergence vs base).
+- GitHub PR title and body.
+- GitHub PR commit list.
+- GitHub PR files-changed list.
+- GitHub Actions check runs (status / conclusion per check).
+- Failed CI logs (the failing job's relevant tail).
+- GitHub PR review comments (review state, requested changes, threads).
+- GitHub Issues (open, linked, labelled).
+- Linked branch (PR ↔ branch ↔ issue).
+- `package.json` scripts (the canonical `lint` / `typecheck` / `test` / `build` commands the navigator can recommend running).
+- Local test command outputs (when the developer runs them).
+
+**New core objects** (data model sketch, not yet implemented):
+
+- **Work Item** — a unit of execution scoped to a PR / branch / issue.
+- **Agent Run** — a recorded invocation of an external coding agent (Claude Code / Codex / LFG / etc.) against a Work Item, with prompt and outcome.
+- **Issue** — an open problem (CI failure, review comment, linked issue, blocked AC) the navigator surfaces.
+- **Verification Run** — an attempted verification against the AC document or the test strategy, with status.
+- **Evidence Link** — a stable reference from a Work Item / Issue / Verification Run to a concrete piece of git / GitHub / CI evidence.
+- **Acceptance Mapping** — a mapping from `docs/03-acceptance-criteria.md` ACs to evidence (changed files, tests, CI runs, smoke runs, review approvals).
+- **Final Verdict** — an evidence-derived draft of `docs/18-final-build-verdict.md`: pass / fail / unresolved risks, anchored to Evidence Links.
+
+**New command direction** (directional, not implemented in this PR):
+
+```
+ocn exec status
+ocn github analyze-pr <number>
+ocn evidence map
+ocn next-prompt
+ocn verify status
+ocn verdict draft
+```
+
+**Options considered**:
+
+- **Option A** — Keep `11–18` as linear doc advance. **Rejected.** Dogfood shows real friction once development starts: the developer spends time in PR / CI / error / fix loops, and a linear `ocn advance` over Markdown artifacts neither tracks nor helps that loop.
+- **Option B** — Remove OCN entirely after step 10. **Rejected.** Even after planning closes, the developer still needs evidence-chain navigation, status judgement against 00–10, and a next-Agent compass; deleting OCN's post-10 role would surrender the discipline OCN sells (`CLAUDE.md` §1).
+- **Option C** — Use GitHub (and local git) as the source of truth for execution, and OCN as the read-only navigator that interprets it against the 00–10 plan and the 03 ACs. **Accepted.** Development evidence already lives in PR / commit / diff / CI / review / issue; OCN's value is interpretation, not duplication.
+- **Option D** — Build a full internal execution database immediately (project-side mirror of every PR / commit / check / issue). **Rejected for now.** Too heavy as a first move; correct sequencing is read-only on git / GitHub evidence + next-prompt first, then decide whether internal indexing is needed.
+
+**Consequences**:
+
+Positive:
+
+- Reduces duplicated manual reporting after planning closes — the developer stops re-typing what GitHub already knows.
+- Fits real development flow (PR + CI + review + issue) rather than a Markdown ladder.
+- Aligns with the "TwigLoop" evidence-chain concept: every status claim is anchored to a verifiable Evidence Link, not to a free-form section in a `.md` file.
+- Useful in stuck loops (failed CI, unresolved review comment, AC with no test) where a linear gate engine has nothing to say.
+- Avoids form-filling theatre — keeps OCN credible as a discipline product, not a doc-factory.
+
+Negative:
+
+- Requires GitHub / git integration code (gh CLI or GitHub API), which 0–10 did not need.
+- Adds a new analysis layer (evidence parsing, AC mapping, next-prompt synthesis) on top of the existing gate engine.
+- OCN becomes more than a simple SOP gate engine; the cognitive surface for users grows.
+- Need to clearly distinguish observed facts (git / PR / CI signals) from AI interpretation (deviation flags, next-prompt suggestions, verdict drafts) so users do not over-trust the navigator.
+
+**Follow-up — future implementation sequence (each its own DEC-bound action)**:
+
+1. Execution Navigator plan (this PR's plan doc).
+2. Read-only local git evidence MVP — `ocn exec status` against local `git status` / `git diff` / `git log`.
+3. Read-only GitHub PR analysis MVP — `ocn github analyze-pr <number>` (PR metadata, commits, files changed, CI checks, review comments), via `gh` CLI or GitHub API, no mutation.
+4. Acceptance criteria mapping from PR evidence — `ocn evidence map` against `docs/03-acceptance-criteria.md` and PR / test / CI signals.
+5. Next-prompt generation for Claude Code / Codex / LFG — `ocn next-prompt`, including issue-specific and verify-failure variants.
+6. Verification status summariser — `ocn verify status` rolling up CI, smoke, AC mapping, and open issues.
+7. Evidence-derived `11–18` report generation / update — `ocn verdict draft` writing a draft `docs/18-final-build-verdict.md` from Evidence Links.
+8. Dogfood again on the same LFG project to validate the navigator delivers real-time value during execution.
+
+**Non-goals**:
+
+- No source implementation in this DEC PR.
+- No `npm publish`.
+- No `latest` dist-tag movement.
+- No GA promotion.
+- No Cursor / Cline validation claim — DEC-019 boundary stands.
+- No removal or rollback of the SOP 0.2.0 code.
+- No deprecation of the `0–10` strong gates.
