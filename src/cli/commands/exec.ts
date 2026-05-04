@@ -16,9 +16,7 @@ export function registerExecCommand(program: Command): void {
 
   exec
     .command("status")
-    .description(
-      "Show local execution evidence (git status, recent commits, OCN project state)",
-    )
+    .description("Show local execution evidence (git status, recent commits, OCN project state)")
     .option("--json", "Emit machine-readable JSON CommandResult", false)
     .option(
       "--project-root <path>",
@@ -33,7 +31,7 @@ export function registerExecCommand(program: Command): void {
             `--project-root must be an absolute path (got: ${rawOpts.projectRoot}).`,
             `--project-root 必须是绝对路径（当前值：${rawOpts.projectRoot}）。`,
           ),
-          { argument: "--project-root", received: rawOpts.projectRoot },
+          { argument: "--project-root", received: "non-absolute-path" },
         );
         outputResult(failure, { json: rawOpts.json });
         return;

@@ -4,16 +4,14 @@ import type { Command } from "commander";
 import { generateNextPrompt } from "../../core/execution-navigator/next-prompt.js";
 import {
   defaultGhRunner,
+  isReadOnlyInvocation,
   type GhRunner,
 } from "../../core/execution-navigator/github-pr-runner.js";
 import {
   SUPPORTED_AGENTS,
   SUPPORTED_MODES,
 } from "../../core/execution-navigator/next-prompt-templates.js";
-import type {
-  NextPromptAgent,
-  NextPromptMode,
-} from "../../core/execution-navigator/types.js";
+import type { NextPromptAgent, NextPromptMode } from "../../core/execution-navigator/types.js";
 import { blocked } from "../../core/result.js";
 import { msg } from "../../core/i18n.js";
 import { outputResult } from "../output.js";
@@ -53,6 +51,16 @@ function createFixtureRunner(fixturePath: string): GhRunner {
   const parsed = JSON.parse(raw) as { entries: readonly FixtureEntry[] };
   return {
     async run(args: readonly string[]) {
+      // Defence-in-depth: refuse non-allowlisted invocations before consulting
+      // fixtures. A buggy fixture file that describes a write call must be
+      // rejected at the runner boundary regardless of fixture content.
+      if (!isReadOnlyInvocation(args)) {
+        return {
+          ok: false as const,
+          code: "OTHER" as const,
+          message: "refused: gh runner only permits read-only subcommands",
+        };
+      }
       const match = parsed.entries.find(
         (e) => e.args.length === args.length && e.args.every((a, i) => a === args[i]),
       );
@@ -90,7 +98,14 @@ function createFixtureRunner(fixturePath: string): GhRunner {
   };
 }
 
+// The fixture runner activates ONLY in test contexts — either NODE_ENV ===
+// "test" or the explicit OCN_TEST_MODE === "1" opt-in. Production binaries
+// ignore OCN_TEST_GH_RUNNER_FIXTURES entirely and fall through to
+// `defaultGhRunner()`.
 function pickRunnerFromEnv(): GhRunner | undefined {
+  if (process.env["NODE_ENV"] !== "test" && process.env["OCN_TEST_MODE"] !== "1") {
+    return undefined;
+  }
   const fixturePath = process.env["OCN_TEST_GH_RUNNER_FIXTURES"];
   if (typeof fixturePath !== "string" || fixturePath.length === 0) return undefined;
   return createFixtureRunner(fixturePath);
@@ -117,16 +132,8 @@ export function registerNextPromptCommand(program: Command): void {
       "Absolute path to the project root (defaults to current working directory)",
     )
     .option("--pr <number>", "Optional GitHub PR number for additional evidence")
-    .option(
-      "--agent <name>",
-      `Target agent (${SUPPORTED_AGENTS.join(" | ")})`,
-      "generic",
-    )
-    .option(
-      "--mode <name>",
-      `Prompt mode (${SUPPORTED_MODES.join(" | ")})`,
-      "continue",
-    )
+    .option("--agent <name>", `Target agent (${SUPPORTED_AGENTS.join(" | ")})`, "generic")
+    .option("--mode <name>", `Prompt mode (${SUPPORTED_MODES.join(" | ")})`, "continue")
     .option("--issue <text>", "Free-form issue description to override the current objective")
     .action(async (rawOpts: RawOpts) => {
       if (rawOpts.projectRoot !== undefined && !isAbsolute(rawOpts.projectRoot)) {
@@ -136,7 +143,7 @@ export function registerNextPromptCommand(program: Command): void {
             `--project-root must be an absolute path (got: ${rawOpts.projectRoot}).`,
             `--project-root 必须是绝对路径（当前值：${rawOpts.projectRoot}）。`,
           ),
-          { argument: "--project-root", received: rawOpts.projectRoot },
+          { argument: "--project-root", received: "non-absolute-path" },
         );
         outputResult(failure, { json: rawOpts.json });
         return;

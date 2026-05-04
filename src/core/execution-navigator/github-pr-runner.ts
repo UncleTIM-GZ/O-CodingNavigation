@@ -47,7 +47,12 @@ const GH_READONLY_LEADING_PAIRS: readonly (readonly [string, string])[] = Object
   ["auth", "status"],
 ]);
 
-function isReadOnlyInvocation(args: readonly string[]): boolean {
+// Exported so CLI fixture runners (test-only) can apply the same defence-in-
+// depth check before consulting fixtures: even a buggy fixture file that
+// describes a write call must be refused at the runner boundary. PR-B will
+// move this into a shared module; for PR-A we keep it co-located with
+// `defaultGhRunner` so callers stay locked to the same allowlist.
+export function isReadOnlyInvocation(args: readonly string[]): boolean {
   if (args.length < 2) return false;
   const a = args[0];
   const b = args[1];

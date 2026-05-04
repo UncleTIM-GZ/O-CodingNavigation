@@ -96,21 +96,26 @@ describe("parseRecentCommits (pure parser)", () => {
     expect(parseRecentCommits("")).toEqual([]);
   });
 
-  it("parses sha\\tsubject lines", () => {
-    const out = parseRecentCommits("abc1234\tfeat: thing\nfffffff\tfix: other\n");
+  it("parses sha<\\x1f>subject lines", () => {
+    const out = parseRecentCommits("abc1234\x1ffeat: thing\nfffffff\x1ffix: other\n");
     expect(out).toEqual([
       { sha: "abc1234", subject: "feat: thing" },
       { sha: "fffffff", subject: "fix: other" },
     ]);
   });
 
-  it("preserves additional tabs inside the subject", () => {
-    const out = parseRecentCommits("abc1234\tfeat: with\textra tab\n");
-    expect(out).toEqual([{ sha: "abc1234", subject: "feat: with\textra tab" }]);
+  it("preserves tab-prefixed commit subjects (no longer dropped)", () => {
+    const out = parseRecentCommits("abc1234\x1f\tfeat: tab-prefixed subject\n");
+    expect(out).toEqual([{ sha: "abc1234", subject: "\tfeat: tab-prefixed subject" }]);
   });
 
-  it("skips malformed lines without a tab", () => {
-    const out = parseRecentCommits("malformed-without-tab\nabc1234\tok\n");
+  it("preserves additional unit-separator bytes inside the subject", () => {
+    const out = parseRecentCommits("abc1234\x1ffeat: with\x1fextra sep\n");
+    expect(out).toEqual([{ sha: "abc1234", subject: "feat: with\x1fextra sep" }]);
+  });
+
+  it("skips malformed lines without a unit-separator", () => {
+    const out = parseRecentCommits("malformed-without-sep\nabc1234\x1fok\n");
     expect(out).toEqual([{ sha: "abc1234", subject: "ok" }]);
   });
 });
@@ -233,11 +238,7 @@ describe("readOcnProjectState (read-only state.json inspector)", () => {
       artifacts: {},
       latestGateResult: null,
     };
-    writeFileSync(
-      join(dir, ".ocoding", "state.json"),
-      JSON.stringify(state, null, 2),
-      "utf8",
-    );
+    writeFileSync(join(dir, ".ocoding", "state.json"), JSON.stringify(state, null, 2), "utf8");
     const r = await readOcnProjectState(dir);
     expect(r.isOcnProject).toBe(true);
     expect(r.sopProfileId).toBe("default-ai-coding-sop");

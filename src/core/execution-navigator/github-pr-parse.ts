@@ -61,10 +61,7 @@ function normaliseChangeType(raw: unknown): PrFileChangeType {
   }
 }
 
-export function parsePrMetadata(
-  raw: Record<string, unknown>,
-  warnings: string[],
-): PrMetadata {
+export function parsePrMetadata(raw: Record<string, unknown>, warnings: string[]): PrMetadata {
   const number = asNumber(raw["number"], 0);
   if (number <= 0) {
     warnings.push("pr-number-missing");
@@ -87,15 +84,11 @@ export function parsePrMetadata(
     baseRefName: typeof raw["baseRefName"] === "string" ? raw["baseRefName"] : null,
     isDraft: asBool(raw["isDraft"]),
     mergeable: typeof raw["mergeable"] === "string" ? raw["mergeable"] : null,
-    mergeStateStatus:
-      typeof raw["mergeStateStatus"] === "string" ? raw["mergeStateStatus"] : null,
+    mergeStateStatus: typeof raw["mergeStateStatus"] === "string" ? raw["mergeStateStatus"] : null,
   };
 }
 
-export function parsePrFiles(
-  raw: unknown,
-  warnings: string[],
-): PrChangesData {
+export function parsePrFiles(raw: unknown, warnings: string[]): PrChangesData {
   if (!Array.isArray(raw)) {
     if (raw !== undefined) warnings.push("files-field-unavailable");
     return { changedFiles: 0, additions: 0, deletions: 0, files: [] };
@@ -118,13 +111,13 @@ export function parsePrFiles(
     additions += fileAdditions;
     deletions += fileDeletions;
   }
+  // Sort by path lex-asc so the parsed output is deterministic regardless of
+  // whatever order `gh pr view --json files` happens to return.
+  files.sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
   return { changedFiles: files.length, additions, deletions, files };
 }
 
-export function parsePrCommits(
-  raw: unknown,
-  warnings: string[],
-): readonly PrCommitRecord[] {
+export function parsePrCommits(raw: unknown, warnings: string[]): readonly PrCommitRecord[] {
   if (!Array.isArray(raw)) {
     if (raw !== undefined) warnings.push("commits-field-unavailable");
     return [];
@@ -139,6 +132,9 @@ export function parsePrCommits(
       messageHeadline: asString(entry["messageHeadline"]),
     });
   }
+  // Sort by oid lex-asc so the parsed output is deterministic regardless of
+  // whatever order `gh pr view --json commits` happens to return.
+  out.sort((a, b) => (a.oid < b.oid ? -1 : a.oid > b.oid ? 1 : 0));
   return out;
 }
 
@@ -182,8 +178,7 @@ export function parsePrChecks(raw: unknown, warnings: string[]): PrChecksData {
     const name = asString(entry["name"]);
     if (name.length === 0) continue;
     const status = asString(entry["status"], "UNKNOWN");
-    const conclusion =
-      typeof entry["conclusion"] === "string" ? entry["conclusion"] : null;
+    const conclusion = typeof entry["conclusion"] === "string" ? entry["conclusion"] : null;
     items.push({ name, status, conclusion });
     const verdict = classifyCheck(status, conclusion);
     if (verdict === "passed") passed += 1;
@@ -191,7 +186,17 @@ export function parsePrChecks(raw: unknown, warnings: string[]): PrChecksData {
     else pending += 1;
   }
   const total = items.length;
-  return { summary: summariseChecks(passed, failed, pending, total), total, passed, failed, pending, items };
+  // Sort by name lex-asc so the parsed output is deterministic regardless of
+  // whatever order `gh pr view --json statusCheckRollup` happens to return.
+  items.sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
+  return {
+    summary: summariseChecks(passed, failed, pending, total),
+    total,
+    passed,
+    failed,
+    pending,
+    items,
+  };
 }
 
 export function parsePrReviews(raw: unknown, warnings: string[]): PrReviewsData {

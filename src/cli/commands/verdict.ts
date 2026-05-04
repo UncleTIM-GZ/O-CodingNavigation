@@ -5,6 +5,7 @@ import { generateVerdictDraft } from "../../core/execution-navigator/verdict-dra
 import { SUPPORTED_MODES } from "../../core/execution-navigator/verdict-draft-constants.js";
 import {
   defaultGhRunner,
+  isReadOnlyInvocation,
   type GhRunner,
 } from "../../core/execution-navigator/github-pr-runner.js";
 import type { VerdictDraftMode } from "../../core/execution-navigator/types.js";
@@ -46,6 +47,16 @@ function createFixtureRunner(fixturePath: string): GhRunner {
   const parsed = JSON.parse(raw) as { entries: readonly FixtureEntry[] };
   return {
     async run(args: readonly string[]) {
+      // Defence-in-depth: refuse non-allowlisted invocations before consulting
+      // fixtures. A buggy fixture file that describes a write call must be
+      // rejected at the runner boundary regardless of fixture content.
+      if (!isReadOnlyInvocation(args)) {
+        return {
+          ok: false as const,
+          code: "OTHER" as const,
+          message: "refused: gh runner only permits read-only subcommands",
+        };
+      }
       const match = parsed.entries.find(
         (e) => e.args.length === args.length && e.args.every((a, i) => a === args[i]),
       );
@@ -83,7 +94,14 @@ function createFixtureRunner(fixturePath: string): GhRunner {
   };
 }
 
+// The fixture runner activates ONLY in test contexts — either NODE_ENV ===
+// "test" or the explicit OCN_TEST_MODE === "1" opt-in. Production binaries
+// ignore OCN_TEST_GH_RUNNER_FIXTURES entirely and fall through to
+// `defaultGhRunner()`.
 function pickRunnerFromEnv(): GhRunner | undefined {
+  if (process.env["NODE_ENV"] !== "test" && process.env["OCN_TEST_MODE"] !== "1") {
+    return undefined;
+  }
   const fixturePath = process.env["OCN_TEST_GH_RUNNER_FIXTURES"];
   if (typeof fixturePath !== "string" || fixturePath.length === 0) return undefined;
   return createFixtureRunner(fixturePath);
@@ -112,11 +130,7 @@ export function registerVerdictCommand(program: Command): void {
       "Absolute path to the project root (defaults to current working directory)",
     )
     .option("--pr <number>", "Optional GitHub PR number for additional evidence")
-    .option(
-      "--mode <name>",
-      `Evidence mode (${SUPPORTED_MODES.join(" | ")})`,
-      "combined",
-    )
+    .option("--mode <name>", `Evidence mode (${SUPPORTED_MODES.join(" | ")})`, "combined")
     .action(async (rawOpts: RawOpts) => {
       if (rawOpts.projectRoot !== undefined && !isAbsolute(rawOpts.projectRoot)) {
         const failure = blocked(
@@ -125,7 +139,7 @@ export function registerVerdictCommand(program: Command): void {
             `--project-root must be an absolute path (got: ${rawOpts.projectRoot}).`,
             `--project-root 必须是绝对路径（当前值：${rawOpts.projectRoot}）。`,
           ),
-          { argument: "--project-root", received: rawOpts.projectRoot },
+          { argument: "--project-root", received: "non-absolute-path" },
         );
         outputResult(failure, { json: rawOpts.json });
         return;
@@ -165,10 +179,7 @@ export function registerVerdictCommand(program: Command): void {
       if (modeRaw === "pr" && prNumber === undefined) {
         const failure = blocked(
           "ERR_ARTIFACT_INVALID",
-          msg(
-            "mode `pr` requires `--pr <number>`.",
-            "--mode `pr` 必须搭配 `--pr <number>` 使用。",
-          ),
+          msg("mode `pr` requires `--pr <number>`.", "--mode `pr` 必须搭配 `--pr <number>` 使用。"),
           { argument: "--mode", received: "pr" },
         );
         outputResult(failure, { json: rawOpts.json });

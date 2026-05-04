@@ -17,17 +17,19 @@ const execFileP = promisify(execFile);
 
 const RECENT_COMMITS_LIMIT = 5;
 
-// Tab-separated tuple between sha and subject. We pass `%x09` to git so any
-// tab inside the subject would break our parse — we therefore split exactly
-// once.
-const LOG_FORMAT = "%h%x09%s";
+// ASCII unit-separator (`\x1f`) tuple between sha and subject. Using `%x1f`
+// rather than `%x09` (tab) avoids silently dropping commit subjects whose
+// first character is a tab (git would round-trip such subjects through `%s`).
+// The unit-separator byte is virtually impossible inside a real commit subject.
+const LOG_FORMAT = "%h%x1f%s";
+const LOG_FIELD_SEPARATOR = "\x1f";
 
 // `git status --porcelain=v1 -z` emits NUL-terminated entries. Renames also
 // emit a second NUL-separated path. We declare these as named constants
 // rather than magic literals.
 const NUL = "\0";
-const PORCELAIN_RENAME_X = "R";
-const PORCELAIN_RENAME_Y = "R";
+const PORCELAIN_RENAME = "R";
+const PORCELAIN_COPY = "C";
 const UNTRACKED_X = "?";
 const UNTRACKED_Y = "?";
 
@@ -126,7 +128,12 @@ export function parsePorcelainV1(stdoutZ: string): PorcelainParseResult {
 
     // Rename or copy: a second NUL-separated entry holds the old path.
     let oldPath: string | undefined;
-    if (x === PORCELAIN_RENAME_X || y === PORCELAIN_RENAME_Y || x === "C" || y === "C") {
+    if (
+      x === PORCELAIN_RENAME ||
+      y === PORCELAIN_RENAME ||
+      x === PORCELAIN_COPY ||
+      y === PORCELAIN_COPY
+    ) {
       const next = records[i];
       if (next !== undefined) {
         oldPath = next;
@@ -151,19 +158,21 @@ export function parsePorcelainV1(stdoutZ: string): PorcelainParseResult {
   };
 }
 
-// Pure parser — exported for direct unit testing. Each line is `sha\tsubject`.
-// Subjects are stripped of trailing CR; subjects containing further tabs are
-// preserved beyond the first tab. Empty / malformed lines are skipped.
+// Pure parser — exported for direct unit testing. Each line is
+// `sha<\x1f>subject`. Subjects are stripped of trailing CR; subjects
+// containing further unit-separator bytes are preserved beyond the first
+// separator (defensive — those bytes should not occur in normal subjects).
+// Empty / malformed lines are skipped.
 export function parseRecentCommits(stdout: string): readonly GitCommitRecord[] {
   const lines = stdout.split("\n");
   const out: GitCommitRecord[] = [];
   for (const raw of lines) {
     const line = raw.replace(/\r$/, "");
     if (line.length === 0) continue;
-    const tabIdx = line.indexOf("\t");
-    if (tabIdx <= 0) continue;
-    const sha = line.slice(0, tabIdx);
-    const subject = line.slice(tabIdx + 1);
+    const sepIdx = line.indexOf(LOG_FIELD_SEPARATOR);
+    if (sepIdx <= 0) continue;
+    const sha = line.slice(0, sepIdx);
+    const subject = line.slice(sepIdx + 1);
     if (sha.length === 0) continue;
     out.push({ sha, subject });
   }
@@ -202,8 +211,10 @@ export async function readLocalGit(cwd: string): Promise<ExecStatusGitData> {
   const branchRaw = branchProbe.ok ? branchProbe.stdout.trim() : "";
   const branch = branchRaw.length > 0 ? branchRaw : null;
 
-  // Step 4 — HEAD short SHA. Failure here = empty repo / no commits.
-  const headProbe = await runGit(["rev-parse", "--short", "HEAD"], cwd);
+  // Step 4 — HEAD short SHA. Failure here = empty repo / no commits. We pin
+  // the abbreviation length to 12 so cross-machine `core.abbrev` config does
+  // not produce drifting output for byte-identical inputs.
+  const headProbe = await runGit(["rev-parse", "--short=12", "HEAD"], cwd);
   const head = headProbe.ok ? headProbe.stdout.trim() : null;
   const noCommits = !headProbe.ok;
 
