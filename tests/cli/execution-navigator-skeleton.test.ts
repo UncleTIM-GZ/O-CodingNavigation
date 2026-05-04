@@ -10,8 +10,10 @@ import { createTempProject, type TempProject } from "../helpers/temp-project.js"
 // — its CLI tests live in `tests/cli/execution-navigator-local-git.test.ts`.
 // MVP 2 (PR 3) graduated `github analyze-pr` to a read-only GitHub PR
 // analysis reader — its CLI tests live in
-// `tests/cli/execution-navigator-github-pr.test.ts`. The four commands
-// below remain skeleton.
+// `tests/cli/execution-navigator-github-pr.test.ts`. MVP 3 (PR 4) graduated
+// `evidence map` to a deterministic acceptance evidence mapper — its CLI
+// tests live in `tests/cli/execution-navigator-evidence-map.test.ts`. The
+// three remaining commands below remain skeleton.
 //
 // These tests assert the skeleton boundary:
 //   - structured JSON envelope per remaining skeleton command
@@ -21,7 +23,7 @@ import { createTempProject, type TempProject } from "../helpers/temp-project.js"
 //     ERR_ARTIFACT_INVALID validation pre-check)
 //   - no `.ocoding/execution` directory is created
 //   - no GitHub auth env var is required to run any of these commands
-describe("ocn execution-navigator commands (skeleton — four remaining commands)", () => {
+describe("ocn execution-navigator commands (skeleton — three remaining commands)", () => {
   let project: TempProject;
 
   // Stripped env: explicitly remove any GitHub credentials so we prove these
@@ -54,7 +56,10 @@ describe("ocn execution-navigator commands (skeleton — four remaining commands
     expect(parsed.message.zh).toMatch(/PR 编号/);
   }, 30_000);
 
-  it("ocn evidence map --json returns ok skeleton", async () => {
+  it("ocn evidence map --json against an empty temp project returns implemented=true with no-acceptance-criteria coverage", async () => {
+    // MVP 3: `evidence.map` is now implemented. In a temp project that has
+    // no `docs/03-acceptance-criteria.md`, the command degrades gracefully
+    // to `coverageStatus: "no-acceptance-criteria"` and stays ok.
     const result = await spawnOcn(["evidence", "map", "--json"], {
       cwd: project.cwd,
       env: stripGhEnv(),
@@ -63,8 +68,12 @@ describe("ocn execution-navigator commands (skeleton — four remaining commands
     const parsed = JSON.parse(result.stdout);
     expect(parsed.ok).toBe(true);
     expect(parsed.data.command).toBe("evidence.map");
-    expect(parsed.data.implemented).toBe(false);
-    expect(parsed.data.evidenceSourcesPlanned).toEqual(["git", "github", "ci"]);
+    expect(parsed.data.implemented).toBe(true);
+    expect(parsed.data.acceptance.found).toBe(false);
+    expect(parsed.data.mapping.coverageStatus).toBe("no-acceptance-criteria");
+    expect(parsed.data.evidenceSourcesUsed).toContain("local-git");
+    expect(parsed.data.evidenceSourcesUsed).toContain("ocn-state");
+    expect(parsed.data.evidenceSourcesUsed).not.toContain("github");
   }, 30_000);
 
   it("ocn next-prompt --json returns ok skeleton", async () => {
@@ -106,7 +115,7 @@ describe("ocn execution-navigator commands (skeleton — four remaining commands
     expect(parsed.data.evidenceSourcesPlanned).toEqual(["git", "github", "ci"]);
   }, 30_000);
 
-  it("none of the skeleton commands create .ocoding/execution", async () => {
+  it("none of the implemented or skeleton execution-navigator commands create .ocoding/execution", async () => {
     const env = stripGhEnv();
     await spawnOcn(["evidence", "map", "--json"], { cwd: project.cwd, env });
     await spawnOcn(["next-prompt", "--json"], { cwd: project.cwd, env });

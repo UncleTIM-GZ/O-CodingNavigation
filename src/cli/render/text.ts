@@ -152,6 +152,58 @@ function appendGithubAnalyzePrBlock(out: string[], data: Record<string, unknown>
   }
 }
 
+function appendEvidenceMapBlock(out: string[], data: Record<string, unknown>): void {
+  const acceptance = isRecord(data["acceptance"]) ? data["acceptance"] : null;
+  const mapping = isRecord(data["mapping"]) ? data["mapping"] : null;
+  const analysis = isRecord(data["analysis"]) ? data["analysis"] : null;
+
+  if (acceptance !== null) {
+    const count = typeof acceptance["criteriaCount"] === "number" ? acceptance["criteriaCount"] : 0;
+    const found = acceptance["found"] === true;
+    const path = typeof acceptance["path"] === "string" ? acceptance["path"] : "?";
+    out.push(`Acceptance criteria: ${count} (${found ? path : `${path} not found`})`);
+  }
+
+  if (mapping !== null) {
+    const status = typeof mapping["coverageStatus"] === "string" ? mapping["coverageStatus"] : "?";
+    const covered = typeof mapping["covered"] === "number" ? mapping["covered"] : 0;
+    const candidate = typeof mapping["candidate"] === "number" ? mapping["candidate"] : 0;
+    const missing = typeof mapping["missing"] === "number" ? mapping["missing"] : 0;
+    const human = typeof mapping["needsHumanReview"] === "number" ? mapping["needsHumanReview"] : 0;
+    out.push(
+      `Coverage: ${status} (covered ${covered} | candidate ${candidate} | missing ${missing} | needs-human ${human})`,
+    );
+
+    const items = Array.isArray(mapping["items"]) ? mapping["items"] : [];
+    const previewLimit = 5;
+    const preview = items.slice(0, previewLimit);
+    for (const raw of preview) {
+      if (!isRecord(raw)) continue;
+      const status = typeof raw["status"] === "string" ? raw["status"] : "?";
+      const id = typeof raw["criterionId"] === "string" ? raw["criterionId"] : "?";
+      const text = typeof raw["criterionText"] === "string" ? raw["criterionText"] : "";
+      const truncated = text.length > 60 ? `${text.slice(0, 60)}…` : text;
+      out.push(`  [${status}] ${id} — ${truncated}`);
+    }
+    if (items.length > preview.length) {
+      out.push(`  … and ${items.length - preview.length} more`);
+    }
+  }
+
+  if (analysis !== null && isStringArray(analysis["riskFlags"])) {
+    const flags = analysis["riskFlags"];
+    if (flags.length > 0) {
+      const top = flags.slice(0, 3).join(", ");
+      out.push(`Risk flags: ${top}${flags.length > 3 ? ` (+${flags.length - 3} more)` : ""}`);
+    }
+  }
+
+  if (analysis !== null && typeof analysis["nextSuggestedAction"] === "string") {
+    out.push("");
+    out.push(`Next: ${analysis["nextSuggestedAction"]}`);
+  }
+}
+
 function appendExecStatusBlock(out: string[], data: Record<string, unknown>): void {
   const git = isRecord(data["git"]) ? data["git"] : undefined;
   const ocn = isRecord(data["ocn"]) ? data["ocn"] : undefined;
@@ -208,6 +260,8 @@ export function renderText<T>(result: CommandResult<T>, locale: "zh" | "en"): st
       appendExecStatusBlock(lines, data);
     } else if (data["command"] === "github.analyze_pr" && data["implemented"] === true) {
       appendGithubAnalyzePrBlock(lines, data);
+    } else if (data["command"] === "evidence.map" && data["implemented"] === true) {
+      appendEvidenceMapBlock(lines, data);
     } else if ("aiGovernanceReminder" in data || "currentBlockers" in data) {
       appendBriefBlock(lines, data);
     } else if ("currentStateId" in data || "currentStepId" in data) {

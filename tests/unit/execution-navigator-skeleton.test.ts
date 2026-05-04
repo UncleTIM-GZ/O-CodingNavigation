@@ -7,12 +7,15 @@ import {
 } from "../../src/core/execution-navigator/skeleton.js";
 import type { ExecutionNavigatorCommand } from "../../src/core/execution-navigator/types.js";
 
-// Four commands remain skeleton in MVP 2 (DEC-024 PR 3). `exec.status`
+// Three commands remain skeleton in MVP 3 (DEC-024 PR 4). `exec.status`
 // graduated in PR 2 (local-git evidence). `github.analyze_pr` graduated in
-// PR 3 (read-only GitHub PR analysis) — see
-// `tests/unit/execution-navigator-github-pr.test.ts`.
+// PR 3 (read-only GitHub PR analysis). `evidence.map` graduated in PR 4
+// (acceptance evidence mapping) — see
+// `tests/unit/execution-navigator-evidence-map.test.ts`. The skeleton table
+// keeps an entry for `evidence.map` so other commands can still consult its
+// planned evidence-source set, but it is no longer in the runtime skeleton
+// list.
 const SKELETON_COMMANDS: readonly ExecutionNavigatorCommand[] = [
-  "evidence.map",
   "next_prompt",
   "verify.status",
   "verdict.draft",

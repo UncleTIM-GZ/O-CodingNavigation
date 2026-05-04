@@ -26,7 +26,9 @@ export type EvidenceSource = "git" | "github" | "ci";
 // modelled here (rather than in `EvidenceSource`) because the broader
 // "future external evidence" universe stays git/github/ci, while
 // `ocn-state` is a local-state probe and not an external evidence stream.
-export type EvidenceSourceUsed = EvidenceSource | "ocn-state";
+// `local-git` is the explicit name MVP 3 uses when surfacing local git as an
+// evidence source distinct from the abstract eventual `git` universe.
+export type EvidenceSourceUsed = EvidenceSource | "ocn-state" | "local-git";
 
 // Skeleton response payload. The shape is stable across all six commands so
 // downstream callers (CLI text renderer, MCP server, agents) can branch on a
@@ -254,5 +256,118 @@ export interface GitHubPrAnalyzeData {
   readonly reviews: PrReviewsData | null;
   readonly ocn: ExecStatusOcnData;
   readonly analysis: GitHubPrAnalysis | null;
+  readonly warnings: readonly string[];
+}
+
+// MVP 3 (DEC-024 follow-up step 4) — `ocn evidence map` payload.
+//
+// Read-only. Reads acceptance criteria from `docs/03-acceptance-criteria.md`,
+// local git evidence (always), OCN state (always), and optional GitHub PR
+// evidence when `--pr <n>` is provided. Maps each criterion deterministically
+// to candidate evidence. No LLM, no mutation, no file writes.
+
+// One acceptance criterion parsed from the AC document.
+export interface AcceptanceCriterion {
+  // Normalised stable ID, e.g. "AC-001" or "AC-INIT-001". Always uppercase.
+  readonly id: string;
+  // Original ID as it appeared in the source markdown, before normalisation.
+  // Useful for debugging when an `AC-1` was zero-padded to `AC-001`.
+  readonly originalId: string | null;
+  // The text of the criterion (first matched line, prefix stripped).
+  readonly text: string;
+  // 1-indexed line number where the criterion was first matched.
+  readonly sourceLine: number;
+  // True when this ID was auto-generated (no explicit ID in source).
+  readonly generatedId: boolean;
+  // Optional checked state when the criterion was a checklist item.
+  readonly checked?: boolean;
+}
+
+// Result of parsing the AC markdown file. `path` is the relative path
+// reported back to the caller; `found=false` means the file is missing.
+export interface AcceptanceParseResult {
+  readonly path: string;
+  readonly found: boolean;
+  readonly criteriaCount: number;
+  readonly criteria: readonly AcceptanceCriterion[];
+  readonly warnings: readonly string[];
+}
+
+// Evidence map mapping statuses. Order matches the rule priority order in
+// `evidence-map.ts`.
+export type EvidenceMapStatus =
+  | "evidence-found"
+  | "evidence-candidate"
+  | "missing-evidence"
+  | "needs-human-review";
+
+export type EvidenceMapConfidence = "low" | "medium" | "high";
+
+// Evidence sources used to flag a candidate / found row. Stable strings —
+// downstream tools may branch on these.
+export type EvidenceMapSource =
+  | "local-git-file"
+  | "local-git-commit"
+  | "github-pr-file"
+  | "github-pr-commit"
+  | "github-pr-title"
+  | "github-pr-body"
+  | "github-checks";
+
+export interface EvidenceMapEvidence {
+  readonly source: EvidenceMapSource;
+  readonly ref: string;
+  readonly reason: string;
+}
+
+export interface EvidenceMapItem {
+  readonly criterionId: string;
+  readonly criterionText: string;
+  readonly status: EvidenceMapStatus;
+  readonly confidence: EvidenceMapConfidence;
+  readonly humanReviewRequired: boolean;
+  readonly evidence: readonly EvidenceMapEvidence[];
+  readonly missingEvidence: readonly string[];
+}
+
+export type EvidenceMapCoverageStatus =
+  | "complete"
+  | "partial"
+  | "missing"
+  | "needs-human-review"
+  | "no-acceptance-criteria";
+
+export interface EvidenceMapMappingData {
+  readonly coverageStatus: EvidenceMapCoverageStatus;
+  readonly covered: number;
+  readonly candidate: number;
+  readonly missing: number;
+  readonly needsHumanReview: number;
+  readonly items: readonly EvidenceMapItem[];
+}
+
+export type EvidenceMapRiskFlag =
+  | "acceptance-file-missing"
+  | "no-acceptance-criteria"
+  | "coverage-partial"
+  | "coverage-missing"
+  | "github-evidence-unavailable"
+  | "human-review-required"
+  | "working-tree-dirty";
+
+export interface EvidenceMapAnalysis {
+  readonly riskFlags: readonly EvidenceMapRiskFlag[];
+  readonly nextSuggestedAction: string;
+}
+
+export interface EvidenceMapData {
+  readonly command: "evidence.map";
+  readonly implemented: true;
+  readonly noMutation: true;
+  readonly evidenceSourcesUsed: readonly EvidenceSourceUsed[];
+  readonly acceptance: AcceptanceParseResult;
+  readonly mapping: EvidenceMapMappingData;
+  readonly ocn: ExecStatusOcnData;
+  readonly analysis: EvidenceMapAnalysis;
   readonly warnings: readonly string[];
 }
