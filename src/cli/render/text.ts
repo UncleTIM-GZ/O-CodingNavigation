@@ -204,6 +204,23 @@ function appendEvidenceMapBlock(out: string[], data: Record<string, unknown>): v
   }
 }
 
+function appendNextPromptBlock(out: string[], data: Record<string, unknown>): void {
+  const summary = isRecord(data["summary"]) ? data["summary"] : null;
+  const agent = typeof data["agent"] === "string" ? data["agent"] : "?";
+  const mode = typeof data["mode"] === "string" ? data["mode"] : "?";
+  const coverage =
+    summary !== null && typeof summary["acceptanceCoverageStatus"] === "string"
+      ? summary["acceptanceCoverageStatus"]
+      : "?";
+  const gitStatus =
+    summary !== null && typeof summary["gitStatus"] === "string" ? summary["gitStatus"] : "?";
+  out.push(`Agent: ${agent} | Mode: ${mode} | Coverage: ${coverage} | Git: ${gitStatus}`);
+  out.push("");
+  if (typeof data["prompt"] === "string") {
+    out.push(data["prompt"]);
+  }
+}
+
 function appendExecStatusBlock(out: string[], data: Record<string, unknown>): void {
   const git = isRecord(data["git"]) ? data["git"] : undefined;
   const ocn = isRecord(data["ocn"]) ? data["ocn"] : undefined;
@@ -262,6 +279,8 @@ export function renderText<T>(result: CommandResult<T>, locale: "zh" | "en"): st
       appendGithubAnalyzePrBlock(lines, data);
     } else if (data["command"] === "evidence.map" && data["implemented"] === true) {
       appendEvidenceMapBlock(lines, data);
+    } else if (data["command"] === "next_prompt" && data["implemented"] === true) {
+      appendNextPromptBlock(lines, data);
     } else if ("aiGovernanceReminder" in data || "currentBlockers" in data) {
       appendBriefBlock(lines, data);
     } else if ("currentStateId" in data || "currentStepId" in data) {

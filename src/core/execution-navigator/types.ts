@@ -28,7 +28,7 @@ export type EvidenceSource = "git" | "github" | "ci";
 // `ocn-state` is a local-state probe and not an external evidence stream.
 // `local-git` is the explicit name MVP 3 uses when surfacing local git as an
 // evidence source distinct from the abstract eventual `git` universe.
-export type EvidenceSourceUsed = EvidenceSource | "ocn-state" | "local-git";
+export type EvidenceSourceUsed = EvidenceSource | "ocn-state" | "local-git" | "acceptance-map";
 
 // Skeleton response payload. The shape is stable across all six commands so
 // downstream callers (CLI text renderer, MCP server, agents) can branch on a
@@ -369,5 +369,60 @@ export interface EvidenceMapData {
   readonly mapping: EvidenceMapMappingData;
   readonly ocn: ExecStatusOcnData;
   readonly analysis: EvidenceMapAnalysis;
+  readonly warnings: readonly string[];
+}
+
+// MVP 4 (DEC-024 follow-up step 5) — `ocn next-prompt` payload.
+//
+// Read-only. Composes existing readers (local git, OCN state, acceptance map,
+// optional GitHub PR) into a deterministic agent prompt body. No LLM, no
+// network call, no mutation, no file writes.
+
+export type NextPromptAgent = "generic" | "claude-code" | "codex" | "lfg";
+
+export type NextPromptMode = "continue" | "fix" | "verify" | "review";
+
+export type NextPromptRiskFlag =
+  | "acceptance-file-missing"
+  | "no-acceptance-criteria"
+  | "coverage-partial"
+  | "coverage-missing"
+  | "github-evidence-unavailable"
+  | "human-review-required"
+  | "working-tree-dirty"
+  | "not-a-git-repository"
+  | "no-commits"
+  | "detached-head"
+  | "git-not-found"
+  | "ocn-state-unreadable"
+  | "ci-failing"
+  | "ci-pending"
+  | "draft-pr"
+  | "merge-conflict-or-unclean";
+
+export interface NextPromptSummary {
+  readonly currentStateId: string | null;
+  readonly currentStepId: string | null;
+  readonly gitStatus: "clean" | "dirty" | "no-git" | "empty-repo";
+  readonly branch: string | null;
+  readonly head: string | null;
+  readonly changedFilesCount: number;
+  readonly acceptanceCoverageStatus: EvidenceMapCoverageStatus;
+  readonly covered: number;
+  readonly candidate: number;
+  readonly missing: number;
+  readonly needsHumanReview: number;
+  readonly riskFlags: readonly NextPromptRiskFlag[];
+}
+
+export interface NextPromptData {
+  readonly command: "next_prompt";
+  readonly implemented: true;
+  readonly noMutation: true;
+  readonly agent: NextPromptAgent;
+  readonly mode: NextPromptMode;
+  readonly evidenceSourcesUsed: readonly EvidenceSourceUsed[];
+  readonly summary: NextPromptSummary;
+  readonly prompt: string;
   readonly warnings: readonly string[];
 }
