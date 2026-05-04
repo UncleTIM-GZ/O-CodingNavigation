@@ -69,6 +69,89 @@ function appendBriefBlock(out: string[], data: Record<string, unknown>): void {
   }
 }
 
+function appendGithubAnalyzePrBlock(out: string[], data: Record<string, unknown>): void {
+  const pr = isRecord(data["pr"]) ? data["pr"] : null;
+  const changes = isRecord(data["changes"]) ? data["changes"] : null;
+  const checks = isRecord(data["checks"]) ? data["checks"] : null;
+  const reviews = isRecord(data["reviews"]) ? data["reviews"] : null;
+  const analysis = isRecord(data["analysis"]) ? data["analysis"] : null;
+  const ocn = isRecord(data["ocn"]) ? data["ocn"] : null;
+  const reason = typeof data["reason"] === "string" ? data["reason"] : null;
+  const prNumber = typeof data["prNumber"] === "number" ? data["prNumber"] : null;
+
+  if (pr === null && reason !== null) {
+    if (prNumber !== null) out.push(`PR: #${prNumber}`);
+    out.push(`Reason: ${reason}`);
+    return;
+  }
+  if (pr === null) return;
+
+  const number = typeof pr["number"] === "number" ? pr["number"] : "?";
+  const title = typeof pr["title"] === "string" ? pr["title"] : "";
+  const state = typeof pr["state"] === "string" ? pr["state"] : "?";
+  const isDraft = pr["isDraft"] === true;
+  const stateLabel = isDraft ? `${state} (draft)` : state;
+  out.push(`PR: #${number} ${title}`);
+  out.push(`State: ${stateLabel}`);
+
+  const author = typeof pr["author"] === "string" ? pr["author"] : "(unknown)";
+  const head = typeof pr["headRefName"] === "string" ? pr["headRefName"] : "?";
+  const base = typeof pr["baseRefName"] === "string" ? pr["baseRefName"] : "?";
+  out.push(`Author: ${author}`);
+  out.push(`Branch: ${head} -> ${base}`);
+
+  const mergeable = typeof pr["mergeable"] === "string" ? pr["mergeable"] : "?";
+  const mergeState = typeof pr["mergeStateStatus"] === "string" ? pr["mergeStateStatus"] : "?";
+  out.push(`Mergeable: ${mergeable} / ${mergeState}`);
+
+  if (changes !== null) {
+    const changedFiles = typeof changes["changedFiles"] === "number" ? changes["changedFiles"] : 0;
+    const additions = typeof changes["additions"] === "number" ? changes["additions"] : 0;
+    const deletions = typeof changes["deletions"] === "number" ? changes["deletions"] : 0;
+    out.push(`Changes: ${changedFiles} files, +${additions} -${deletions}`);
+  }
+
+  if (checks !== null) {
+    const summary = typeof checks["summary"] === "string" ? checks["summary"] : "?";
+    const total = typeof checks["total"] === "number" ? checks["total"] : 0;
+    const passed = typeof checks["passed"] === "number" ? checks["passed"] : 0;
+    const failed = typeof checks["failed"] === "number" ? checks["failed"] : 0;
+    const pending = typeof checks["pending"] === "number" ? checks["pending"] : 0;
+    out.push(
+      `Checks: ${summary} (total ${total}, passed ${passed}, failed ${failed}, pending ${pending})`,
+    );
+  }
+
+  if (reviews !== null) {
+    const total = typeof reviews["total"] === "number" ? reviews["total"] : 0;
+    const approved = typeof reviews["approved"] === "number" ? reviews["approved"] : 0;
+    const cr = typeof reviews["changesRequested"] === "number" ? reviews["changesRequested"] : 0;
+    const commented = typeof reviews["commented"] === "number" ? reviews["commented"] : 0;
+    out.push(
+      `Reviews: total ${total}, approved ${approved}, changes-requested ${cr}, commented ${commented}`,
+    );
+  }
+
+  if (analysis !== null && isStringArray(analysis["riskFlags"])) {
+    const flags = analysis["riskFlags"];
+    if (flags.length > 0) {
+      const top = flags.slice(0, 3).join(", ");
+      out.push(`Risk flags: ${top}${flags.length > 3 ? ` (+${flags.length - 3} more)` : ""}`);
+    }
+  }
+
+  if (ocn !== null && ocn["isOcnProject"] === true) {
+    const stateId = typeof ocn["currentStateId"] === "string" ? ocn["currentStateId"] : "?";
+    const stepId = typeof ocn["currentStepId"] === "string" ? ocn["currentStepId"] : "?";
+    out.push(`OCN: ${stateId} / ${stepId}`);
+  }
+
+  if (analysis !== null && typeof analysis["nextSuggestedAction"] === "string") {
+    out.push("");
+    out.push(`Next: ${analysis["nextSuggestedAction"]}`);
+  }
+}
+
 function appendExecStatusBlock(out: string[], data: Record<string, unknown>): void {
   const git = isRecord(data["git"]) ? data["git"] : undefined;
   const ocn = isRecord(data["ocn"]) ? data["ocn"] : undefined;
@@ -123,6 +206,8 @@ export function renderText<T>(result: CommandResult<T>, locale: "zh" | "en"): st
     lines.push("");
     if (data["command"] === "exec.status" && data["implemented"] === true) {
       appendExecStatusBlock(lines, data);
+    } else if (data["command"] === "github.analyze_pr" && data["implemented"] === true) {
+      appendGithubAnalyzePrBlock(lines, data);
     } else if ("aiGovernanceReminder" in data || "currentBlockers" in data) {
       appendBriefBlock(lines, data);
     } else if ("currentStateId" in data || "currentStepId" in data) {
@@ -141,14 +226,18 @@ export function renderText<T>(result: CommandResult<T>, locale: "zh" | "en"): st
   if (!result.ok && isRecord(result.data)) {
     const data = result.data;
     lines.push("");
-    if (typeof data["artifactPath"] === "string") {
-      lines.push(`Artifact: ${data["artifactPath"]}`);
-    }
-    if (typeof data["status"] === "string") {
-      lines.push(`Status: ${data["status"]}`);
-    }
-    if (isStringArray(data["missingRequiredSectionIds"])) {
-      lines.push(`Missing required sections: ${data["missingRequiredSectionIds"].join(", ")}`);
+    if (data["command"] === "github.analyze_pr") {
+      appendGithubAnalyzePrBlock(lines, data);
+    } else {
+      if (typeof data["artifactPath"] === "string") {
+        lines.push(`Artifact: ${data["artifactPath"]}`);
+      }
+      if (typeof data["status"] === "string") {
+        lines.push(`Status: ${data["status"]}`);
+      }
+      if (isStringArray(data["missingRequiredSectionIds"])) {
+        lines.push(`Missing required sections: ${data["missingRequiredSectionIds"].join(", ")}`);
+      }
     }
   }
 

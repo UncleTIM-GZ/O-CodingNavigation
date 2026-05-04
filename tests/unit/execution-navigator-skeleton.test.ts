@@ -7,18 +7,18 @@ import {
 } from "../../src/core/execution-navigator/skeleton.js";
 import type { ExecutionNavigatorCommand } from "../../src/core/execution-navigator/types.js";
 
-// Five commands remain skeleton in MVP 1 (DEC-024 PR 2). `exec.status`
-// has graduated to real local-git evidence ingestion — see
-// `tests/unit/execution-navigator-local-git.test.ts`.
+// Four commands remain skeleton in MVP 2 (DEC-024 PR 3). `exec.status`
+// graduated in PR 2 (local-git evidence). `github.analyze_pr` graduated in
+// PR 3 (read-only GitHub PR analysis) — see
+// `tests/unit/execution-navigator-github-pr.test.ts`.
 const SKELETON_COMMANDS: readonly ExecutionNavigatorCommand[] = [
-  "github.analyze_pr",
   "evidence.map",
   "next_prompt",
   "verify.status",
   "verdict.draft",
 ];
 
-describe("execution-navigator skeleton (DEC-024 — five remaining commands)", () => {
+describe("execution-navigator skeleton (DEC-024 — four remaining commands)", () => {
   it("each remaining skeleton command builds a planned/not-implemented payload", () => {
     for (const command of SKELETON_COMMANDS) {
       const data = buildSkeletonData(command);

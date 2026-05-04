@@ -1,33 +1,101 @@
+import { readFileSync } from "node:fs";
+import { isAbsolute } from "node:path";
 import type { Command } from "commander";
-import { skeletonResult } from "../../core/execution-navigator/skeleton.js";
+import { analyzeGithubPr } from "../../core/execution-navigator/github-pr.js";
+import { defaultGhRunner, type GhRunner } from "../../core/execution-navigator/github-pr-runner.js";
 import { blocked } from "../../core/result.js";
 import { msg } from "../../core/i18n.js";
 import { outputResult } from "../output.js";
 
-// Validates that the argument is a positive-integer PR number. Skeleton-only:
-// even on success we never call `gh` or the GitHub API.
+// Validates that the argument is a positive-integer PR number.
 function isValidPrNumber(raw: string): boolean {
   if (!/^[1-9][0-9]*$/.test(raw)) return false;
   const value = Number(raw);
   return Number.isSafeInteger(value) && value > 0;
 }
 
-// `ocn github analyze-pr <number>` — Execution Navigator skeleton (DEC-024 PR 1).
-// Validates input shape; otherwise returns the planned/not-implemented envelope.
-// Does NOT call `gh`, the GitHub API, or any network resource.
+// Test injection hook. When the CLI is launched with the env var
+// `OCN_TEST_GH_RUNNER_FIXTURES` set to a path, the runner reads canned
+// responses from that JSON fixture instead of spawning real `gh`. This
+// keeps end-to-end CLI tests deterministic without needing real network /
+// auth state. The hook activates ONLY when the env var is set; production
+// code paths use `defaultGhRunner()`.
+function pickRunnerFromEnv(): GhRunner | undefined {
+  const fixturePath = process.env["OCN_TEST_GH_RUNNER_FIXTURES"];
+  if (typeof fixturePath !== "string" || fixturePath.length === 0) return undefined;
+  return createFixtureRunner(fixturePath);
+}
+
+interface FixtureEntry {
+  readonly args: readonly string[];
+  readonly ok?: boolean;
+  readonly stdout?: string;
+  readonly stderr?: string;
+  readonly code?: "ENOENT" | "EXIT_NONZERO" | "OTHER";
+  readonly exitCode?: number;
+  readonly message?: string;
+}
+
+function createFixtureRunner(fixturePath: string): GhRunner {
+  const raw = readFileSync(fixturePath, "utf8");
+  const parsed = JSON.parse(raw) as { entries: readonly FixtureEntry[] };
+  return {
+    async run(args: readonly string[]) {
+      const match = parsed.entries.find(
+        (e) => e.args.length === args.length && e.args.every((a, i) => a === args[i]),
+      );
+      if (match === undefined) {
+        return {
+          ok: false as const,
+          code: "OTHER" as const,
+          message: `fixture-runner: no entry for ${args.join(" ")}`,
+        };
+      }
+      if (match.ok === false) {
+        const errorEntry: {
+          ok: false;
+          code: "ENOENT" | "EXIT_NONZERO" | "OTHER";
+          message: string;
+          stdout?: string;
+          stderr?: string;
+          exitCode?: number;
+        } = {
+          ok: false,
+          code: match.code ?? "EXIT_NONZERO",
+          message: match.message ?? "fixture-runner failure",
+        };
+        if (match.stdout !== undefined) errorEntry.stdout = match.stdout;
+        if (match.stderr !== undefined) errorEntry.stderr = match.stderr;
+        if (match.exitCode !== undefined) errorEntry.exitCode = match.exitCode;
+        return errorEntry;
+      }
+      return {
+        ok: true as const,
+        stdout: match.stdout ?? "",
+        stderr: match.stderr ?? "",
+      };
+    },
+  };
+}
+
+// `ocn github analyze-pr <number>` — Execution Navigator MVP 2 (DEC-024 PR 3).
+// Read-only GitHub PR evidence reader. Spawns only `gh auth status` and
+// `gh pr view --json ...`. Never invokes a `gh` write subcommand.
 export function registerGithubCommand(program: Command): void {
   const github = program
     .command("github")
-    .description("Execution Navigator GitHub surface (DEC-024) — read-only (skeleton)");
+    .description("Execution Navigator GitHub surface (DEC-024) — read-only");
 
   github
     .command("analyze-pr")
-    .description(
-      "Analyze a GitHub PR (skeleton — read-only GitHub PR analysis not yet implemented)",
-    )
+    .description("Analyze a GitHub PR (read-only via gh CLI)")
     .argument("<number>", "Pull request number (positive integer)")
     .option("--json", "Emit machine-readable JSON CommandResult", false)
-    .action((rawNumber: string, rawOpts: { json: boolean }) => {
+    .option(
+      "--project-root <path>",
+      "Absolute path to the project root (defaults to current working directory)",
+    )
+    .action(async (rawNumber: string, rawOpts: { json: boolean; projectRoot?: string }) => {
       if (!isValidPrNumber(rawNumber)) {
         const failure = blocked(
           "ERR_ARTIFACT_INVALID",
@@ -40,7 +108,26 @@ export function registerGithubCommand(program: Command): void {
         outputResult(failure, { json: rawOpts.json });
         return;
       }
-      const result = skeletonResult("github.analyze_pr");
+      const cwd = rawOpts.projectRoot ?? process.cwd();
+      if (rawOpts.projectRoot !== undefined && !isAbsolute(rawOpts.projectRoot)) {
+        const failure = blocked(
+          "ERR_IO_OR_CONFIG",
+          msg(
+            `--project-root must be an absolute path (got: ${rawOpts.projectRoot}).`,
+            `--project-root 必须是绝对路径（当前值：${rawOpts.projectRoot}）。`,
+          ),
+          { argument: "--project-root", received: rawOpts.projectRoot },
+        );
+        outputResult(failure, { json: rawOpts.json });
+        return;
+      }
+
+      const runner = pickRunnerFromEnv() ?? defaultGhRunner();
+      const result = await analyzeGithubPr({
+        prNumber: Number(rawNumber),
+        cwd,
+        runner,
+      });
       outputResult(result, { json: rawOpts.json });
     });
 }
