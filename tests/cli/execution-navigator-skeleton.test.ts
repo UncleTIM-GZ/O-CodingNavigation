@@ -4,31 +4,29 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { spawnOcn } from "../helpers/spawn-ocn.js";
 import { createTempProject, type TempProject } from "../helpers/temp-project.js";
 
-// Execution Navigator command skeleton (DEC-024).
+// Execution Navigator command series — closed at MVP 6 (DEC-024 PR 7).
 //
-// MVP 1 (PR 2) graduated `exec status` to a real local-git evidence reader
-// — its CLI tests live in `tests/cli/execution-navigator-local-git.test.ts`.
-// MVP 2 (PR 3) graduated `github analyze-pr` to a read-only GitHub PR
-// analysis reader — its CLI tests live in
-// `tests/cli/execution-navigator-github-pr.test.ts`. MVP 3 (PR 4) graduated
-// `evidence map` to a deterministic acceptance evidence mapper — its CLI
-// tests live in `tests/cli/execution-navigator-evidence-map.test.ts`. MVP 4
-// (PR 5) graduated `next-prompt` to a deterministic agent prompt generator
-// — its CLI tests live in `tests/cli/execution-navigator-next-prompt.test.ts`.
-// MVP 5 (PR 6) graduated `verify status` to a verification readiness
-// summarizer — its CLI tests live in
-// `tests/cli/execution-navigator-verify-status.test.ts`. Only one skeleton
-// command remains (`verdict draft`).
+// All six Execution Navigator commands now graduate from the planned skeleton
+// to a real implementation:
 //
-// These tests assert the skeleton boundary:
-//   - structured JSON envelope per remaining skeleton command
-//   - implemented:false on every remaining skeleton command
+//   - exec.status         — MVP 1 (PR 2)
+//   - github.analyze_pr   — MVP 2 (PR 3)
+//   - evidence.map        — MVP 3 (PR 4)
+//   - next_prompt         — MVP 4 (PR 5)
+//   - verify.status       — MVP 5 (PR 6)
+//   - verdict.draft       — MVP 6 (PR 7)
+//
+// Per-command CLI tests live in their own files
+// (`tests/cli/execution-navigator-*.test.ts`). This file enforces the
+// cross-command contract:
+//   - structured JSON envelope per command
+//   - implemented:true on every command
 //   - validation failure path on `github analyze-pr <not-an-int>` is still
 //     enforced before any gh invocation (graduated command keeps the same
 //     ERR_ARTIFACT_INVALID validation pre-check)
 //   - no `.ocoding/execution` directory is created
 //   - no GitHub auth env var is required to run any of these commands
-describe("ocn execution-navigator commands (skeleton — one remaining command)", () => {
+describe("ocn execution-navigator commands (series closed — all six implemented)", () => {
   let project: TempProject;
 
   // Stripped env: explicitly remove any GitHub credentials so we prove these
@@ -62,9 +60,6 @@ describe("ocn execution-navigator commands (skeleton — one remaining command)"
   }, 30_000);
 
   it("ocn evidence map --json against an empty temp project returns implemented=true with no-acceptance-criteria coverage", async () => {
-    // MVP 3: `evidence.map` is now implemented. In a temp project that has
-    // no `docs/03-acceptance-criteria.md`, the command degrades gracefully
-    // to `coverageStatus: "no-acceptance-criteria"` and stays ok.
     const result = await spawnOcn(["evidence", "map", "--json"], {
       cwd: project.cwd,
       env: stripGhEnv(),
@@ -82,9 +77,6 @@ describe("ocn execution-navigator commands (skeleton — one remaining command)"
   }, 30_000);
 
   it("ocn next-prompt --json against an empty temp project returns implemented=true with prompt body", async () => {
-    // MVP 4: `next_prompt` is now implemented. In a temp project that has no
-    // `docs/03-acceptance-criteria.md`, the command degrades gracefully and
-    // still produces a valid prompt with an `acceptance-file-missing` flag.
     const result = await spawnOcn(["next-prompt", "--json"], {
       cwd: project.cwd,
       env: stripGhEnv(),
@@ -101,10 +93,6 @@ describe("ocn execution-navigator commands (skeleton — one remaining command)"
   }, 30_000);
 
   it("ocn verify status --json against an empty temp project returns implemented=true", async () => {
-    // MVP 5: `verify.status` is now implemented. In a temp project that has
-    // no `package.json` and no `docs/03-acceptance-criteria.md`, the command
-    // degrades gracefully to `verification.status === "no-verification-data"`
-    // and stays ok.
     const result = await spawnOcn(["verify", "status", "--json"], {
       cwd: project.cwd,
       env: stripGhEnv(),
@@ -121,7 +109,10 @@ describe("ocn execution-navigator commands (skeleton — one remaining command)"
     expect(parsed.data.evidenceSourcesUsed).toContain("ocn-state");
   }, 30_000);
 
-  it("ocn verdict draft --json returns ok skeleton", async () => {
+  it("ocn verdict draft --json against an empty temp project returns implemented=true", async () => {
+    // MVP 6: `verdict.draft` is now implemented. In a temp project that has
+    // no `package.json` and no `docs/03-acceptance-criteria.md`, the command
+    // degrades gracefully and stays ok with a deterministic verdict draft.
     const result = await spawnOcn(["verdict", "draft", "--json"], {
       cwd: project.cwd,
       env: stripGhEnv(),
@@ -130,11 +121,17 @@ describe("ocn execution-navigator commands (skeleton — one remaining command)"
     const parsed = JSON.parse(result.stdout);
     expect(parsed.ok).toBe(true);
     expect(parsed.data.command).toBe("verdict.draft");
-    expect(parsed.data.implemented).toBe(false);
-    expect(parsed.data.evidenceSourcesPlanned).toEqual(["git", "github", "ci"]);
+    expect(parsed.data.implemented).toBe(true);
+    expect(parsed.data.noMutation).toBe(true);
+    expect(typeof parsed.data.verdict.category).toBe("string");
+    expect(typeof parsed.data.verdict.confidence).toBe("string");
+    expect(parsed.data.evidenceSourcesUsed).toContain("local-git");
+    expect(parsed.data.evidenceSourcesUsed).toContain("ocn-state");
+    expect(parsed.data.evidenceSourcesUsed).toContain("acceptance-map");
+    expect(parsed.data.evidenceSourcesUsed).toContain("verify-status");
   }, 30_000);
 
-  it("none of the implemented or skeleton execution-navigator commands create .ocoding/execution", async () => {
+  it("none of the implemented execution-navigator commands create .ocoding/execution", async () => {
     const env = stripGhEnv();
     await spawnOcn(["evidence", "map", "--json"], { cwd: project.cwd, env });
     await spawnOcn(["next-prompt", "--json"], { cwd: project.cwd, env });

@@ -287,6 +287,48 @@ function appendVerifyStatusBlock(out: string[], data: Record<string, unknown>): 
   }
 }
 
+function appendVerdictDraftBlock(out: string[], data: Record<string, unknown>): void {
+  const verdict = isRecord(data["verdict"]) ? data["verdict"] : null;
+  const mode = typeof data["mode"] === "string" ? data["mode"] : "?";
+  const warnings = isStringArray(data["warnings"]) ? data["warnings"] : [];
+
+  if (verdict === null) return;
+
+  const category = typeof verdict["category"] === "string" ? verdict["category"] : "?";
+  const confidence = typeof verdict["confidence"] === "string" ? verdict["confidence"] : "?";
+  out.push(`Verdict: ${category}`);
+  out.push(`Confidence: ${confidence}`);
+  out.push(`Mode: ${mode}`);
+
+  const supports = isStringArray(verdict["supports"]) ? verdict["supports"] : [];
+  out.push("Why:");
+  if (supports.length === 0) {
+    out.push("- (no supporting evidence collected)");
+  } else {
+    for (const s of supports.slice(0, 5)) out.push(`- ${s}`);
+  }
+
+  const blocks = isStringArray(verdict["blocks"]) ? verdict["blocks"] : [];
+  out.push("Blocks:");
+  if (blocks.length === 0) {
+    out.push("- (no blocking evidence detected)");
+  } else {
+    for (const b of blocks.slice(0, 5)) out.push(`- ${b}`);
+  }
+
+  const human = verdict["humanReviewRequired"] === true ? "yes" : "no";
+  out.push(`Human review required: ${human}`);
+
+  const next =
+    typeof verdict["nextSuggestedAction"] === "string" ? verdict["nextSuggestedAction"] : "?";
+  out.push(`Next: ${next}`);
+
+  if (warnings.length > 0) {
+    out.push("Warnings:");
+    for (const w of warnings) out.push(`- ${w}`);
+  }
+}
+
 function appendNextPromptBlock(out: string[], data: Record<string, unknown>): void {
   const summary = isRecord(data["summary"]) ? data["summary"] : null;
   const agent = typeof data["agent"] === "string" ? data["agent"] : "?";
@@ -366,6 +408,8 @@ export function renderText<T>(result: CommandResult<T>, locale: "zh" | "en"): st
       appendNextPromptBlock(lines, data);
     } else if (data["command"] === "verify.status" && data["implemented"] === true) {
       appendVerifyStatusBlock(lines, data);
+    } else if (data["command"] === "verdict.draft" && data["implemented"] === true) {
+      appendVerdictDraftBlock(lines, data);
     } else if ("aiGovernanceReminder" in data || "currentBlockers" in data) {
       appendBriefBlock(lines, data);
     } else if ("currentStateId" in data || "currentStepId" in data) {
