@@ -4,15 +4,19 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { spawnOcn } from "../helpers/spawn-ocn.js";
 import { createTempProject, type TempProject } from "../helpers/temp-project.js";
 
-// Execution Navigator command skeleton (DEC-024 PR 1).
+// Execution Navigator command skeleton (DEC-024).
+//
+// MVP 1 (PR 2) graduated `exec status` to a real local-git evidence reader
+// — its CLI tests live in `tests/cli/execution-navigator-local-git.test.ts`.
+// The five commands below remain skeleton.
 //
 // These tests assert the skeleton boundary:
 //   - structured JSON envelope per command
-//   - implemented:false on every command
+//   - implemented:false on every remaining skeleton command
 //   - validation failure path on `github analyze-pr <not-an-int>`
 //   - no `.ocoding/execution` directory is created
 //   - no GitHub auth env var is required to run any of these commands
-describe("ocn execution-navigator commands (skeleton — DEC-024 PR 1)", () => {
+describe("ocn execution-navigator commands (skeleton — five remaining commands)", () => {
   let project: TempProject;
 
   // Stripped env: explicitly remove any GitHub credentials so we prove these
@@ -31,25 +35,6 @@ describe("ocn execution-navigator commands (skeleton — DEC-024 PR 1)", () => {
   afterEach(async () => {
     await project.cleanup();
   });
-
-  it("ocn exec status --json returns ok and implemented=false", async () => {
-    const result = await spawnOcn(["exec", "status", "--json"], {
-      cwd: project.cwd,
-      env: stripGhEnv(),
-    });
-    expect(result.exitCode).toBe(0);
-    const parsed = JSON.parse(result.stdout);
-    expect(parsed.ok).toBe(true);
-    expect(parsed.code).toBe("OK");
-    expect(parsed.data.command).toBe("exec.status");
-    expect(parsed.data.implemented).toBe(false);
-    expect(parsed.data.status).toBe("planned");
-    expect(parsed.data.noMutation).toBe(true);
-    expect(parsed.data.evidenceSourcesPlanned).toEqual(["git"]);
-    expect(parsed.data.nextImplementation).toBe("local-git evidence ingestion");
-    expect(typeof parsed.message.en).toBe("string");
-    expect(typeof parsed.message.zh).toBe("string");
-  }, 30_000);
 
   it("ocn github analyze-pr 123 --json returns ok and implemented=false", async () => {
     const result = await spawnOcn(["github", "analyze-pr", "123", "--json"], {
@@ -131,7 +116,6 @@ describe("ocn execution-navigator commands (skeleton — DEC-024 PR 1)", () => {
 
   it("none of the skeleton commands create .ocoding/execution", async () => {
     const env = stripGhEnv();
-    await spawnOcn(["exec", "status", "--json"], { cwd: project.cwd, env });
     await spawnOcn(["github", "analyze-pr", "1", "--json"], { cwd: project.cwd, env });
     await spawnOcn(["evidence", "map", "--json"], { cwd: project.cwd, env });
     await spawnOcn(["next-prompt", "--json"], { cwd: project.cwd, env });

@@ -7,8 +7,10 @@ import {
 } from "../../src/core/execution-navigator/skeleton.js";
 import type { ExecutionNavigatorCommand } from "../../src/core/execution-navigator/types.js";
 
-const ALL_COMMANDS: readonly ExecutionNavigatorCommand[] = [
-  "exec.status",
+// Five commands remain skeleton in MVP 1 (DEC-024 PR 2). `exec.status`
+// has graduated to real local-git evidence ingestion — see
+// `tests/unit/execution-navigator-local-git.test.ts`.
+const SKELETON_COMMANDS: readonly ExecutionNavigatorCommand[] = [
   "github.analyze_pr",
   "evidence.map",
   "next_prompt",
@@ -16,9 +18,9 @@ const ALL_COMMANDS: readonly ExecutionNavigatorCommand[] = [
   "verdict.draft",
 ];
 
-describe("execution-navigator skeleton (DEC-024 PR 1)", () => {
-  it("each command builds a planned/not-implemented payload with the correct shape", () => {
-    for (const command of ALL_COMMANDS) {
+describe("execution-navigator skeleton (DEC-024 — five remaining commands)", () => {
+  it("each remaining skeleton command builds a planned/not-implemented payload", () => {
+    for (const command of SKELETON_COMMANDS) {
       const data = buildSkeletonData(command);
       expect(data.command).toBe(command);
       expect(data.status).toBe("planned");
@@ -32,7 +34,7 @@ describe("execution-navigator skeleton (DEC-024 PR 1)", () => {
   });
 
   it("skeletonResult returns ok=true with bilingual headline message", () => {
-    for (const command of ALL_COMMANDS) {
+    for (const command of SKELETON_COMMANDS) {
       const result = skeletonResult(command);
       expect(result.ok).toBe(true);
       if (!result.ok) return;
@@ -46,7 +48,12 @@ describe("execution-navigator skeleton (DEC-024 PR 1)", () => {
     }
   });
 
-  it("evidenceSourcesPlanned matches DEC-024 plan per command", () => {
+  it("evidenceSourcesPlanned still records exec.status as ['git'] (skeleton table is the eventual external evidence universe)", () => {
+    // The skeleton table records the *external* evidence sources the
+    // Execution Navigator commands plan to consume. exec.status's external
+    // source remains "git". The graduated MVP 1 command additionally reads
+    // local OCN state, but that is not an external evidence stream and is
+    // therefore not part of `EVIDENCE_SOURCES_PLANNED`.
     expect(EVIDENCE_SOURCES_PLANNED["exec.status"]).toEqual(["git"]);
     expect(EVIDENCE_SOURCES_PLANNED["github.analyze_pr"]).toEqual(["github"]);
     expect(EVIDENCE_SOURCES_PLANNED["evidence.map"]).toEqual(["git", "github", "ci"]);
@@ -57,18 +64,10 @@ describe("execution-navigator skeleton (DEC-024 PR 1)", () => {
 
   it("nextImplementation labels are stable per DEC-024 sequencing", () => {
     expect(NEXT_IMPLEMENTATION_LABEL["exec.status"]).toBe("local-git evidence ingestion");
-    expect(NEXT_IMPLEMENTATION_LABEL["github.analyze_pr"]).toBe(
-      "read-only GitHub PR analysis",
-    );
-    expect(NEXT_IMPLEMENTATION_LABEL["evidence.map"]).toBe(
-      "acceptance criteria evidence mapping",
-    );
+    expect(NEXT_IMPLEMENTATION_LABEL["github.analyze_pr"]).toBe("read-only GitHub PR analysis");
+    expect(NEXT_IMPLEMENTATION_LABEL["evidence.map"]).toBe("acceptance criteria evidence mapping");
     expect(NEXT_IMPLEMENTATION_LABEL["next_prompt"]).toBe("agent prompt generator");
-    expect(NEXT_IMPLEMENTATION_LABEL["verify.status"]).toBe(
-      "verification status summariser",
-    );
-    expect(NEXT_IMPLEMENTATION_LABEL["verdict.draft"]).toBe(
-      "evidence-derived final verdict",
-    );
+    expect(NEXT_IMPLEMENTATION_LABEL["verify.status"]).toBe("verification status summariser");
+    expect(NEXT_IMPLEMENTATION_LABEL["verdict.draft"]).toBe("evidence-derived final verdict");
   });
 });
