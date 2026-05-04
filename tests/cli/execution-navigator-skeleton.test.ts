@@ -8,15 +8,20 @@ import { createTempProject, type TempProject } from "../helpers/temp-project.js"
 //
 // MVP 1 (PR 2) graduated `exec status` to a real local-git evidence reader
 // — its CLI tests live in `tests/cli/execution-navigator-local-git.test.ts`.
-// The five commands below remain skeleton.
+// MVP 2 (PR 3) graduated `github analyze-pr` to a read-only GitHub PR
+// analysis reader — its CLI tests live in
+// `tests/cli/execution-navigator-github-pr.test.ts`. The four commands
+// below remain skeleton.
 //
 // These tests assert the skeleton boundary:
-//   - structured JSON envelope per command
+//   - structured JSON envelope per remaining skeleton command
 //   - implemented:false on every remaining skeleton command
-//   - validation failure path on `github analyze-pr <not-an-int>`
+//   - validation failure path on `github analyze-pr <not-an-int>` is still
+//     enforced before any gh invocation (graduated command keeps the same
+//     ERR_ARTIFACT_INVALID validation pre-check)
 //   - no `.ocoding/execution` directory is created
 //   - no GitHub auth env var is required to run any of these commands
-describe("ocn execution-navigator commands (skeleton — five remaining commands)", () => {
+describe("ocn execution-navigator commands (skeleton — four remaining commands)", () => {
   let project: TempProject;
 
   // Stripped env: explicitly remove any GitHub credentials so we prove these
@@ -35,19 +40,6 @@ describe("ocn execution-navigator commands (skeleton — five remaining commands
   afterEach(async () => {
     await project.cleanup();
   });
-
-  it("ocn github analyze-pr 123 --json returns ok and implemented=false", async () => {
-    const result = await spawnOcn(["github", "analyze-pr", "123", "--json"], {
-      cwd: project.cwd,
-      env: stripGhEnv(),
-    });
-    expect(result.exitCode).toBe(0);
-    const parsed = JSON.parse(result.stdout);
-    expect(parsed.ok).toBe(true);
-    expect(parsed.data.command).toBe("github.analyze_pr");
-    expect(parsed.data.implemented).toBe(false);
-    expect(parsed.data.evidenceSourcesPlanned).toEqual(["github"]);
-  }, 30_000);
 
   it("ocn github analyze-pr abc --json returns validation failure (ERR_ARTIFACT_INVALID, exit 2)", async () => {
     const result = await spawnOcn(["github", "analyze-pr", "abc", "--json"], {
@@ -116,7 +108,6 @@ describe("ocn execution-navigator commands (skeleton — five remaining commands
 
   it("none of the skeleton commands create .ocoding/execution", async () => {
     const env = stripGhEnv();
-    await spawnOcn(["github", "analyze-pr", "1", "--json"], { cwd: project.cwd, env });
     await spawnOcn(["evidence", "map", "--json"], { cwd: project.cwd, env });
     await spawnOcn(["next-prompt", "--json"], { cwd: project.cwd, env });
     await spawnOcn(["verify", "status", "--json"], { cwd: project.cwd, env });
