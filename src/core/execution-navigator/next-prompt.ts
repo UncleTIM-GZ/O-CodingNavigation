@@ -419,6 +419,33 @@ function buildEvidenceSourcesUsed(
   return out;
 }
 
+interface GhFetchResult {
+  readonly github: GitHubPrAnalyzeData | null;
+  readonly githubUnavailable: boolean;
+  readonly warning: string | null;
+}
+
+async function fetchGithubEvidence(opts: NextPromptOptions): Promise<GhFetchResult> {
+  if (typeof opts.prNumber !== "number") {
+    return { github: null, githubUnavailable: false, warning: null };
+  }
+  const ghResult = await analyzeGithubPr({
+    prNumber: opts.prNumber,
+    cwd: opts.cwd,
+    ...(opts.runner !== undefined ? { runner: opts.runner } : {}),
+  });
+  if (ghResult.ok === true && ghResult.data !== undefined && ghResult.data.pr !== null) {
+    return { github: ghResult.data, githubUnavailable: false, warning: null };
+  }
+  const data = ghResult.data as GitHubPrAnalyzeData | undefined;
+  const reason = data?.reason ?? "unknown";
+  return {
+    github: null,
+    githubUnavailable: true,
+    warning: `github-evidence-unavailable: ${reason}`,
+  };
+}
+
 export async function generateNextPrompt(
   opts: NextPromptOptions,
 ): Promise<CommandResult<NextPromptData>> {
@@ -428,33 +455,17 @@ export async function generateNextPrompt(
     warnings.push(`issue text truncated to ${ISSUE_TEXT_MAX_LENGTH} chars`);
   }
 
-  const [git, ocn, acceptance, smokeAvailable] = await Promise.all([
+  const [git, ocn, acceptance, smokeAvailable, gh] = await Promise.all([
     readLocalGit(opts.cwd),
     readOcnProjectState(opts.cwd),
     loadAcceptance(opts.cwd),
     smokeScriptExists(opts.cwd),
+    fetchGithubEvidence(opts),
   ]);
 
-  let github: GitHubPrAnalyzeData | null = null;
-  let githubUnavailable = false;
+  if (gh.warning !== null) warnings.push(gh.warning);
   const githubRequested = typeof opts.prNumber === "number";
-  if (githubRequested && opts.prNumber !== undefined) {
-    const ghResult = await analyzeGithubPr({
-      prNumber: opts.prNumber,
-      cwd: opts.cwd,
-      ...(opts.runner !== undefined ? { runner: opts.runner } : {}),
-    });
-    if (ghResult.ok === true && ghResult.data !== undefined && ghResult.data.pr !== null) {
-      github = ghResult.data;
-    } else {
-      githubUnavailable = true;
-      const data = ghResult.data as GitHubPrAnalyzeData | undefined;
-      const reason = data?.reason ?? "unknown";
-      warnings.push(`github-evidence-unavailable: ${reason}`);
-    }
-  }
-
-  const mapping = mapEvidence({ criteria: acceptance.criteria, git, github });
+  const mapping = mapEvidence({ criteria: acceptance.criteria, git, github: gh.github });
 
   const input: PromptInputs = {
     opts,
@@ -462,9 +473,9 @@ export async function generateNextPrompt(
     ocn,
     acceptance,
     mapping,
-    github,
+    github: gh.github,
     githubRequested,
-    githubUnavailable,
+    githubUnavailable: gh.githubUnavailable,
     issueText: issue.text,
     issueTruncated: issue.truncated,
     smokeAvailable,
@@ -473,7 +484,7 @@ export async function generateNextPrompt(
 
   const { prompt, riskFlags } = assemblePrompt(input);
   const summary = buildSummary(input, riskFlags);
-  const evidenceSourcesUsed = buildEvidenceSourcesUsed(github !== null, acceptance.found);
+  const evidenceSourcesUsed = buildEvidenceSourcesUsed(gh.github !== null, acceptance.found);
 
   const data: NextPromptData = {
     command: "next_prompt",
