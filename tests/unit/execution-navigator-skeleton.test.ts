@@ -7,19 +7,21 @@ import {
 } from "../../src/core/execution-navigator/skeleton.js";
 import type { ExecutionNavigatorCommand } from "../../src/core/execution-navigator/types.js";
 
-// Two commands remain skeleton in MVP 4 (DEC-024 PR 5). `exec.status`
+// One command remains skeleton in MVP 5 (DEC-024 PR 6). `exec.status`
 // graduated in PR 2 (local-git evidence). `github.analyze_pr` graduated in
 // PR 3 (read-only GitHub PR analysis). `evidence.map` graduated in PR 4
 // (acceptance evidence mapping) — see
 // `tests/unit/execution-navigator-evidence-map.test.ts`. `next_prompt`
 // graduated in PR 5 (deterministic agent prompt generator) — see
-// `tests/unit/execution-navigator-next-prompt.test.ts`. The skeleton table
+// `tests/unit/execution-navigator-next-prompt.test.ts`. `verify.status`
+// graduated in PR 6 (verification status summarizer) — see
+// `tests/unit/execution-navigator-verify-status.test.ts`. The skeleton table
 // keeps an entry for the graduated commands so future commands can still
 // consult their planned evidence-source set, but they are no longer in the
 // runtime skeleton list.
-const SKELETON_COMMANDS: readonly ExecutionNavigatorCommand[] = ["verify.status", "verdict.draft"];
+const SKELETON_COMMANDS: readonly ExecutionNavigatorCommand[] = ["verdict.draft"];
 
-describe("execution-navigator skeleton (DEC-024 — four remaining commands)", () => {
+describe("execution-navigator skeleton (DEC-024 — one remaining command)", () => {
   it("each remaining skeleton command builds a planned/not-implemented payload", () => {
     for (const command of SKELETON_COMMANDS) {
       const data = buildSkeletonData(command);

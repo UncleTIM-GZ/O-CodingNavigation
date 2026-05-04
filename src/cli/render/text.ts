@@ -204,6 +204,89 @@ function appendEvidenceMapBlock(out: string[], data: Record<string, unknown>): v
   }
 }
 
+function appendVerifyStatusBlock(out: string[], data: Record<string, unknown>): void {
+  const verification = isRecord(data["verification"]) ? data["verification"] : null;
+  const local = isRecord(data["local"]) ? data["local"] : null;
+  const acceptance = isRecord(data["acceptance"]) ? data["acceptance"] : null;
+  const pr = isRecord(data["pr"]) ? data["pr"] : null;
+  const mode = typeof data["mode"] === "string" ? data["mode"] : "?";
+
+  const status =
+    verification !== null && typeof verification["status"] === "string"
+      ? verification["status"]
+      : "?";
+  const ready = verification !== null && verification["readyForReview"] === true ? "yes" : "no";
+  out.push(`Verification status: ${status}`);
+  out.push(`Ready for review: ${ready}`);
+  out.push(`Mode: ${mode}`);
+
+  const requiredCommands =
+    verification !== null && isStringArray(verification["requiredCommands"])
+      ? verification["requiredCommands"]
+      : [];
+  if (requiredCommands.length === 0) {
+    out.push("Local commands available: (none detected)");
+  } else {
+    out.push("Local commands available:");
+    for (const cmd of requiredCommands) out.push(`- ${cmd}`);
+  }
+
+  if (acceptance !== null) {
+    const cs =
+      typeof acceptance["coverageStatus"] === "string" ? acceptance["coverageStatus"] : "?";
+    const covered = typeof acceptance["covered"] === "number" ? acceptance["covered"] : 0;
+    const candidate = typeof acceptance["candidate"] === "number" ? acceptance["candidate"] : 0;
+    const missing = typeof acceptance["missing"] === "number" ? acceptance["missing"] : 0;
+    const human =
+      typeof acceptance["needsHumanReview"] === "number" ? acceptance["needsHumanReview"] : 0;
+    out.push(
+      `Acceptance coverage: ${cs} (covered ${covered} | candidate ${candidate} | missing ${missing} | human-review ${human})`,
+    );
+  }
+
+  if (pr !== null) {
+    const summary = typeof pr["checksSummary"] === "string" ? pr["checksSummary"] : "?";
+    const passed = typeof pr["passed"] === "number" ? pr["passed"] : 0;
+    const failed = typeof pr["failed"] === "number" ? pr["failed"] : 0;
+    const pending = typeof pr["pending"] === "number" ? pr["pending"] : 0;
+    out.push(`PR checks: ${summary} (passed ${passed} | failed ${failed} | pending ${pending})`);
+  }
+
+  if (local !== null && isRecord(local["git"])) {
+    const git = local["git"];
+    const branch =
+      typeof git["branch"] === "string"
+        ? git["branch"]
+        : git["branch"] === null
+          ? "(detached)"
+          : "?";
+    const dirty = git["isDirty"] === true ? "dirty" : "clean";
+    out.push(`Local git: ${branch} (${dirty})`);
+  }
+
+  const riskFlags =
+    verification !== null && isStringArray(verification["riskFlags"])
+      ? verification["riskFlags"]
+      : [];
+  if (riskFlags.length > 0) {
+    out.push("Risk flags:");
+    for (const f of riskFlags.slice(0, 5)) out.push(`- ${f}`);
+  }
+
+  const missingSignals =
+    verification !== null && isStringArray(verification["missingSignals"])
+      ? verification["missingSignals"]
+      : [];
+  if (missingSignals.length > 0) {
+    out.push("Missing signals:");
+    for (const s of missingSignals.slice(0, 5)) out.push(`- ${s}`);
+  }
+
+  if (verification !== null && typeof verification["nextSuggestedAction"] === "string") {
+    out.push(`Next: ${verification["nextSuggestedAction"]}`);
+  }
+}
+
 function appendNextPromptBlock(out: string[], data: Record<string, unknown>): void {
   const summary = isRecord(data["summary"]) ? data["summary"] : null;
   const agent = typeof data["agent"] === "string" ? data["agent"] : "?";
@@ -281,6 +364,8 @@ export function renderText<T>(result: CommandResult<T>, locale: "zh" | "en"): st
       appendEvidenceMapBlock(lines, data);
     } else if (data["command"] === "next_prompt" && data["implemented"] === true) {
       appendNextPromptBlock(lines, data);
+    } else if (data["command"] === "verify.status" && data["implemented"] === true) {
+      appendVerifyStatusBlock(lines, data);
     } else if ("aiGovernanceReminder" in data || "currentBlockers" in data) {
       appendBriefBlock(lines, data);
     } else if ("currentStateId" in data || "currentStepId" in data) {
