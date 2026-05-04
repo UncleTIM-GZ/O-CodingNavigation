@@ -1,20 +1,139 @@
+import { readFileSync } from "node:fs";
+import { isAbsolute } from "node:path";
 import type { Command } from "commander";
-import { skeletonResult } from "../../core/execution-navigator/skeleton.js";
+import { generateEvidenceMap } from "../../core/execution-navigator/evidence-map-runner.js";
+import {
+  defaultGhRunner,
+  type GhRunner,
+} from "../../core/execution-navigator/github-pr-runner.js";
+import { blocked } from "../../core/result.js";
+import { msg } from "../../core/i18n.js";
 import { outputResult } from "../output.js";
 
-// `ocn evidence map` — Execution Navigator skeleton (DEC-024 PR 1).
-// Maps acceptance criteria to evidence in a future PR. Currently skeleton.
+// `ocn evidence map` — Execution Navigator MVP 3 (DEC-024 PR 4).
+// Read-only acceptance evidence mapper. Reads docs/03-acceptance-criteria.md,
+// local git evidence, OCN state, and optionally GitHub PR evidence when
+// `--pr <n>` is provided. No LLM, no mutation, no file writes.
+
+function isValidPrNumber(raw: string): boolean {
+  if (!/^[1-9][0-9]*$/.test(raw)) return false;
+  const value = Number(raw);
+  return Number.isSafeInteger(value) && value > 0;
+}
+
+interface FixtureEntry {
+  readonly args: readonly string[];
+  readonly ok?: boolean;
+  readonly stdout?: string;
+  readonly stderr?: string;
+  readonly code?: "ENOENT" | "EXIT_NONZERO" | "OTHER";
+  readonly exitCode?: number;
+  readonly message?: string;
+}
+
+// Same fixture-runner injection mechanism MVP 2 introduced. Used by tests
+// to seed canned `gh` responses without spawning a real `gh` process.
+function createFixtureRunner(fixturePath: string): GhRunner {
+  const raw = readFileSync(fixturePath, "utf8");
+  const parsed = JSON.parse(raw) as { entries: readonly FixtureEntry[] };
+  return {
+    async run(args: readonly string[]) {
+      const match = parsed.entries.find(
+        (e) => e.args.length === args.length && e.args.every((a, i) => a === args[i]),
+      );
+      if (match === undefined) {
+        return {
+          ok: false as const,
+          code: "OTHER" as const,
+          message: `fixture-runner: no entry for ${args.join(" ")}`,
+        };
+      }
+      if (match.ok === false) {
+        const errorEntry: {
+          ok: false;
+          code: "ENOENT" | "EXIT_NONZERO" | "OTHER";
+          message: string;
+          stdout?: string;
+          stderr?: string;
+          exitCode?: number;
+        } = {
+          ok: false,
+          code: match.code ?? "EXIT_NONZERO",
+          message: match.message ?? "fixture-runner failure",
+        };
+        if (match.stdout !== undefined) errorEntry.stdout = match.stdout;
+        if (match.stderr !== undefined) errorEntry.stderr = match.stderr;
+        if (match.exitCode !== undefined) errorEntry.exitCode = match.exitCode;
+        return errorEntry;
+      }
+      return {
+        ok: true as const,
+        stdout: match.stdout ?? "",
+        stderr: match.stderr ?? "",
+      };
+    },
+  };
+}
+
+function pickRunnerFromEnv(): GhRunner | undefined {
+  const fixturePath = process.env["OCN_TEST_GH_RUNNER_FIXTURES"];
+  if (typeof fixturePath !== "string" || fixturePath.length === 0) return undefined;
+  return createFixtureRunner(fixturePath);
+}
+
 export function registerEvidenceCommand(program: Command): void {
   const evidence = program
     .command("evidence")
-    .description("Execution Navigator evidence surface (DEC-024) — read-only (skeleton)");
+    .description("Execution Navigator evidence surface (DEC-024) — read-only");
 
   evidence
     .command("map")
-    .description("Map acceptance criteria to evidence (skeleton — AC evidence mapping not yet implemented)")
+    .description("Map acceptance criteria to git / GitHub evidence (read-only)")
     .option("--json", "Emit machine-readable JSON CommandResult", false)
-    .action((rawOpts: { json: boolean }) => {
-      const result = skeletonResult("evidence.map");
-      outputResult(result, { json: rawOpts.json });
-    });
+    .option(
+      "--project-root <path>",
+      "Absolute path to the project root (defaults to current working directory)",
+    )
+    .option("--pr <number>", "Optional GitHub PR number for additional evidence")
+    .action(
+      async (rawOpts: { json: boolean; projectRoot?: string; pr?: string }) => {
+        if (rawOpts.projectRoot !== undefined && !isAbsolute(rawOpts.projectRoot)) {
+          const failure = blocked(
+            "ERR_IO_OR_CONFIG",
+            msg(
+              `--project-root must be an absolute path (got: ${rawOpts.projectRoot}).`,
+              `--project-root 必须是绝对路径（当前值：${rawOpts.projectRoot}）。`,
+            ),
+            { argument: "--project-root", received: rawOpts.projectRoot },
+          );
+          outputResult(failure, { json: rawOpts.json });
+          return;
+        }
+
+        let prNumber: number | undefined;
+        if (typeof rawOpts.pr === "string") {
+          if (!isValidPrNumber(rawOpts.pr)) {
+            const failure = blocked(
+              "ERR_ARTIFACT_INVALID",
+              msg(
+                `Invalid PR number "${rawOpts.pr}". Expected a positive integer (e.g. 42).`,
+                `PR 编号 "${rawOpts.pr}" 无效，必须是正整数（例如 42）。`,
+              ),
+              { argument: "--pr", received: rawOpts.pr },
+            );
+            outputResult(failure, { json: rawOpts.json });
+            return;
+          }
+          prNumber = Number(rawOpts.pr);
+        }
+
+        const cwd = rawOpts.projectRoot ?? process.cwd();
+        const runner = pickRunnerFromEnv() ?? defaultGhRunner();
+        const result = await generateEvidenceMap({
+          cwd,
+          ...(prNumber !== undefined ? { prNumber, runner } : {}),
+        });
+        outputResult(result, { json: rawOpts.json });
+      },
+    );
 }
