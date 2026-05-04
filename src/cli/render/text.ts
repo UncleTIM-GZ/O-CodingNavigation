@@ -48,9 +48,7 @@ function appendBriefBlock(out: string[], data: Record<string, unknown>): void {
   }
   if (isStringArray(data["currentBlockers"])) {
     const blockers = data["currentBlockers"];
-    out.push(
-      `Current Blockers: ${blockers.length === 0 ? "(none)" : blockers.join(", ")}`,
-    );
+    out.push(`Current Blockers: ${blockers.length === 0 ? "(none)" : blockers.join(", ")}`);
   }
   if (isStringArray(data["nextActions"])) {
     out.push("");
@@ -71,6 +69,51 @@ function appendBriefBlock(out: string[], data: Record<string, unknown>): void {
   }
 }
 
+function appendExecStatusBlock(out: string[], data: Record<string, unknown>): void {
+  const git = isRecord(data["git"]) ? data["git"] : undefined;
+  const ocn = isRecord(data["ocn"]) ? data["ocn"] : undefined;
+  const analysis = isRecord(data["analysis"]) ? data["analysis"] : undefined;
+
+  if (git === undefined) return;
+
+  if (git["isGitRepo"] === false) {
+    const reason = typeof git["reason"] === "string" ? git["reason"] : "unknown";
+    out.push(`Git: not a repository (${reason})`);
+  } else {
+    const branch = git["branch"];
+    const branchLabel =
+      typeof branch === "string" ? branch : branch === null ? "(detached HEAD)" : "?";
+    const head = typeof git["head"] === "string" ? git["head"] : "(no commits)";
+    const dirty = git["isDirty"] === true ? "dirty" : "clean";
+    out.push(`Branch: ${branchLabel}`);
+    out.push(`HEAD:   ${head}`);
+    out.push(`Working tree: ${dirty}`);
+
+    const changedFiles = isStringArray(git["changedFiles"]) ? git["changedFiles"] : [];
+    out.push(`Changed files: ${changedFiles.length}`);
+    const preview = changedFiles.slice(0, 5);
+    for (const f of preview) {
+      out.push(`  - ${f}`);
+    }
+    if (changedFiles.length > preview.length) {
+      out.push(`  … and ${changedFiles.length - preview.length} more`);
+    }
+  }
+
+  if (ocn !== undefined && ocn["isOcnProject"] === true) {
+    const stateId = typeof ocn["currentStateId"] === "string" ? ocn["currentStateId"] : "?";
+    const stepId = typeof ocn["currentStepId"] === "string" ? ocn["currentStepId"] : "?";
+    out.push(`OCN: ${stateId} / ${stepId}`);
+  } else if (ocn !== undefined && ocn["isOcnProject"] === false) {
+    out.push("OCN: not initialized");
+  }
+
+  if (analysis !== undefined && typeof analysis["nextSuggestedAction"] === "string") {
+    out.push("");
+    out.push(`Next: ${analysis["nextSuggestedAction"]}`);
+  }
+}
+
 export function renderText<T>(result: CommandResult<T>, locale: "zh" | "en"): string {
   const lines: string[] = [];
   lines.push(formatBilingual(result.message.en, result.message.zh, locale));
@@ -78,7 +121,9 @@ export function renderText<T>(result: CommandResult<T>, locale: "zh" | "en"): st
   if (result.ok && isRecord(result.data)) {
     const data = result.data;
     lines.push("");
-    if ("aiGovernanceReminder" in data || "currentBlockers" in data) {
+    if (data["command"] === "exec.status" && data["implemented"] === true) {
+      appendExecStatusBlock(lines, data);
+    } else if ("aiGovernanceReminder" in data || "currentBlockers" in data) {
       appendBriefBlock(lines, data);
     } else if ("currentStateId" in data || "currentStepId" in data) {
       appendStatusBlock(lines, data);
@@ -103,9 +148,7 @@ export function renderText<T>(result: CommandResult<T>, locale: "zh" | "en"): st
       lines.push(`Status: ${data["status"]}`);
     }
     if (isStringArray(data["missingRequiredSectionIds"])) {
-      lines.push(
-        `Missing required sections: ${data["missingRequiredSectionIds"].join(", ")}`,
-      );
+      lines.push(`Missing required sections: ${data["missingRequiredSectionIds"].join(", ")}`);
     }
   }
 
