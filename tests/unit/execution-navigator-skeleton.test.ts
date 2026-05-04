@@ -2,61 +2,41 @@ import { describe, expect, it } from "vitest";
 import {
   EVIDENCE_SOURCES_PLANNED,
   NEXT_IMPLEMENTATION_LABEL,
-  buildSkeletonData,
-  skeletonResult,
 } from "../../src/core/execution-navigator/skeleton.js";
 import type { ExecutionNavigatorCommand } from "../../src/core/execution-navigator/types.js";
 
-// One command remains skeleton in MVP 5 (DEC-024 PR 6). `exec.status`
-// graduated in PR 2 (local-git evidence). `github.analyze_pr` graduated in
-// PR 3 (read-only GitHub PR analysis). `evidence.map` graduated in PR 4
-// (acceptance evidence mapping) — see
-// `tests/unit/execution-navigator-evidence-map.test.ts`. `next_prompt`
-// graduated in PR 5 (deterministic agent prompt generator) — see
-// `tests/unit/execution-navigator-next-prompt.test.ts`. `verify.status`
-// graduated in PR 6 (verification status summarizer) — see
-// `tests/unit/execution-navigator-verify-status.test.ts`. The skeleton table
-// keeps an entry for the graduated commands so future commands can still
-// consult their planned evidence-source set, but they are no longer in the
-// runtime skeleton list.
-const SKELETON_COMMANDS: readonly ExecutionNavigatorCommand[] = ["verdict.draft"];
+// MVP 6 (DEC-024 PR 7) closes the Execution Navigator MVP series. The
+// skeleton list is now empty: every Execution Navigator command graduated
+// from the planned/not-implemented skeleton to a real implementation.
+//
+//   - exec.status         — MVP 1 (PR 2) — local-git evidence reader
+//   - github.analyze_pr   — MVP 2 (PR 3) — read-only GitHub PR analysis
+//   - evidence.map        — MVP 3 (PR 4) — acceptance evidence mapping
+//   - next_prompt         — MVP 4 (PR 5) — agent prompt generator
+//   - verify.status       — MVP 5 (PR 6) — verification status summarizer
+//   - verdict.draft       — MVP 6 (PR 7) — evidence-derived final verdict
+//
+// The skeleton table is preserved so future commands can still consult their
+// planned evidence-source set, but no command remains in the skeleton list.
+const SKELETON_COMMANDS: readonly ExecutionNavigatorCommand[] = [];
+const ALL_COMMANDS: readonly ExecutionNavigatorCommand[] = [
+  "exec.status",
+  "github.analyze_pr",
+  "evidence.map",
+  "next_prompt",
+  "verify.status",
+  "verdict.draft",
+];
 
-describe("execution-navigator skeleton (DEC-024 — one remaining command)", () => {
-  it("each remaining skeleton command builds a planned/not-implemented payload", () => {
-    for (const command of SKELETON_COMMANDS) {
-      const data = buildSkeletonData(command);
-      expect(data.command).toBe(command);
-      expect(data.status).toBe("planned");
-      expect(data.implemented).toBe(false);
-      expect(data.noMutation).toBe(true);
-      expect(typeof data.nextImplementation).toBe("string");
-      expect(data.nextImplementation.length).toBeGreaterThan(0);
-      expect(Array.isArray(data.evidenceSourcesPlanned)).toBe(true);
-      expect(data.evidenceSourcesPlanned.length).toBeGreaterThan(0);
-    }
+describe("execution-navigator skeleton (DEC-024 — series closed)", () => {
+  it("no skeleton commands remain — all six commands are implemented", () => {
+    expect(SKELETON_COMMANDS).toEqual([]);
   });
 
-  it("skeletonResult returns ok=true with bilingual headline message", () => {
-    for (const command of SKELETON_COMMANDS) {
-      const result = skeletonResult(command);
-      expect(result.ok).toBe(true);
-      if (!result.ok) return;
-      expect(result.code).toBe("OK");
-      expect(typeof result.message.en).toBe("string");
-      expect(typeof result.message.zh).toBe("string");
-      expect(result.message.en.length).toBeGreaterThan(0);
-      expect(result.message.zh.length).toBeGreaterThan(0);
-      // Sanity: zh must actually contain CJK so it isn't accidentally English.
-      expect(/[一-鿿]/.test(result.message.zh)).toBe(true);
-    }
-  });
-
-  it("evidenceSourcesPlanned still records exec.status as ['git'] (skeleton table is the eventual external evidence universe)", () => {
+  it("evidenceSourcesPlanned still records the planned external evidence universe per command", () => {
     // The skeleton table records the *external* evidence sources the
-    // Execution Navigator commands plan to consume. exec.status's external
-    // source remains "git". The graduated MVP 1 command additionally reads
-    // local OCN state, but that is not an external evidence stream and is
-    // therefore not part of `EVIDENCE_SOURCES_PLANNED`.
+    // Execution Navigator commands plan to consume. Graduated commands keep
+    // their entries so future tooling can introspect the planned set.
     expect(EVIDENCE_SOURCES_PLANNED["exec.status"]).toEqual(["git"]);
     expect(EVIDENCE_SOURCES_PLANNED["github.analyze_pr"]).toEqual(["github"]);
     expect(EVIDENCE_SOURCES_PLANNED["evidence.map"]).toEqual(["git", "github", "ci"]);
@@ -72,5 +52,11 @@ describe("execution-navigator skeleton (DEC-024 — one remaining command)", () 
     expect(NEXT_IMPLEMENTATION_LABEL["next_prompt"]).toBe("agent prompt generator");
     expect(NEXT_IMPLEMENTATION_LABEL["verify.status"]).toBe("verification status summariser");
     expect(NEXT_IMPLEMENTATION_LABEL["verdict.draft"]).toBe("evidence-derived final verdict");
+  });
+
+  it("the skeleton table covers exactly the six Execution Navigator commands (no new commands added without a DEC)", () => {
+    const labels = Object.keys(NEXT_IMPLEMENTATION_LABEL).sort();
+    const expected = [...ALL_COMMANDS].sort();
+    expect(labels).toEqual(expected);
   });
 });

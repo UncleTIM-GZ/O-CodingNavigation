@@ -28,7 +28,12 @@ export type EvidenceSource = "git" | "github" | "ci";
 // `ocn-state` is a local-state probe and not an external evidence stream.
 // `local-git` is the explicit name MVP 3 uses when surfacing local git as an
 // evidence source distinct from the abstract eventual `git` universe.
-export type EvidenceSourceUsed = EvidenceSource | "ocn-state" | "local-git" | "acceptance-map";
+export type EvidenceSourceUsed =
+  | EvidenceSource
+  | "ocn-state"
+  | "local-git"
+  | "acceptance-map"
+  | "verify-status";
 
 // Skeleton response payload. The shape is stable across all six commands so
 // downstream callers (CLI text renderer, MCP server, agents) can branch on a
@@ -568,4 +573,102 @@ export interface VerifyStatusData {
   readonly acceptance: VerifyStatusAcceptance;
   readonly verification: VerifyStatusVerification;
   readonly warnings: readonly string[];
+}
+
+// MVP 6 (DEC-024 follow-up step 7) — `ocn verdict draft` payload.
+//
+// Read-only orchestrator. Composes existing readers (local git, OCN state,
+// acceptance evidence map, verification status, optional GitHub PR) into a
+// deterministic evidence-derived verdict draft. No LLM, no mutation, no file
+// writes, no command execution — humans decide; the navigator only drafts.
+
+export type VerdictDraftMode = "local" | "pr" | "combined";
+
+export type VerdictDraftCategory =
+  | "continue-work"
+  | "request-changes"
+  | "ready-for-review"
+  | "ready-to-merge"
+  | "hold-for-manual-review";
+
+export type VerdictDraftConfidence = "low" | "medium" | "high";
+
+// Risk flag universe for the verdict draft. Combines local-git, evidence-map,
+// github-pr, and verify-status risk-flag universes. Lexicographically sorted
+// at the boundary.
+export type VerdictDraftRiskFlag =
+  | "working-tree-dirty"
+  | "not-a-git-repository"
+  | "no-commits"
+  | "detached-head"
+  | "git-not-found"
+  | "ocn-state-unreadable"
+  | "acceptance-file-missing"
+  | "no-acceptance-criteria"
+  | "coverage-partial"
+  | "coverage-missing"
+  | "human-review-required"
+  | "github-evidence-unavailable"
+  | "draft-pr"
+  | "closed-pr"
+  | "merge-conflict-or-unclean"
+  | "ci-failing"
+  | "ci-pending"
+  | "no-checks-found"
+  | "changes-requested"
+  | "no-review-yet"
+  | "large-diff"
+  | "many-files-changed"
+  | "source-change-without-test-change"
+  | "test-change-without-source-change"
+  | "docs-only-change"
+  | "workflow-changed"
+  | "package-metadata-changed"
+  | "verification-blocked"
+  | "verification-partial";
+
+export type VerdictDraftWarning =
+  | "github-evidence-unavailable"
+  | "pr-checks-unavailable"
+  | "no-acceptance-criteria"
+  | "no-local-scripts-detected";
+
+// Bilingual summary sentence — one of a small set of deterministic templates.
+export interface VerdictDraftSummary {
+  readonly en: string;
+  readonly zh: string;
+}
+
+export interface VerdictDraftInputs {
+  readonly currentStateId: string | null;
+  readonly currentStepId: string | null;
+  readonly verificationStatus: VerifyStatusOverall;
+  readonly acceptanceCoverageStatus: EvidenceMapCoverageStatus;
+  readonly gitStatus: "clean" | "dirty" | "no-git" | "empty-repo";
+  readonly branch: string | null;
+  readonly head: string | null;
+  readonly prState: string | null;
+  readonly prChecksSummary: string | null;
+}
+
+export interface VerdictDraftVerdict {
+  readonly category: VerdictDraftCategory;
+  readonly confidence: VerdictDraftConfidence;
+  readonly summary: VerdictDraftSummary;
+  readonly supports: readonly string[];
+  readonly blocks: readonly string[];
+  readonly humanReviewRequired: boolean;
+  readonly nextSuggestedAction: string;
+}
+
+export interface VerdictDraftData {
+  readonly command: "verdict.draft";
+  readonly implemented: true;
+  readonly noMutation: true;
+  readonly mode: VerdictDraftMode;
+  readonly evidenceSourcesUsed: readonly EvidenceSourceUsed[];
+  readonly verdict: VerdictDraftVerdict;
+  readonly inputs: VerdictDraftInputs;
+  readonly riskFlags: readonly VerdictDraftRiskFlag[];
+  readonly warnings: readonly VerdictDraftWarning[];
 }
