@@ -426,3 +426,146 @@ export interface NextPromptData {
   readonly prompt: string;
   readonly warnings: readonly string[];
 }
+
+// MVP 5 (DEC-024 follow-up step 6) — `ocn verify status` payload.
+//
+// Read-only. Reads `package.json` scripts, local git evidence, OCN state, the
+// acceptance evidence map, and (optionally) GitHub PR checks. Summarises
+// verification readiness deterministically. No LLM, no mutation, no command
+// execution — humans / agents run the listed verification commands.
+
+export type VerifyStatusMode = "local" | "pr" | "combined";
+
+export type VerifyStatusOverall =
+  | "ready"
+  | "partial"
+  | "blocked"
+  | "pending"
+  | "no-verification-data";
+
+export type VerifyStatusMissingSignal =
+  | "no-lint-script"
+  | "no-typecheck-script"
+  | "no-test-script"
+  | "no-build-script"
+  | "no-coverage-script"
+  | "no-acceptance-criteria"
+  | "acceptance-evidence-missing"
+  | "pr-checks-unavailable"
+  | "pr-not-provided"
+  | "local-working-tree-dirty"
+  | "checks-pending"
+  | "checks-failing";
+
+// Risk flags surfaced in the verification verdict. Combines local-git, evidence-map,
+// and github-pr risk-flag universes. Lexicographically sorted at the boundary.
+export type VerifyStatusRiskFlag =
+  | "working-tree-dirty"
+  | "not-a-git-repository"
+  | "no-commits"
+  | "detached-head"
+  | "git-not-found"
+  | "acceptance-file-missing"
+  | "no-acceptance-criteria"
+  | "coverage-partial"
+  | "coverage-missing"
+  | "human-review-required"
+  | "github-evidence-unavailable"
+  | "draft-pr"
+  | "closed-pr"
+  | "merge-conflict-or-unclean"
+  | "ci-failing"
+  | "ci-pending"
+  | "no-checks-found"
+  | "changes-requested"
+  | "no-review-yet"
+  | "large-diff"
+  | "many-files-changed"
+  | "source-change-without-test-change"
+  | "test-change-without-source-change"
+  | "docs-only-change"
+  | "workflow-changed"
+  | "package-metadata-changed";
+
+// Detected presence of well-known npm scripts that drive verification.
+export interface VerifyStatusScriptsPresent {
+  readonly lint: boolean;
+  readonly typecheck: boolean;
+  readonly test: boolean;
+  readonly build: boolean;
+  readonly coverage: boolean;
+  readonly smoke: boolean;
+}
+
+export interface VerifyStatusLocalGit {
+  readonly branch: string | null;
+  readonly head: string | null;
+  readonly isDirty: boolean;
+  readonly changedFilesCount: number;
+}
+
+export interface VerifyStatusLocalEvidence {
+  readonly scripts: VerifyStatusScriptsPresent;
+  readonly scriptCommands: Readonly<Record<string, string>>;
+  readonly git: VerifyStatusLocalGit;
+  readonly ocn: ExecStatusOcnData;
+}
+
+// Subset of GitHub PR data used by the verifier — kept narrow so the envelope
+// stays small and stable.
+export interface VerifyStatusPrCheckRecord {
+  readonly name: string;
+  readonly status: string;
+  readonly conclusion: string | null;
+}
+
+export interface VerifyStatusPr {
+  readonly number: number;
+  readonly state: string;
+  readonly isDraft: boolean;
+  readonly mergeable: string | null;
+  readonly mergeStateStatus: string | null;
+  readonly checksSummary: string;
+  readonly passed: number;
+  readonly failed: number;
+  readonly pending: number;
+  readonly items: readonly VerifyStatusPrCheckRecord[];
+  readonly reviews: {
+    readonly total: number;
+    readonly approved: number;
+    readonly changesRequested: number;
+    readonly commented: number;
+  };
+}
+
+export interface VerifyStatusAcceptance {
+  readonly found: boolean;
+  readonly coverageStatus: EvidenceMapCoverageStatus;
+  readonly criteriaCount: number;
+  readonly covered: number;
+  readonly candidate: number;
+  readonly missing: number;
+  readonly needsHumanReview: number;
+}
+
+export interface VerifyStatusVerification {
+  readonly status: VerifyStatusOverall;
+  readonly readyForReview: boolean;
+  readonly requiredCommands: readonly string[];
+  readonly missingSignals: readonly VerifyStatusMissingSignal[];
+  readonly riskFlags: readonly VerifyStatusRiskFlag[];
+  readonly nextSuggestedAction: string;
+}
+
+export interface VerifyStatusData {
+  readonly command: "verify.status";
+  readonly implemented: true;
+  readonly noMutation: true;
+  readonly mode: VerifyStatusMode;
+  readonly evidenceSourcesUsed: readonly EvidenceSourceUsed[];
+  readonly local: VerifyStatusLocalEvidence;
+  readonly pr: VerifyStatusPr | null;
+  readonly acceptance: VerifyStatusAcceptance;
+  readonly verification: VerifyStatusVerification;
+  readonly warnings: readonly string[];
+}
