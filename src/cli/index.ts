@@ -4,9 +4,15 @@ import { registerAdvanceCommand } from "./commands/advance.js";
 import { registerBriefCommand } from "./commands/brief.js";
 import { registerCheckCommand } from "./commands/check.js";
 import { registerDocCommand } from "./commands/doc.js";
+import { registerEvidenceCommand } from "./commands/evidence.js";
+import { registerExecCommand } from "./commands/exec.js";
 import { registerGateCommand } from "./commands/gate.js";
+import { registerGithubCommand } from "./commands/github.js";
 import { registerInitCommand } from "./commands/init.js";
+import { registerNextPromptCommand } from "./commands/next-prompt.js";
 import { registerStatusCommand } from "./commands/status.js";
+import { registerVerdictCommand } from "./commands/verdict.js";
+import { registerVerifyCommand } from "./commands/verify.js";
 import { PACKAGE_VERSION } from "../version.js";
 
 const program = new Command();
@@ -23,5 +29,12 @@ registerDocCommand(program);
 registerCheckCommand(program);
 registerGateCommand(program);
 registerAdvanceCommand(program);
+// Execution Navigator skeleton (DEC-024 PR 1) — read-only, no evidence ingestion yet.
+registerExecCommand(program);
+registerGithubCommand(program);
+registerEvidenceCommand(program);
+registerNextPromptCommand(program);
+registerVerifyCommand(program);
+registerVerdictCommand(program);
 
 await program.parseAsync(process.argv);
