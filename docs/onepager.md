@@ -12,6 +12,31 @@
 
 ---
 
+## 解决什么痛点
+
+| 痛点 | 表现 | OCN 应对 |
+|---|---|---|
+| **Lost（迷路）** | 没人知道项目当前在哪一步 | 状态机 + `ocn status` |
+| **Drift（漂移）** | Agent 输出越走越偏离需求 | 强门禁 + AC 校验，gate 不通过不能推进 |
+| **Amnesia（失忆）** | 新 chat 必须重头讲一遍背景 | `ocn brief` 给 Agent 灌当前 step 上下文 |
+| **False-completion（假完成）** | 文档存在但缺少必需 section，Agent 仍宣称"完成" | required-section 校验，gate 拦截 |
+| **实现阶段卡死** | LFG / Codex / Claude Code 在 PR / CI / 修复循环里停滞 | Execution Navigator 6 命令读证据、出下一轮简报 |
+| **Verdict 草率** | 仅凭"CI 绿了"就 merge | `verdict draft` 综合 git / PR / AC / verify 信号，倾向保守 |
+| **审计缺失** | AI 改完什么、何时推进的，事后难复盘 | 所有 push 事件双轨写入 `.ocoding/audit-events.jsonl` 与 `docs/22-audit-trail.md` |
+
+---
+
+## 典型落地场景
+
+1. **新项目从 0 到 1** — 用 Planning Gatekeeper 锁定 brief / scope / PRD / AC / 架构 / build plan，再开始实现。前期不省，后期不返工。
+2. **多 Agent / 多 session 接力** — 每个新 session 调 `ocn brief` 或 `ocn next-prompt`，把当前 step 必需 section 与 governance 直接喂给 Agent，不用人再解释一遍。
+3. **PR 评审前** — 用 `evidence map` 看 AC 覆盖、`verify status` 看就绪度、`verdict draft` 拿草案，再做人工裁决；避免凭直觉 merge。
+4. **CI 失败 / 实现卡住** — `ocn next-prompt --mode fix --pr <n>` 生成限定 scope（allowed files / forbidden actions / required commands / stop conditions）的下一轮 Agent 简报，防止 Agent 改飞。
+5. **跨人 / 跨周交接** — 接手人跑 `ocn status` + `ocn brief` 即知项目位置；不用读完整 chat 历史。
+6. **审计与合规追溯** — 每次 advance / gate / artifact 创建都有 audit 事件，可对外证明决策路径。
+
+---
+
 ## 两阶段模型
 
 | 阶段 | 角色 | 时机 |
