@@ -18,6 +18,7 @@
 
 **Use OCN**
 2. [First 5 minutes (DISCOVERY → SPEC walkthrough)](#2-first-5-minutes-discovery--spec-walkthrough)
+   - 2.7 [Post-plan execution flow](#27-post-plan-execution-flow)
 3. [Expected file tree after init](#3-expected-file-tree-after-init)
 
 **Reference**
@@ -157,6 +158,23 @@ ocn brief
 
 Prints the current-step required sections, the AI Governance reminders, and the Uncertainty Policy. Pipe it into your AI coding host so the agent resumes with full context.
 
+### 2.7 Post-plan execution flow
+
+After your planning artifacts (00–10) pass their gates and the project enters implementation, the Execution Navigator commands take over (full reference: [README §6.2](../README.md#62-execution-navigator-commands)). They are read-only — they summarise what is actually true in the repo, the PR, the acceptance evidence, and the verification signals.
+
+1. Build the planning artifacts (steps above) — your `state_plan` artifacts (00–10) gate the implementation.
+2. Start implementation in your normal repo workflow (your IDE, agents, etc.).
+3. During implementation, use the Execution Navigator commands to read evidence:
+   ```bash
+   ocn exec status                              # local git + OCN state snapshot
+   ocn github analyze-pr <n>                    # GitHub PR analysis (when a PR exists)
+   ocn evidence map --pr <n>                    # acceptance criteria coverage
+   ocn next-prompt --agent claude               # next agent brief
+   ocn verify status --mode combined --pr <n>   # verification readiness
+   ocn verdict draft --mode combined --pr <n>   # evidence-derived verdict
+   ```
+4. Review the evidence and verdict draft before merge — the verdict is conservative; `ready-to-merge` requires every signal aligned. None of these commands mutate state, call an LLM, or run `npm` / mutating `gh` commands.
+
 ---
 
 ## 3. Expected file tree after init
@@ -265,6 +283,7 @@ Every tool requires an absolute `projectRoot` argument. The host (or your prompt
 
 **使用 OCN**
 - §B. [5 分钟上手（DISCOVERY → SPEC 演练）](#b-5-分钟上手discovery--spec-演练)
+   - §B.7 [实现阶段：执行证据流](#b7-实现阶段执行证据流)
 - §C. [`ocn init` 后的预期文件树](#c-ocn-init-后的预期文件树)
 
 **参考资料**
@@ -403,6 +422,23 @@ ocn brief
 ```
 
 输出当前 step 的必填章节、AI 治理提醒和不确定性策略。把它直接喂给你的 AI 编程 host，agent 就能在完整上下文里继续工作。
+
+### B.7 实现阶段：执行证据流
+
+planning 阶段的 artifact（00–10）跑过门禁、项目进入实现阶段后，Execution Navigator 命令接力（完整参考：[README §F.2](../README.md#f2-execution-navigator-命令)）。它们都是只读的——汇总 repo、PR、AC、验证信号到底是什么状态。
+
+1. 先把 planning 阶段的 artifact 写完（上一节流程）——`state_plan` 的 artifact（00–10）是实现的门禁。
+2. 在你日常的 repo 流程里推进实现（你的 IDE、agent 等）。
+3. 实现过程中用 Execution Navigator 命令读证据：
+   ```bash
+   ocn exec status                              # 本地 git + OCN 状态快照
+   ocn github analyze-pr <n>                    # GitHub PR 分析（已开 PR 时）
+   ocn evidence map --pr <n>                    # AC 覆盖度
+   ocn next-prompt --agent claude               # 下一条 agent brief
+   ocn verify status --mode combined --pr <n>   # 验证就绪度
+   ocn verdict draft --mode combined --pr <n>   # 证据驱动的 verdict 草稿
+   ```
+4. 合入前看一眼证据与 verdict 草稿——verdict 是保守的：`ready-to-merge` 要求所有信号一致。这些命令永不写状态、永不调 LLM、永不跑 mutating 的 `npm` / `gh` 命令。
 
 ---
 
