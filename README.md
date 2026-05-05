@@ -2,7 +2,7 @@
 
 > Local-first, MCP-first, state-machine-driven **AI coding workflow operating system**.
 > CLI: `ocn` · MCP: `ocn-mcp` · License: Apache-2.0
-> **Phase**: SOP 0.2.0 Plan → Build → Verify mainline · **Status**: pre-GA beta · **Public**: on npm as `latest` and `@beta` → [`0.2.0-beta.1`](https://www.npmjs.com/package/o-coding-navigation) · GitHub pre-release: [`v0.2.0-beta.1`](https://github.com/UncleTIM-GZ/O-CodingNavigation/releases/tag/v0.2.0-beta.1)
+> **Phase**: SOP 0.2.0 Plan → Build → Verify mainline · **Status**: pre-GA beta · **Public**: on npm as `latest` and `@beta` → [`0.2.0-beta.2`](https://www.npmjs.com/package/o-coding-navigation) · GitHub pre-release: [`v0.2.0-beta.2`](https://github.com/UncleTIM-GZ/O-CodingNavigation/releases/tag/v0.2.0-beta.2)
 
 > 📑 This README has two parts:
 > **Part 1 — English** (sections 1 – 11) · **Part 2 — 中文版** (§§ A – K)
@@ -76,10 +76,12 @@ OCN treats these as the same problem: *the AI coding loop has no rigorous notion
 | Phase | **SOP 0.2.0 Plan → Build → Verify mainline** — runtime cutover complete; plan-to-verify smoke covers all 19 steps |
 | Tests | full vitest suite green on Node 20 + Node 22 |
 | Coverage | meets the publish-time gate |
-| npm | `latest` → `0.2.0-beta.1`; `beta` → `0.2.0-beta.1`; `alpha` → `0.1.0-alpha.2` (historical; preserved) |
+| npm | `latest` → `0.2.0-beta.2`; `beta` → `0.2.0-beta.2`; `alpha` → `0.1.0-alpha.2` (historical; preserved) |
 | Maturity | **pre-GA beta** — not stable, not GA, beta only (for controlled testing / dogfood) |
 | External host validation | Validated with Claude Desktop on Windows with WSL2. Cursor and Cline are not yet verified. |
 | MCP transport | stdio only (HTTP/SSE not started) |
+
+> **2026-05-04 republish note**: Republished as `0.2.0-beta.2` to ship the Execution Navigator commands (`exec status`, `github analyze-pr`, `evidence map`, `next-prompt`, `verify status`, `verdict draft`) that were merged after `0.2.0-beta.1` was packaged. The README documentation and the published CLI binary now match.
 
 #### 3.1 Two-stage product model
 
@@ -100,7 +102,7 @@ The two stages are connected: planning artifacts (00–10) must pass their gates
 - **MCP safe tools**: 7 read/prepare/create/log tools over stdio; 4 forbidden tools never registered (full list in §7); `projectRoot` validator + threat model ([`docs/security/mcp-threat-model.md`](./docs/security/mcp-threat-model.md)).
 - **Real MCP Host validation**: Claude Desktop on Windows with WSL2 validated end-to-end ([DEC-017](./docs/20-decision-log.md), [report](./docs/reports/2026-04-30-mcp-external-host-validation-report.md)). Cursor and Cline remain unverified.
 - **Executable example**: [`examples/discovery-to-plan/`](./examples/discovery-to-plan/) walks all 10 v1.0 SOP steps end-to-end via `scripts/smoke.sh`. Bundled fixtures derived verbatim from `src/core/templates/*.ts` so they cannot drift.
-- **npm publish discipline**: SOP 0.2.0 mainline published as `o-coding-navigation@0.2.0-beta.1` under strict pre-publish checklists, `prepublishOnly` gate, and `files` allowlist. `latest` and `beta` both point to `0.2.0-beta.1`; `alpha` is preserved at `0.1.0-alpha.2` for historical use. Annotated git tag `v0.2.0-beta.1` and matching GitHub pre-release published.
+- **npm publish discipline**: SOP 0.2.0 mainline published as `o-coding-navigation@0.2.0-beta.2` under strict pre-publish checklists, `prepublishOnly` gate, and `files` allowlist. `latest` and `beta` both point to `0.2.0-beta.2`; `alpha` is preserved at `0.1.0-alpha.2` for historical use. Annotated git tag `v0.2.0-beta.2` and matching GitHub pre-release published.
 
 **Not implemented (deliberately deferred — see §10)**
 
@@ -118,12 +120,12 @@ The two stages are connected: planning artifacts (00–10) must pass their gates
 npm install -g o-coding-navigation
 ```
 
-As of v0.2.0-beta.1, npm latest and beta both point to the SOP 0.2.0 Plan → Build → Verify release.
+As of v0.2.0-beta.2, npm latest and beta both point to the SOP 0.2.0 Plan → Build → Verify release.
 
 Verify:
 
 ```bash
-ocn --version       # 0.2.0-beta.1
+ocn --version       # 0.2.0-beta.2
 ocn --help
 ocn-mcp             # starts the MCP stdio server; press Ctrl+C to exit
 ```
@@ -140,8 +142,8 @@ To uninstall: `npm uninstall -g o-coding-navigation`.
 
 | Channel | Version | npm tag | Notes |
 |---|---|---|---|
-| `latest` (recommended) | `0.2.0-beta.1` | `latest` | SOP 0.2.0 Plan → Build → Verify mainline. |
-| Beta (explicit prerelease pin) | `0.2.0-beta.1` | `beta` | Same artifact as `latest`; use `@beta` when you want to pin the prerelease channel explicitly. |
+| `latest` (recommended) | `0.2.0-beta.2` | `latest` | SOP 0.2.0 Plan → Build → Verify mainline. |
+| Beta (explicit prerelease pin) | `0.2.0-beta.2` | `beta` | Same artifact as `latest`; use `@beta` when you want to pin the prerelease channel explicitly. |
 | Alpha (still available) | `0.1.0-alpha.2` | `alpha` | Prior pre-GA channel; preserved for historical use only. |
 
 Package home: https://www.npmjs.com/package/o-coding-navigation
@@ -647,7 +649,7 @@ The GA Prep phase was a documentation, packaging, and operational-readiness audi
 **Execution Navigator MVP series (post-DEC-024)**
 
 - **MVP 1–6 complete** — the six Execution Navigator commands (§6.2) shipped in PRs #63–#68 and merged to main. Cross-cutting review fixes landed in PR #69 ([report](./docs/reports/2026-05-04-execution-navigator-review-fixes-pr-a.md)). Series closure: [`docs/reports/2026-05-04-execution-navigator-verdict-draft.md`](./docs/reports/2026-05-04-execution-navigator-verdict-draft.md).
-- Current external package: `0.2.0-beta.1` — Planning Gatekeeper (§6.1) + Execution Evidence Navigator (§6.2).
+- Current external package: `0.2.0-beta.2` — Planning Gatekeeper (§6.1) + Execution Evidence Navigator (§6.2).
 - Still beta, not GA. Validated with Claude Desktop on Windows with WSL2; Cursor and Cline remain unverified.
 - Next gate: real external-repo dogfood pass before any further release sync; GA promotion remains gated on its own DEC.
 
@@ -735,10 +737,12 @@ OCN 把这四个问题视为同一个问题：*AI 编程闭环缺乏严肃的"�
 | 阶段 | **SOP 0.2.0 Plan → Build → Verify 主干**——runtime 已切换；plan-to-verify smoke 覆盖全部 19 步 |
 | 测试 | 完整 vitest 套件在 Node 20 + Node 22 全部通过 |
 | 覆盖率 | 满足发布门 |
-| npm | `latest` → `0.2.0-beta.1`；`beta` → `0.2.0-beta.1`；`alpha` → `0.1.0-alpha.2`（历史保留） |
+| npm | `latest` → `0.2.0-beta.2`；`beta` → `0.2.0-beta.2`；`alpha` → `0.1.0-alpha.2`（历史保留） |
 | 成熟度 | **pre-GA beta**——非稳定、非 GA、仅 beta（用于受控测试 / dogfood） |
 | 已验证 Host | 已在 Claude Desktop on Windows + WSL2 验证。Cursor 与 Cline 暂未验证。 |
 | MCP 传输 | 仅 stdio（HTTP/SSE 尚未启动） |
+
+> **2026-05-04 republish 说明**：以 `0.2.0-beta.2` 重新发布，目的是把 `0.2.0-beta.1` 打包之后才合入的 Execution Navigator 命令（`exec status`、`github analyze-pr`、`evidence map`、`next-prompt`、`verify status`、`verdict draft`）真正包进 npm artifact。README 文档与已发布的 CLI 现在保持一致。
 
 #### C.1 两阶段产品模型
 
@@ -759,7 +763,7 @@ OCN 现在分为两个衔接阶段：
 - **MCP 安全工具**：stdio 上 7 个只读/准备/创建/日志类工具，4 个禁用工具不会被注册（详见 §G）；`projectRoot` 校验器 + 威胁模型（[`docs/security/mcp-threat-model.md`](./docs/security/mcp-threat-model.md)）。
 - **真实 Host 验证**：Claude Desktop on Windows + WSL2 已完成端到端验证（[DEC-017](./docs/20-decision-log.md)、[报告](./docs/reports/2026-04-30-mcp-external-host-validation-report.md)）。
 - **可执行示例**：[`examples/discovery-to-plan/`](./examples/discovery-to-plan/)，`scripts/smoke.sh` 跑完 v1.0 SOP 全部 10 个 step；fixture 直接来源于 `src/core/templates/*.ts`，避免漂移。
-- **npm 发布纪律**：SOP 0.2.0 主干以 `o-coding-navigation@0.2.0-beta.1` 形式发布，遵循严格的预发布清单与 `prepublishOnly` 门，`files` allowlist 收敛到 `dist/` + LICENSE + README + `docs/quickstart.md` + `docs/mcp-usage.md`；`latest` 与 `beta` 都指向 `0.2.0-beta.1`，`alpha` 仍保留在 `0.1.0-alpha.2`；`v0.2.0-beta.1` 为带注释的 git tag + GitHub pre-release。
+- **npm 发布纪律**：SOP 0.2.0 主干以 `o-coding-navigation@0.2.0-beta.2` 形式发布，遵循严格的预发布清单与 `prepublishOnly` 门，`files` allowlist 收敛到 `dist/` + LICENSE + README + `docs/quickstart.md` + `docs/mcp-usage.md`；`latest` 与 `beta` 都指向 `0.2.0-beta.2`，`alpha` 仍保留在 `0.1.0-alpha.2`；`v0.2.0-beta.2` 为带注释的 git tag + GitHub pre-release。
 
 **尚未实现（刻意延后，详见 §J）**
 
@@ -777,12 +781,12 @@ OCN 现在分为两个衔接阶段：
 npm install -g o-coding-navigation
 ```
 
-从 v0.2.0-beta.1 开始，npm latest 与 beta 均指向 SOP 0.2.0 的 Plan → Build → Verify 闭环版本。
+从 v0.2.0-beta.2 开始，npm latest 与 beta 均指向 SOP 0.2.0 的 Plan → Build → Verify 闭环版本。
 
 安装后验证：
 
 ```bash
-ocn --version       # 0.2.0-beta.1
+ocn --version       # 0.2.0-beta.2
 ocn --help
 ocn-mcp             # 启动 MCP stdio server；按 Ctrl+C 退出
 ```
@@ -799,8 +803,8 @@ npm install -g o-coding-navigation@beta
 
 | 渠道 | 版本 | npm tag | 说明 |
 |---|---|---|---|
-| `latest`（推荐） | `0.2.0-beta.1` | `latest` | SOP 0.2.0 Plan → Build → Verify 主干。 |
-| Beta（显式预发布通道） | `0.2.0-beta.1` | `beta` | 与 `latest` 同一份产物；想明确固定在预发布通道时使用 `@beta`。 |
+| `latest`（推荐） | `0.2.0-beta.2` | `latest` | SOP 0.2.0 Plan → Build → Verify 主干。 |
+| Beta（显式预发布通道） | `0.2.0-beta.2` | `beta` | 与 `latest` 同一份产物；想明确固定在预发布通道时使用 `@beta`。 |
 | Alpha（仍可用） | `0.1.0-alpha.2` | `alpha` | 之前的 pre-GA 通道；仅作历史保留。 |
 
 包主页：https://www.npmjs.com/package/o-coding-navigation
@@ -1304,7 +1308,7 @@ GA Prep 阶段是从 Phase 2 收口走到 beta candidate 准备的一段文档/�
 **Execution Navigator MVP 系列（DEC-024 之后）**
 
 - **MVP 1–6 已完成**——§F.2 的 6 条 Execution Navigator 命令在 PR #63–#68 中陆续 ship 并合入 main；横切 review 修复在 PR #69 落地（[报告](./docs/reports/2026-05-04-execution-navigator-review-fixes-pr-a.md)）。系列收口：[`docs/reports/2026-05-04-execution-navigator-verdict-draft.md`](./docs/reports/2026-05-04-execution-navigator-verdict-draft.md)。
-- 当前外部包：`0.2.0-beta.1`——Planning Gatekeeper（§F.1）+ Execution Evidence Navigator（§F.2）。
+- 当前外部包：`0.2.0-beta.2`——Planning Gatekeeper（§F.1）+ Execution Evidence Navigator（§F.2）。
 - 仍是 beta，非 GA。已在 Claude Desktop on Windows + WSL2 验证；Cursor 与 Cline 仍未验证。
 - 下一道门：在真实外部 repo 完成一次 dogfood，再考虑后续 release sync；GA promotion 仍由独立 DEC 把守。
 
