@@ -19,14 +19,18 @@ OCN turns AI coding from continuous-chat improvisation into a navigable, gated, 
 **Understand OCN**
 1. [What OCN is](#1-what-ocn-is)
 2. [Why OCN exists](#2-why-ocn-exists)
-3. [Current status](#3-current-status-phase-2-complete--beta-published)
+3. [Current status](#3-current-status-sop-020-plan--build--verify-mainline)
+   - 3.1 [Two-stage product model](#31-two-stage-product-model)
 
 **Use OCN**
 4. [Install](#4-install)
 5. [First 5 minutes](#5-first-5-minutes)
    - 5.4 [Full walkthrough: how it looks inside Claude Code](#54-full-walkthrough-how-it-looks-inside-claude-code)
    - 5.5 [Adopting OCN mid-project](#55-adopting-ocn-mid-project)
+   - 5.6 [Post-plan execution flow](#56-post-plan-execution-flow)
 6. [Core CLI commands](#6-core-cli-commands)
+   - 6.1 [Planning Gatekeeper commands](#61-planning-gatekeeper-commands)
+   - 6.2 [Execution Navigator commands](#62-execution-navigator-commands)
 7. [MCP tools](#7-mcp-tools)
 
 **Reference**
@@ -73,9 +77,18 @@ OCN treats these as the same problem: *the AI coding loop has no rigorous notion
 | Tests | full vitest suite green on Node 20 + Node 22 |
 | Coverage | meets the publish-time gate |
 | npm | `latest` → `0.2.0-beta.1`; `beta` → `0.2.0-beta.1`; `alpha` → `0.1.0-alpha.2` (historical; preserved) |
-| Maturity | **pre-GA beta** — not stable, not GA, not production-ready |
+| Maturity | **pre-GA beta** — not stable, not GA, beta only (for controlled testing / dogfood) |
 | External host validation | Validated with Claude Desktop on Windows with WSL2. Cursor and Cline are not yet verified. |
 | MCP transport | stdio only (HTTP/SSE not started) |
+
+#### 3.1 Two-stage product model
+
+OCN now works in two connected phases:
+
+1. **Planning Gatekeeper** — define scope, architecture, acceptance, and build plan before implementation. Drives `state_discovery` → `state_plan`, gates artifact completion, and is the surface covered by §6.1.
+2. **Execution Evidence Navigator** — read git, GitHub PR, acceptance evidence, and verification signals during implementation. Six new read-only commands (§6.2) summarise that evidence and draft the next agent prompt, the verification readiness signal, and the final verdict. They never mutate state, never call an LLM, never run `npm`/`gh` mutating commands.
+
+The two stages are connected: planning artifacts (00–10) must pass their gates before the execution stage's `evidence map`, `verify status`, and `verdict draft` can read meaningful inputs. Authoritative reframe: [DEC-024](./docs/20-decision-log.md). Series closure report: [`docs/reports/2026-05-04-execution-navigator-verdict-draft.md`](./docs/reports/2026-05-04-execution-navigator-verdict-draft.md).
 
 **Implemented**
 
@@ -135,7 +148,7 @@ Package home: https://www.npmjs.com/package/o-coding-navigation
 
 **Prerequisites**: Node.js ≥ 20 (see `engines` in `package.json`).
 
-> **Pre-GA caveat**: this is a **pre-GA beta** release. The package is not stable, not GA, and not production-ready. Validated with Claude Desktop on Windows with WSL2. Cursor and Cline are not yet verified.
+> **Pre-GA caveat**: this is a **pre-GA beta** release — beta only, intended for controlled testing / dogfood, not GA. Validated with Claude Desktop on Windows with WSL2. Cursor and Cline are not yet verified.
 
 #### 4.3 Alternative: local development from source
 
@@ -473,6 +486,23 @@ Bringing this into OCN looks like (real conversation will be denser; this shows 
 
 Once the backfill catches up, **all new work** comes in through OCN's next step — every new feature has a brief, a gate, and an audit trail.
 
+#### 5.6 Post-plan execution flow
+
+After your planning artifacts (00–10) pass their gates and the project enters implementation, the Execution Navigator commands take over. They are read-only summarisers — they help you and the agent see what is actually true in the repo, the PR, the acceptance evidence, and the verification signals.
+
+1. Build the planning artifacts (steps above) — your `state_plan` artifacts (00–10) gate the implementation.
+2. Start implementation in your normal repo workflow (your IDE, agents, etc.).
+3. During implementation, use the Execution Navigator commands (§6.2) to read evidence:
+   ```bash
+   ocn exec status                              # local git + OCN state snapshot
+   ocn github analyze-pr <n>                    # GitHub PR analysis (when a PR exists)
+   ocn evidence map --pr <n>                    # acceptance criteria coverage
+   ocn next-prompt --agent claude               # next agent brief
+   ocn verify status --mode combined --pr <n>   # verification readiness
+   ocn verdict draft --mode combined --pr <n>   # evidence-derived verdict
+   ```
+4. Review the evidence and verdict draft before merge — the verdict is conservative; `ready-to-merge` requires every signal aligned (verification ready, PR clean, acceptance covered, no failed checks, no changes-requested).
+
 ### 6. Core CLI commands
 
 All commands accept `--json` to emit a machine-readable `CommandResult` envelope. Exit codes are stable:
@@ -485,6 +515,8 @@ All commands accept `--json` to emit a machine-readable `CommandResult` envelope
 | `3` | state machine error |
 | `4` | config / lock / IO error |
 | `5` | SOP version incompatibility |
+
+#### 6.1 Planning Gatekeeper commands
 
 | Command | Purpose | Reads / writes | Audit emission |
 |---|---|---|---|
@@ -504,6 +536,21 @@ All commands accept `--json` to emit a machine-readable `CommandResult` envelope
 `final-build-verdict`.
 
 `--tier` for `init` accepts `minimal`, `production`, `full` — only `minimal` is enforced today (production / full are accepted but their artifact sets are not yet differentiated).
+
+#### 6.2 Execution Navigator commands
+
+Beyond the planning gate, OCN now reads execution-time evidence (git, GitHub PR, acceptance criteria, package scripts) and produces deterministic summaries — no LLM calls, no mutation, no `npm run` from inside the implementation. These commands are useful during implementation and review, after `state_plan` is closed. Authoritative reframe: [DEC-024](./docs/20-decision-log.md). Series closure: [`docs/reports/2026-05-04-execution-navigator-verdict-draft.md`](./docs/reports/2026-05-04-execution-navigator-verdict-draft.md).
+
+| Command | Purpose | Typical use |
+|---|---|---|
+| `ocn exec status [--json]` | Read local git evidence and OCN project state. | Snapshot of branch, head, dirty/clean, changed files, recent commits, current state/step. |
+| `ocn github analyze-pr <n> [--json]` | Read-only GitHub PR evidence analysis via `gh` CLI. | PR metadata, files changed, commits, checks, reviews — no mutation. |
+| `ocn evidence map [--json] [--pr <n>]` | Map acceptance criteria to available evidence. | Per-criterion status: `evidence-found` / `evidence-candidate` / `missing-evidence` / `needs-human-review`. |
+| `ocn next-prompt [--json] [--agent ...] [--mode ...] [--pr <n>] [--issue ...]` | Generate the next deterministic agent task brief. | 9 fixed sections — objective, evidence, allowed work, forbidden actions, verification commands, stop conditions. |
+| `ocn verify status [--json] [--mode ...] [--pr <n>]` | Summarise verification readiness and missing signals. | Status `ready` / `partial` / `blocked` / `pending` / `no-verification-data` plus required commands and risk flags. |
+| `ocn verdict draft [--json] [--mode ...] [--pr <n>]` | Draft an evidence-derived final judgment. | Category `continue-work` / `request-changes` / `ready-for-review` / `ready-to-merge` / `hold-for-manual-review`, with sorted supports / blocks / warnings. |
+
+All six commands are read-only by design: no writes to `.ocoding/`, `docs/`, or any project file; no git mutation; no gh mutation (only `pr view` / `auth status`); no LLM call. `--mode` accepts `local | pr | combined` where applicable; `--pr <n>` enables GitHub evidence in `pr` and `combined` modes. Per-MVP implementation reports live under [`docs/reports/2026-05-02-execution-navigator-*.md`](./docs/reports/) and the closure report linked above.
 
 ### 7. MCP tools
 
@@ -597,6 +644,13 @@ The GA Prep phase was a documentation, packaging, and operational-readiness audi
 - **PR F** — `examples/` directory plan. F1 + F2 + F3 complete: [`examples/discovery-to-plan/`](./examples/discovery-to-plan/) is an executable smoke that walks all 10 v1.0 SOP steps ([report](./docs/reports/2026-05-01-examples-discovery-to-plan.md)). F4 (top-level "Try the example" link) is the example reference under §5.
 - **Post-Codex audit fix train** — final full-repo Codex audit ([report](./docs/reports/2026-05-02-final-codex-full-repo-audit.md)) and P1/P2 closure ([report](./docs/reports/2026-05-02-post-codex-p1-p2-fix-report.md)). Two P3 polish items remain.
 
+**Execution Navigator MVP series (post-DEC-024)**
+
+- **MVP 1–6 complete** — the six Execution Navigator commands (§6.2) shipped in PRs #63–#68 and merged to main. Cross-cutting review fixes landed in PR #69 ([report](./docs/reports/2026-05-04-execution-navigator-review-fixes-pr-a.md)). Series closure: [`docs/reports/2026-05-04-execution-navigator-verdict-draft.md`](./docs/reports/2026-05-04-execution-navigator-verdict-draft.md).
+- Current external package: `0.2.0-beta.1` — Planning Gatekeeper (§6.1) + Execution Evidence Navigator (§6.2).
+- Still beta, not GA. Validated with Claude Desktop on Windows with WSL2; Cursor and Cline remain unverified.
+- Next gate: real external-repo dogfood pass before any further release sync; GA promotion remains gated on its own DEC.
+
 **Beyond GA Prep — not in any current plan; each requires its own DEC entry first**
 
 - `ocn doctor`, `ocn reset`, `ocn baseline`
@@ -624,14 +678,18 @@ CLI：`ocn`；MCP server：`ocn-mcp`；许可：Apache-2.0。
 **理解 OCN**
 - §A. [OCN 是什么](#a-ocn-是什么)
 - §B. [OCN 解决什么问题](#b-ocn-解决什么问题)
-- §C. [当前状态](#c-当前状态phase-2-完成--beta-已发布)
+- §C. [当前状态](#c-当前状态sop-020-plan--build--verify-主干)
+   - §C.1 [两阶段产品模型](#c1-两阶段产品模型)
 
 **使用 OCN**
 - §D. [安装](#d-安装)
 - §E. [5 分钟上手](#e-5-分钟上手)
    - §E.4 [完整操作流程：在 Claude Code 里走完一遍](#e4-完整操作流程在-claude-code-里走完一遍)
    - §E.5 [把 OCN 加入一个进行中的项目](#e5-把-ocn-加入一个进行中的项目)
+   - §E.6 [实现阶段：执行证据流](#e6-实现阶段执行证据流)
 - §F. [核心 CLI 命令](#f-核心-cli-命令)
+   - §F.1 [Planning Gatekeeper 命令](#f1-planning-gatekeeper-命令)
+   - §F.2 [Execution Navigator 命令](#f2-execution-navigator-命令)
 - §G. [MCP 工具](#g-mcp-工具)
 
 **参考资料**
@@ -678,9 +736,18 @@ OCN 把这四个问题视为同一个问题：*AI 编程闭环缺乏严肃的"�
 | 测试 | 完整 vitest 套件在 Node 20 + Node 22 全部通过 |
 | 覆盖率 | 满足发布门 |
 | npm | `latest` → `0.2.0-beta.1`；`beta` → `0.2.0-beta.1`；`alpha` → `0.1.0-alpha.2`（历史保留） |
-| 成熟度 | **pre-GA beta**——非稳定、非 GA、非生产可用 |
+| 成熟度 | **pre-GA beta**——非稳定、非 GA、仅 beta（用于受控测试 / dogfood） |
 | 已验证 Host | 已在 Claude Desktop on Windows + WSL2 验证。Cursor 与 Cline 暂未验证。 |
 | MCP 传输 | 仅 stdio（HTTP/SSE 尚未启动） |
+
+#### C.1 两阶段产品模型
+
+OCN 现在分为两个衔接阶段：
+
+1. **Planning Gatekeeper**：在实现前锁定范围、架构、验收与 build plan。驱动 `state_discovery` → `state_plan`，把守 artifact 完整度，对应 §F.1 的命令面。
+2. **Execution Evidence Navigator**：在实现过程中读取 git、GitHub PR、验收证据与验证信号。新加 6 条只读命令（§F.2）汇总这些证据，并产出下一条 agent prompt、验证就绪信号与最终 verdict 草稿。这些命令永不写状态、永不调 LLM、永不跑 mutating 的 `npm` / `gh` 命令。
+
+两个阶段是衔接的：planning 阶段的 artifact（00–10）必须先过门禁，execution 阶段的 `evidence map`、`verify status`、`verdict draft` 才能读到有意义的输入。权威 reframe：[DEC-024](./docs/20-decision-log.md)。系列收口报告：[`docs/reports/2026-05-04-execution-navigator-verdict-draft.md`](./docs/reports/2026-05-04-execution-navigator-verdict-draft.md)。
 
 **已实现**
 
@@ -740,7 +807,7 @@ npm install -g o-coding-navigation@beta
 
 **前置依赖**：Node.js ≥ 20（参见 `package.json` 的 `engines`）。
 
-> **pre-GA 警告**：当前是 **pre-GA beta**，不稳定、非 GA、非生产可用。已在 Claude Desktop on Windows + WSL2 验证。Cursor 与 Cline 暂未验证。
+> **pre-GA 警告**：当前是 **pre-GA beta**——仅 beta，用于受控测试 / dogfood，非 GA。已在 Claude Desktop on Windows + WSL2 验证。Cursor 与 Cline 暂未验证。
 
 #### D.3 备选：从源码本地开发
 
@@ -1076,6 +1143,23 @@ AI 会循环走 `doc create → 编辑 → run_gate`，每个 step 跑完 `run_g
 
 走完后，新的工作全部从 OCN 的下一 step 开始——**每个新功能都有 brief、有门禁、有审计**。
 
+#### E.6 实现阶段：执行证据流
+
+planning 阶段的 artifact（00–10）跑过门禁、项目进入实现阶段后，Execution Navigator 命令接力。它们都是只读的"汇总器"——帮你和 agent 看清 repo、PR、验收证据、验证信号到底是什么状态。
+
+1. 先把 planning 阶段的 artifact 写完（上一节流程）——`state_plan` 的 artifact（00–10）是实现的门禁。
+2. 在你日常的 repo 流程里推进实现（你的 IDE、agent 等）。
+3. 实现过程中，用 §F.2 的 Execution Navigator 命令读证据：
+   ```bash
+   ocn exec status                              # 本地 git + OCN 状态快照
+   ocn github analyze-pr <n>                    # GitHub PR 分析（已开 PR 时）
+   ocn evidence map --pr <n>                    # AC 覆盖度
+   ocn next-prompt --agent claude               # 下一条 agent brief
+   ocn verify status --mode combined --pr <n>   # 验证就绪度
+   ocn verdict draft --mode combined --pr <n>   # 证据驱动的 verdict 草稿
+   ```
+4. 合入前看一眼证据和 verdict 草稿——verdict 是保守的：`ready-to-merge` 要求所有信号一致（验证 ready、PR 干净、AC 覆盖、无失败 check、无 changes-requested）。
+
 ### F. 核心 CLI 命令
 
 所有命令都接受 `--json`，输出机器可读的 `CommandResult`。退出码是稳定契约：
@@ -1088,6 +1172,8 @@ AI 会循环走 `doc create → 编辑 → run_gate`，每个 step 跑完 `run_g
 | `3` | 状态机错误 |
 | `4` | 配置/锁/IO 错误 |
 | `5` | SOP 版本不兼容 |
+
+#### F.1 Planning Gatekeeper 命令
 
 | 命令 | 用途 | 读/写 | 审计输出 |
 |---|---|---|---|
@@ -1107,6 +1193,21 @@ AI 会循环走 `doc create → 编辑 → run_gate`，每个 step 跑完 `run_g
 `final-build-verdict`。
 
 `init` 的 `--tier`：`minimal`、`production`、`full`，目前只对 `minimal` 强制约束（`production` / `full` 接受参数但产物集合尚未差异化）。
+
+#### F.2 Execution Navigator 命令
+
+planning 门禁之外，OCN 现在还能读"实现期证据"（git、GitHub PR、AC、package scripts），并产出确定性汇总——不调 LLM、不写状态、实现内部不跑 `npm run`。这些命令在实现与评审阶段（`state_plan` 关闭之后）有用。权威 reframe：[DEC-024](./docs/20-decision-log.md)。系列收口：[`docs/reports/2026-05-04-execution-navigator-verdict-draft.md`](./docs/reports/2026-05-04-execution-navigator-verdict-draft.md)。
+
+| 命令 | 用途 | 典型用法 |
+|---|---|---|
+| `ocn exec status [--json]` | 读取本地 git 证据 + OCN 项目状态。 | branch、head、dirty/clean、变更文件、近期 commit、当前 state/step 的快照。 |
+| `ocn github analyze-pr <n> [--json]` | 通过 `gh` CLI 做只读 GitHub PR 证据分析。 | PR metadata、变更文件、commit、checks、reviews——不写。 |
+| `ocn evidence map [--json] [--pr <n>]` | 把 AC 映射到可用证据。 | 每条 AC 状态：`evidence-found` / `evidence-candidate` / `missing-evidence` / `needs-human-review`。 |
+| `ocn next-prompt [--json] [--agent ...] [--mode ...] [--pr <n>] [--issue ...]` | 生成下一条确定性 agent 任务 brief。 | 9 个固定段：objective、evidence、allowed work、forbidden actions、verification commands、stop conditions。 |
+| `ocn verify status [--json] [--mode ...] [--pr <n>]` | 汇总验证就绪度与缺失信号。 | 状态 `ready` / `partial` / `blocked` / `pending` / `no-verification-data`，含必跑命令与风险旗标。 |
+| `ocn verdict draft [--json] [--mode ...] [--pr <n>]` | 输出基于证据的最终判定草稿。 | 类别 `continue-work` / `request-changes` / `ready-for-review` / `ready-to-merge` / `hold-for-manual-review`，含按字典序排序的 supports / blocks / warnings。 |
+
+6 条命令按设计都是只读的：不写 `.ocoding/`、`docs/`、任何项目文件；不做 git 写操作；gh 仅 `pr view` / `auth status`；不调 LLM。`--mode` 可选 `local | pr | combined`；`--pr <n>` 在 `pr` / `combined` 模式下启用 GitHub 证据。各 MVP 实现报告见 [`docs/reports/2026-05-02-execution-navigator-*.md`](./docs/reports/) 与上面的收口报告。
 
 ### G. MCP 工具
 
@@ -1199,6 +1300,13 @@ GA Prep 阶段是从 Phase 2 收口走到 beta candidate 准备的一段文档/�
 - **PR E**——npm 发布门禁计划 + CI 稳定性审计。发布纪律：[DEC-008](./docs/20-decision-log.md) / [DEC-012](./docs/20-decision-log.md) / [DEC-015](./docs/20-decision-log.md) / [DEC-016](./docs/20-decision-log.md) / [DEC-021](./docs/20-decision-log.md) / [DEC-022](./docs/20-decision-log.md)。CI 矩阵已扩展到 Node 20 + Node 22（[报告](./docs/reports/2026-05-01-ci-node-22-matrix-expansion.md)）。锁观察 flake 已加固（[报告](./docs/reports/2026-05-01-state-store-lock-observability-flake-hardening.md)）。
 - **PR F**——`examples/` 计划。F1 + F2 + F3 完成：[`examples/discovery-to-plan/`](./examples/discovery-to-plan/) 是端到端可执行 smoke，覆盖 v1.0 SOP 全部 10 个 step（[报告](./docs/reports/2026-05-01-examples-discovery-to-plan.md)）。F4（README 顶层 "Try the example" 链接）即 §E 中的示例引用。
 - **post-Codex 审计修复 train**——最终 Codex 全 repo 审计（[报告](./docs/reports/2026-05-02-final-codex-full-repo-audit.md)）与 P1/P2 修复（[报告](./docs/reports/2026-05-02-post-codex-p1-p2-fix-report.md)）；剩两个 P3 polish 项。
+
+**Execution Navigator MVP 系列（DEC-024 之后）**
+
+- **MVP 1–6 已完成**——§F.2 的 6 条 Execution Navigator 命令在 PR #63–#68 中陆续 ship 并合入 main；横切 review 修复在 PR #69 落地（[报告](./docs/reports/2026-05-04-execution-navigator-review-fixes-pr-a.md)）。系列收口：[`docs/reports/2026-05-04-execution-navigator-verdict-draft.md`](./docs/reports/2026-05-04-execution-navigator-verdict-draft.md)。
+- 当前外部包：`0.2.0-beta.1`——Planning Gatekeeper（§F.1）+ Execution Evidence Navigator（§F.2）。
+- 仍是 beta，非 GA。已在 Claude Desktop on Windows + WSL2 验证；Cursor 与 Cline 仍未验证。
+- 下一道门：在真实外部 repo 完成一次 dogfood，再考虑后续 release sync；GA promotion 仍由独立 DEC 把守。
 
 **GA Prep 之外——目前不在任何活动计划里，落地前必须先开 DEC**
 
