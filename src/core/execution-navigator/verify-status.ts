@@ -6,20 +6,24 @@
 // runs lint / typecheck / test / build itself; only enumerates them. No LLM,
 // no mutation, no file writes. Pure assembly: same inputs produce
 // byte-identical JSON.
+//
+// PR-B / M2: takes an optional `EvidenceContext` so callers that already
+// composed one (e.g. verdict-draft) can pass it through and avoid a second
+// round-trip to the GitHub API.
 
 import { promises as fs } from "node:fs";
 import { join } from "node:path";
 import type { CommandResult } from "../../types/result.js";
 import { ok } from "../result.js";
 import { msg } from "../i18n.js";
-import { readLocalGit } from "./local-git.js";
-import { readOcnProjectState } from "./ocn-state-reader.js";
-import { analyzeGithubPr } from "./github-pr.js";
-import { emptyAcceptanceParseResult, parseAcceptanceCriteria } from "./acceptance-parser.js";
+import {
+  buildEvidenceContext,
+  type EvidenceContext,
+} from "./evidence-context.js";
 import { mapEvidence } from "./evidence-map.js";
 import { readPackageScripts } from "./verify-status-package.js";
 import { buildVerification, deriveStatus, type PrSlice } from "./verify-status-verdict.js";
-import type { GhRunner } from "./github-pr-runner.js";
+import { defaultGhRunner, type GhRunner } from "./github-pr-runner.js";
 import type {
   AcceptanceParseResult,
   EvidenceMapMappingData,
@@ -34,7 +38,6 @@ import type {
   VerifyStatusPrCheckRecord,
 } from "./types.js";
 import {
-  ACCEPTANCE_RELATIVE_PATH,
   HEADLINE_EN,
   HEADLINE_ZH,
   PR_ITEMS_LIMIT,
@@ -47,6 +50,9 @@ export interface VerifyStatusOptions {
   readonly mode: VerifyStatusMode;
   readonly prNumber?: number;
   readonly runner?: GhRunner;
+  // Optional pre-built EvidenceContext (PR-B / M2). When supplied, the
+  // orchestrator skips git/ocn/acceptance/github I/O and reuses the bundle.
+  readonly context?: EvidenceContext;
 }
 
 async function smokeScriptExists(cwd: string): Promise<boolean> {
@@ -55,15 +61,6 @@ async function smokeScriptExists(cwd: string): Promise<boolean> {
     return true;
   } catch {
     return false;
-  }
-}
-
-async function loadAcceptance(cwd: string): Promise<AcceptanceParseResult> {
-  try {
-    const raw = await fs.readFile(join(cwd, ACCEPTANCE_RELATIVE_PATH), "utf8");
-    return parseAcceptanceCriteria(raw, { path: ACCEPTANCE_RELATIVE_PATH });
-  } catch {
-    return emptyAcceptanceParseResult(ACCEPTANCE_RELATIVE_PATH);
   }
 }
 
@@ -160,58 +157,42 @@ function buildEvidenceSourcesUsed(hasGithub: boolean): readonly EvidenceSourceUs
   return out;
 }
 
-interface GhFetchResult {
-  readonly github: GitHubPrAnalyzeData | null;
-  readonly githubUnavailable: boolean;
-  readonly warning: string | null;
-}
-
-async function fetchGithubEvidence(opts: VerifyStatusOptions): Promise<GhFetchResult> {
-  if (typeof opts.prNumber !== "number") {
-    return { github: null, githubUnavailable: false, warning: null };
-  }
-  if (opts.mode === "local") {
-    return {
-      github: null,
-      githubUnavailable: false,
-      warning: "ignoring --pr because --mode local was requested",
-    };
-  }
-  const ghResult = await analyzeGithubPr({
-    prNumber: opts.prNumber,
-    cwd: opts.cwd,
-    ...(opts.runner !== undefined ? { runner: opts.runner } : {}),
-  });
-  if (ghResult.ok === true && ghResult.data !== undefined && ghResult.data.pr !== null) {
-    return { github: ghResult.data, githubUnavailable: false, warning: null };
-  }
-  const data = ghResult.data as GitHubPrAnalyzeData | undefined;
-  const reason = data?.reason ?? "unknown";
-  return {
-    github: null,
-    githubUnavailable: true,
-    warning: `github-evidence-unavailable: ${reason}`,
-  };
-}
-
 export async function summarizeVerifyStatus(
   opts: VerifyStatusOptions,
 ): Promise<CommandResult<VerifyStatusData>> {
   const warnings: string[] = [];
+  const prRequested = typeof opts.prNumber === "number";
+  const ignorePrInLocalMode = prRequested && opts.mode === "local";
+  if (ignorePrInLocalMode) {
+    warnings.push("ignoring --pr because --mode local was requested");
+  }
 
-  const [git, ocn, acceptance, smokeAvailable, gh] = await Promise.all([
-    readLocalGit(opts.cwd),
-    readOcnProjectState(opts.cwd),
-    loadAcceptance(opts.cwd),
-    smokeScriptExists(opts.cwd),
-    fetchGithubEvidence(opts),
-  ]);
-  if (gh.warning !== null) warnings.push(gh.warning);
+  const ctx =
+    opts.context ??
+    (await buildEvidenceContext({
+      cwd: opts.cwd,
+      mode: opts.mode,
+      prNumber: prRequested && !ignorePrInLocalMode ? (opts.prNumber as number) : null,
+      ghRunner: opts.runner ?? defaultGhRunner(),
+    }));
 
+  // Forward github-evidence-unavailable warnings emitted during context
+  // construction. Acceptance-loader warnings are intentionally not surfaced
+  // in the verify-status envelope (backward compatibility with PR-A shape).
+  for (const w of ctx.warnings) {
+    if (w.startsWith("github-evidence-unavailable")) warnings.push(w);
+  }
+
+  const smokeAvailable = await smokeScriptExists(opts.cwd);
   const pkg = await readPackageScripts(opts.cwd, smokeAvailable);
-  const mapping = mapEvidence({ criteria: acceptance.criteria, git, github: gh.github });
-  const acceptanceSlice = buildAcceptance(acceptance, mapping);
-  const built = buildPr({ github: gh.github });
+
+  const mapping = mapEvidence({
+    criteria: ctx.acceptance.criteria,
+    git: ctx.git,
+    github: ctx.github,
+  });
+  const acceptanceSlice = buildAcceptance(ctx.acceptance, mapping);
+  const built = buildPr({ github: ctx.github });
 
   const githubRequested =
     typeof opts.prNumber === "number" && (opts.mode === "pr" || opts.mode === "combined");
@@ -220,10 +201,10 @@ export async function summarizeVerifyStatus(
     mode: opts.mode,
     scripts: pkg.scripts,
     acceptance: acceptanceSlice,
-    git,
+    git: ctx.git,
     pr: built.slice,
     githubRequested,
-    githubUnavailable: gh.githubUnavailable,
+    githubUnavailable: ctx.githubUnavailable,
   };
 
   const status = deriveStatus(verdictInputs);
@@ -233,14 +214,14 @@ export async function summarizeVerifyStatus(
     scripts: pkg.scripts,
     scriptCommands: pkg.scriptCommands,
     git: {
-      branch: typeof git.branch === "string" ? git.branch : null,
-      head: typeof git.head === "string" ? git.head : null,
-      isDirty: git.isDirty === true,
-      changedFilesCount: (git.changedFiles ?? []).length,
-      isGitRepo: git.isGitRepo === true,
-      gitReason: git.reason ?? null,
+      branch: typeof ctx.git.branch === "string" ? ctx.git.branch : null,
+      head: typeof ctx.git.head === "string" ? ctx.git.head : null,
+      isDirty: ctx.git.isDirty === true,
+      changedFilesCount: (ctx.git.changedFiles ?? []).length,
+      isGitRepo: ctx.git.isGitRepo === true,
+      gitReason: ctx.git.reason ?? null,
     },
-    ocn: ocn satisfies ExecStatusOcnData,
+    ocn: ctx.ocn satisfies ExecStatusOcnData,
   };
 
   const data: VerifyStatusData = {
@@ -248,7 +229,7 @@ export async function summarizeVerifyStatus(
     implemented: true,
     noMutation: true,
     mode: opts.mode,
-    evidenceSourcesUsed: buildEvidenceSourcesUsed(gh.github !== null),
+    evidenceSourcesUsed: buildEvidenceSourcesUsed(ctx.github !== null),
     local,
     pr: opts.mode === "local" ? null : built.pr,
     acceptance: acceptanceSlice,

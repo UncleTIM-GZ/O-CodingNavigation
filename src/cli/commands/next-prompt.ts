@@ -1,118 +1,35 @@
-import { readFileSync } from "node:fs";
-import { isAbsolute } from "node:path";
 import type { Command } from "commander";
 import { generateNextPrompt } from "../../core/execution-navigator/next-prompt.js";
-import {
-  defaultGhRunner,
-  isReadOnlyInvocation,
-  type GhRunner,
-} from "../../core/execution-navigator/github-pr-runner.js";
 import {
   SUPPORTED_AGENTS,
   SUPPORTED_MODES,
 } from "../../core/execution-navigator/next-prompt-templates.js";
-import type { NextPromptAgent, NextPromptMode } from "../../core/execution-navigator/types.js";
-import { blocked } from "../../core/result.js";
-import { msg } from "../../core/i18n.js";
-import { outputResult } from "../output.js";
+import type {
+  NextPromptAgent,
+  NextPromptMode,
+} from "../../core/execution-navigator/types.js";
+import { runWithCommonFlags } from "../lib/run-with-common-flags.js";
+import {
+  validateMode,
+  validatePrNumber,
+  validateProjectRoot,
+} from "../lib/validate-cli-flags.js";
 
 // `ocn next-prompt` — Execution Navigator MVP 4 (DEC-024 PR 5).
 // Read-only, deterministic agent prompt generator. Composes existing readers
 // (local git, OCN state, acceptance map, optional GitHub PR) into a markdown
 // prompt body. No LLM, no network call, no mutation, no file writes.
 
-function isValidPrNumber(raw: string): boolean {
-  if (!/^[1-9][0-9]*$/.test(raw)) return false;
-  const value = Number(raw);
-  return Number.isSafeInteger(value) && value > 0;
-}
-
-function isAgent(raw: string): raw is NextPromptAgent {
-  return (SUPPORTED_AGENTS as readonly string[]).includes(raw);
-}
-
-function isMode(raw: string): raw is NextPromptMode {
-  return (SUPPORTED_MODES as readonly string[]).includes(raw);
-}
-
-interface FixtureEntry {
-  readonly args: readonly string[];
-  readonly ok?: boolean;
-  readonly stdout?: string;
-  readonly stderr?: string;
-  readonly code?: "ENOENT" | "EXIT_NONZERO" | "OTHER";
-  readonly exitCode?: number;
-  readonly message?: string;
-}
-
-// Same fixture-runner injection mechanism MVP 2 introduced.
-function createFixtureRunner(fixturePath: string): GhRunner {
-  const raw = readFileSync(fixturePath, "utf8");
-  const parsed = JSON.parse(raw) as { entries: readonly FixtureEntry[] };
-  return {
-    async run(args: readonly string[]) {
-      // Defence-in-depth: refuse non-allowlisted invocations before consulting
-      // fixtures. A buggy fixture file that describes a write call must be
-      // rejected at the runner boundary regardless of fixture content.
-      if (!isReadOnlyInvocation(args)) {
-        return {
-          ok: false as const,
-          code: "OTHER" as const,
-          message: "refused: gh runner only permits read-only subcommands",
-        };
-      }
-      const match = parsed.entries.find(
-        (e) => e.args.length === args.length && e.args.every((a, i) => a === args[i]),
-      );
-      if (match === undefined) {
-        return {
-          ok: false as const,
-          code: "OTHER" as const,
-          message: `fixture-runner: no entry for ${args.join(" ")}`,
-        };
-      }
-      if (match.ok === false) {
-        const errorEntry: {
-          ok: false;
-          code: "ENOENT" | "EXIT_NONZERO" | "OTHER";
-          message: string;
-          stdout?: string;
-          stderr?: string;
-          exitCode?: number;
-        } = {
-          ok: false,
-          code: match.code ?? "EXIT_NONZERO",
-          message: match.message ?? "fixture-runner failure",
-        };
-        if (match.stdout !== undefined) errorEntry.stdout = match.stdout;
-        if (match.stderr !== undefined) errorEntry.stderr = match.stderr;
-        if (match.exitCode !== undefined) errorEntry.exitCode = match.exitCode;
-        return errorEntry;
-      }
-      return {
-        ok: true as const,
-        stdout: match.stdout ?? "",
-        stderr: match.stderr ?? "",
-      };
-    },
-  };
-}
-
-// The fixture runner activates ONLY in test contexts — either NODE_ENV ===
-// "test" or the explicit OCN_TEST_MODE === "1" opt-in. Production binaries
-// ignore OCN_TEST_GH_RUNNER_FIXTURES entirely and fall through to
-// `defaultGhRunner()`.
-function pickRunnerFromEnv(): GhRunner | undefined {
-  if (process.env["NODE_ENV"] !== "test" && process.env["OCN_TEST_MODE"] !== "1") {
-    return undefined;
-  }
-  const fixturePath = process.env["OCN_TEST_GH_RUNNER_FIXTURES"];
-  if (typeof fixturePath !== "string" || fixturePath.length === 0) return undefined;
-  return createFixtureRunner(fixturePath);
+interface NextPromptOpts {
+  readonly cwd: string;
+  readonly agent: NextPromptAgent;
+  readonly mode: NextPromptMode;
+  readonly issue?: string;
+  readonly prNumber: number | null;
 }
 
 interface RawOpts {
-  readonly json: boolean;
+  readonly json?: boolean;
   readonly projectRoot?: string;
   readonly pr?: string;
   readonly agent?: string;
@@ -136,73 +53,49 @@ export function registerNextPromptCommand(program: Command): void {
     .option("--mode <name>", `Prompt mode (${SUPPORTED_MODES.join(" | ")})`, "continue")
     .option("--issue <text>", "Free-form issue description to override the current objective")
     .action(async (rawOpts: RawOpts) => {
-      if (rawOpts.projectRoot !== undefined && !isAbsolute(rawOpts.projectRoot)) {
-        const failure = blocked(
-          "ERR_IO_OR_CONFIG",
-          msg(
-            `--project-root must be an absolute path (got: ${rawOpts.projectRoot}).`,
-            `--project-root 必须是绝对路径（当前值：${rawOpts.projectRoot}）。`,
-          ),
-          { argument: "--project-root", received: "non-absolute-path" },
-        );
-        outputResult(failure, { json: rawOpts.json });
-        return;
-      }
-
-      const agentRaw = rawOpts.agent ?? "generic";
-      if (!isAgent(agentRaw)) {
-        const failure = blocked(
-          "ERR_ARTIFACT_INVALID",
-          msg(
-            `Invalid --agent "${agentRaw}". Expected one of: ${SUPPORTED_AGENTS.join(", ")}.`,
-            `--agent "${agentRaw}" 无效，必须是以下之一：${SUPPORTED_AGENTS.join(", ")}。`,
-          ),
-          { argument: "--agent", received: agentRaw },
-        );
-        outputResult(failure, { json: rawOpts.json });
-        return;
-      }
-
-      const modeRaw = rawOpts.mode ?? "continue";
-      if (!isMode(modeRaw)) {
-        const failure = blocked(
-          "ERR_ARTIFACT_INVALID",
-          msg(
-            `Invalid --mode "${modeRaw}". Expected one of: ${SUPPORTED_MODES.join(", ")}.`,
-            `--mode "${modeRaw}" 无效，必须是以下之一：${SUPPORTED_MODES.join(", ")}。`,
-          ),
-          { argument: "--mode", received: modeRaw },
-        );
-        outputResult(failure, { json: rawOpts.json });
-        return;
-      }
-
-      let prNumber: number | undefined;
-      if (typeof rawOpts.pr === "string") {
-        if (!isValidPrNumber(rawOpts.pr)) {
-          const failure = blocked(
-            "ERR_ARTIFACT_INVALID",
-            msg(
-              `Invalid PR number "${rawOpts.pr}". Expected a positive integer (e.g. 42).`,
-              `PR 编号 "${rawOpts.pr}" 无效，必须是正整数（例如 42）。`,
-            ),
-            { argument: "--pr", received: rawOpts.pr },
-          );
-          outputResult(failure, { json: rawOpts.json });
-          return;
-        }
-        prNumber = Number(rawOpts.pr);
-      }
-
-      const cwd = rawOpts.projectRoot ?? process.cwd();
-      const runner = pickRunnerFromEnv() ?? defaultGhRunner();
-      const result = await generateNextPrompt({
-        cwd,
-        agent: agentRaw,
-        mode: modeRaw,
-        ...(rawOpts.issue !== undefined ? { issue: rawOpts.issue } : {}),
-        ...(prNumber !== undefined ? { prNumber, runner } : {}),
-      });
-      outputResult(result, { json: rawOpts.json });
+      await runWithCommonFlags(
+        {
+          validate: (raw) => {
+            const r = raw as RawOpts;
+            const root = validateProjectRoot(r.projectRoot);
+            if (!root.ok) return root;
+            const agent = validateMode<NextPromptAgent>(
+              r.agent ?? "generic",
+              SUPPORTED_AGENTS,
+              "--agent",
+            );
+            if (!agent.ok) return agent;
+            const mode = validateMode<NextPromptMode>(
+              r.mode ?? "continue",
+              SUPPORTED_MODES,
+              "--mode",
+            );
+            if (!mode.ok) return mode;
+            let prNumber: number | null = null;
+            if (typeof r.pr === "string") {
+              const pr = validatePrNumber(r.pr, "--pr");
+              if (!pr.ok) return pr;
+              prNumber = pr.value;
+            }
+            const value: NextPromptOpts = {
+              cwd: root.value,
+              agent: agent.value,
+              mode: mode.value,
+              prNumber,
+              ...(r.issue !== undefined ? { issue: r.issue } : {}),
+            };
+            return { ok: true, value };
+          },
+        },
+        rawOpts,
+        async (opts, runner) =>
+          generateNextPrompt({
+            cwd: opts.cwd,
+            agent: opts.agent,
+            mode: opts.mode,
+            ...(opts.issue !== undefined ? { issue: opts.issue } : {}),
+            ...(opts.prNumber !== null ? { prNumber: opts.prNumber, runner } : {}),
+          }),
+      );
     });
 }

@@ -4,23 +4,23 @@
 // optionally GitHub PR evidence. Maps criteria to evidence deterministically.
 // Never writes any file. Never calls a `gh` mutation subcommand. Never
 // touches the working tree or `.ocoding/`.
+//
+// PR-B / M1 + M2: acceptance loading delegates to the shared
+// `loadAcceptanceFromProject` helper; the four readers can be composed once
+// via the shared `buildEvidenceContext` aggregator and reused by callers
+// that already have a context (verdict-draft uses this to dedupe its
+// downstream verify-status call).
 
-import { promises as fs } from "node:fs";
-import { join, relative } from "node:path";
 import type { CommandResult } from "../../types/result.js";
 import { ok } from "../result.js";
 import { msg } from "../i18n.js";
 import {
-  emptyAcceptanceParseResult,
-  parseAcceptanceCriteria,
-} from "./acceptance-parser.js";
-import { readLocalGit } from "./local-git.js";
-import { readOcnProjectState } from "./ocn-state-reader.js";
-import { analyzeGithubPr } from "./github-pr.js";
+  buildEvidenceContext,
+  type EvidenceContext,
+} from "./evidence-context.js";
+import { defaultGhRunner, type GhRunner } from "./github-pr-runner.js";
 import { mapEvidence } from "./evidence-map.js";
-import type { GhRunner } from "./github-pr-runner.js";
 import type {
-  AcceptanceParseResult,
   EvidenceMapAnalysis,
   EvidenceMapCoverageStatus,
   EvidenceMapData,
@@ -29,10 +29,7 @@ import type {
   EvidenceSourceUsed,
   ExecStatusGitData,
   ExecStatusOcnData,
-  GitHubPrAnalyzeData,
 } from "./types.js";
-
-const ACCEPTANCE_RELATIVE_PATH = "docs/03-acceptance-criteria.md";
 
 const HEADLINE_OK = msg(
   "Acceptance evidence map generated.",
@@ -61,44 +58,15 @@ export interface EvidenceMapOptions {
   readonly prNumber?: number;
   // Optional gh runner override (used by tests / CLI env injection).
   readonly runner?: GhRunner;
-}
-
-async function loadAcceptanceFile(
-  cwd: string,
-): Promise<{ readonly result: AcceptanceParseResult; readonly fileMissing: boolean }> {
-  const absPath = join(cwd, ACCEPTANCE_RELATIVE_PATH);
-  let raw: string;
-  try {
-    raw = await fs.readFile(absPath, "utf8");
-  } catch (err) {
-    const e = err as NodeJS.ErrnoException;
-    if (e.code === "ENOENT") {
-      return {
-        result: emptyAcceptanceParseResult(ACCEPTANCE_RELATIVE_PATH),
-        fileMissing: true,
-      };
-    }
-    // Defensive: any other read error → treat as missing but record a warning
-    // by emitting a parse result with `found=false` and a synthetic warning.
-    const fallback = emptyAcceptanceParseResult(ACCEPTANCE_RELATIVE_PATH);
-    return {
-      result: {
-        ...fallback,
-        warnings: [`acceptance file unreadable: ${e.code ?? "unknown"}`],
-      },
-      fileMissing: true,
-    };
-  }
-
-  // Use the relative path so output is portable regardless of cwd.
-  const path = relative(cwd, absPath) || ACCEPTANCE_RELATIVE_PATH;
-  const result = parseAcceptanceCriteria(raw, { path });
-  return { result, fileMissing: false };
+  // Optional pre-built EvidenceContext (PR-B / M2). When supplied, the
+  // orchestrator skips all I/O and runs as a pure assembler.
+  readonly context?: EvidenceContext;
 }
 
 interface AnalysisInputs {
   readonly mapping: EvidenceMapMappingData;
-  readonly acceptance: AcceptanceParseResult;
+  readonly acceptanceFound: boolean;
+  readonly criteriaCount: number;
   readonly git: ExecStatusGitData;
   readonly githubUnavailable: boolean;
   readonly githubRequested: boolean;
@@ -107,8 +75,8 @@ interface AnalysisInputs {
 function buildAnalysis(inputs: AnalysisInputs): EvidenceMapAnalysis {
   const flags: EvidenceMapRiskFlag[] = [];
 
-  if (!inputs.acceptance.found) flags.push("acceptance-file-missing");
-  if (inputs.acceptance.found && inputs.acceptance.criteriaCount === 0) {
+  if (!inputs.acceptanceFound) flags.push("acceptance-file-missing");
+  if (inputs.acceptanceFound && inputs.criteriaCount === 0) {
     flags.push("no-acceptance-criteria");
   }
   if (inputs.mapping.coverageStatus === "partial") flags.push("coverage-partial");
@@ -142,65 +110,57 @@ function buildEvidenceSourcesUsed(
 export async function generateEvidenceMap(
   opts: EvidenceMapOptions,
 ): Promise<CommandResult<EvidenceMapData>> {
-  const [{ result: acceptance }, git, ocn] = await Promise.all([
-    loadAcceptanceFile(opts.cwd),
-    readLocalGit(opts.cwd),
-    readOcnProjectState(opts.cwd),
-  ]);
-
-  const warnings: string[] = [];
-  let github: GitHubPrAnalyzeData | null = null;
-  let githubUnavailable = false;
-  const githubRequested = typeof opts.prNumber === "number";
-
-  if (githubRequested && opts.prNumber !== undefined) {
-    const ghResult = await analyzeGithubPr({
-      prNumber: opts.prNumber,
+  const ctx =
+    opts.context ??
+    (await buildEvidenceContext({
       cwd: opts.cwd,
-      ...(opts.runner !== undefined ? { runner: opts.runner } : {}),
-    });
-    if (
-      ghResult.ok === true &&
-      ghResult.data !== undefined &&
-      ghResult.data.pr !== null
-    ) {
-      github = ghResult.data;
-    } else {
-      githubUnavailable = true;
-      const data = ghResult.data as GitHubPrAnalyzeData | undefined;
-      const reason = data?.reason ?? "unknown";
-      warnings.push(`github-evidence-unavailable: ${reason}`);
-    }
-  }
+      // evidence-map historically used a hybrid mode: local + (optional pr)
+      // without any explicit `--mode` flag. Mirror that with "combined" so
+      // PR data is fetched whenever a prNumber is supplied.
+      mode: typeof opts.prNumber === "number" ? "combined" : "local",
+      prNumber: typeof opts.prNumber === "number" ? opts.prNumber : null,
+      ghRunner: opts.runner ?? defaultGhRunner(),
+    }));
 
   const mapping = mapEvidence({
-    criteria: acceptance.criteria,
-    git,
-    github,
+    criteria: ctx.acceptance.criteria,
+    git: ctx.git,
+    github: ctx.github,
   });
 
   const analysis = buildAnalysis({
     mapping,
-    acceptance,
-    git,
-    githubUnavailable,
-    githubRequested,
+    acceptanceFound: ctx.acceptance.found,
+    criteriaCount: ctx.acceptance.criteriaCount,
+    git: ctx.git,
+    githubUnavailable: ctx.githubUnavailable,
+    githubRequested: ctx.githubRequested,
   });
 
-  const evidenceSourcesUsed = buildEvidenceSourcesUsed(github !== null);
+  const evidenceSourcesUsed = buildEvidenceSourcesUsed(ctx.github !== null);
+
+  // evidence-map's historical `warnings` array carried only the github
+  // unavailable warning (acceptance-loader warnings are not surfaced here
+  // for backward compatibility with the existing envelope shape).
+  const warnings: string[] = [];
+  if (ctx.githubRequested && ctx.githubUnavailable) {
+    for (const w of ctx.warnings) {
+      if (w.startsWith("github-evidence-unavailable")) warnings.push(w);
+    }
+  }
 
   const data: EvidenceMapData = {
     command: "evidence.map",
     implemented: true,
     noMutation: true,
     evidenceSourcesUsed,
-    acceptance,
+    acceptance: ctx.acceptance,
     mapping,
-    ocn: ocn satisfies ExecStatusOcnData,
+    ocn: ctx.ocn satisfies ExecStatusOcnData,
     analysis,
     warnings,
   };
 
-  const headline = acceptance.found ? HEADLINE_OK : HEADLINE_MISSING;
+  const headline = ctx.acceptance.found ? HEADLINE_OK : HEADLINE_MISSING;
   return ok(headline, data);
 }
