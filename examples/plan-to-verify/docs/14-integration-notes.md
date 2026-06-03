@@ -25,7 +25,7 @@ No queues, no jobs, no streaming. All flows are synchronous.
 
 ## API Impact｜API 影响
 
-- New CLI surface (4 commands) per `docs/07-api-contract.md`.
+- New CLI surface (4 commands) per `docs/08-api-contract.md`.
 - New stable `--json` envelope. Adding fields is allowed; removing or
   renaming requires a `mtt` major-version bump.
 

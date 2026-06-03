@@ -10,7 +10,7 @@
 
 | id | kind | role | meaning |
 |---|---|---|---|
-| `input_artifact_md` | input | input | the authored `docs/19-logic-backbone.md` |
+| `input_artifact_md` | input | input | the authored `docs/07-logic-backbone.md` |
 | `formula_extract_block` | formula | intermediate | extract the fenced `ocn-logic-graph` block |
 | `formula_zod_parse` | formula | intermediate | YAML load + zod schema validation |
 | `score_validation` | score | intermediate | the validator's issue set (5 drift checks) |

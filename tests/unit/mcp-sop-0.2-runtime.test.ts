@@ -102,10 +102,10 @@ describe("MCP runtime under 0.2.0 cutover", () => {
     // about. Project initialised once; create them in independent docs/
     // paths so we don't trip the FileExists gate.
     const newIds: ReadonlyArray<{ type: string; file: string }> = [
-      { type: "build-plan", file: "docs/10-build-plan.md" },
-      { type: "verification-report", file: "docs/14-verification-report.md" },
-      { type: "regression-evidence", file: "docs/17-regression-evidence.md" },
-      { type: "final-build-verdict", file: "docs/18-final-build-verdict.md" },
+      { type: "build-plan", file: "docs/11-build-plan.md" },
+      { type: "verification-report", file: "docs/15-verification-report.md" },
+      { type: "regression-evidence", file: "docs/18-regression-evidence.md" },
+      { type: "final-build-verdict", file: "docs/19-final-build-verdict.md" },
     ];
     for (const a of newIds) {
       const result = await createArtifactTool.handler({

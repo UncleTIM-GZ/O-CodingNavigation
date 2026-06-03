@@ -9,7 +9,7 @@ import { z } from "zod";
 // This file is the single source of truth (zod schema + inferred types). The
 // validator in src/core/gate/logic-backbone-validator.ts checks the graph for
 // the five drift defects (missing role, dangling reference, cycle, orphan,
-// unbound trigger). See docs/19-logic-backbone.md for the authored form.
+// unbound trigger). See docs/07-logic-backbone.md for the authored form.
 
 // What a node IS (DMN/DAG vocabulary mapped to the user's terms).
 export const LogicNodeKind = z.enum([

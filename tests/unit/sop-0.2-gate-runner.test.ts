@@ -242,7 +242,8 @@ describe("SOP 0.2.0 gate runner — full bundled template passes every step", ()
     it(`passes ${s.stepId} when ${s.artifactPath} is the bundled 0.2.0 template (canonical + bilingual headings)`, async () => {
       const entry = getTemplate(s.docType);
       expect(DOC_TYPES).toContain(s.docType);
-      expect(entry.relativePath).toBe(s.artifactPath);
+      // Write at the 0.2.0 profile path (s.artifactPath) and gate with SOP_020;
+      // registry path is version-independent now, so no relativePath equality.
       await seedState(project.cwd, {
         currentStateId: s.stateId,
         currentStepId: s.stepId,

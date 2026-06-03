@@ -400,7 +400,7 @@ SOP 0.3.0 ships `doc create` templates for all 20 steps. The table below maps ev
 | `step_data_model` | `docs/06-data-model.md` | `schema.sql`, Prisma schema, ORM models, ER diagrams, DB migration files |
 | `step_api_contract` | `docs/07-api-contract.md` | OpenAPI / Swagger spec, Postman collections, router code, `@RestController` annotations |
 | `step_test_strategy` | `docs/08-test-strategy.md` | `tests/` directory layout, CI config (`.github/workflows/`), coverage targets, E2E framework choice |
-| `step_logic_backbone` | `docs/19-logic-backbone.md` | Existing scoring/decision/rules logic, formula definitions, signal→action mappings |
+| `step_logic_backbone` | `docs/07-logic-backbone.md` | Existing scoring/decision/rules logic, formula definitions, signal→action mappings |
 
 **PLAN phase**
 
@@ -586,7 +586,7 @@ Full wiring guidance + per-tool envelopes: [`docs/mcp-usage.md`](./docs/mcp-usag
 | `navigator.where_am_i` | State snapshot. | No |
 | `navigator.brief` | Current-step brief. | No |
 | `navigator.run_gate` | Read-only gate aggregation. | No |
-| `navigator.create_artifact` | Create from the full template registry (20 types: 00–18 plus logic-backbone). | Filesystem only |
+| `navigator.create_artifact` | Create from the full template registry (20 types: 00–19, logic-backbone at 07). | Filesystem only |
 | `navigator.capture_log` | Append to `docs/19-dev-log.md` (`type=dev`) or `docs/18-research-log.md` (`type=research`). **`type=decision` is hard-rejected.** | Filesystem only |
 | `navigator.detect_sop_version` | Drift between locked profile and bundled OCN SOP. | No |
 | `navigator.generate_next_prompt` | Required sections + governance reminder + uncertainty policy + self-check rule. | No |
@@ -652,7 +652,7 @@ The GA Prep phase was a documentation, packaging, and operational-readiness audi
 
 - **MVP 1–6 complete** — the six Execution Navigator commands (§6.2) shipped in PRs #63–#68 and merged to main. Cross-cutting review fixes landed in PR #69 ([report](./docs/reports/2026-05-04-execution-navigator-review-fixes-pr-a.md)). Series closure: [`docs/reports/2026-05-04-execution-navigator-verdict-draft.md`](./docs/reports/2026-05-04-execution-navigator-verdict-draft.md).
 - Current external package: `0.3.0-beta.0` — Planning Gatekeeper (§6.1) + Execution Evidence Navigator (§6.2) + the Logic Backbone DESIGN gate.
-- **Logic Backbone shipped in `0.3.0-beta.0`** — SOP 0.3.0 adds the DESIGN-phase `docs/19-logic-backbone.md` artifact; `ocn check` machine-validates its computation/decision graph (blocks on missing role, duplicate node id, dangling reference, dependency cycle, orphan node, unbound trigger) and on pass writes `.ocoding/logic-graph.json`, which `ocn brief` summarises as execution order + trigger bindings.
+- **Logic Backbone shipped in `0.3.0-beta.0`** — SOP 0.3.0 adds the DESIGN-phase `docs/07-logic-backbone.md` artifact; `ocn check` machine-validates its computation/decision graph (blocks on missing role, duplicate node id, dangling reference, dependency cycle, orphan node, unbound trigger) and on pass writes `.ocoding/logic-graph.json`, which `ocn brief` summarises as execution order + trigger bindings.
 - Still beta, not GA. Validated with Claude Desktop on Windows with WSL2; Cursor and Cline remain unverified.
 - Next gate: real external-repo dogfood pass before any further release sync; GA promotion remains gated on its own DEC.
 
@@ -1062,7 +1062,7 @@ SOP 0.3.0 的 20 个 step 全有 `doc create` 模板。下表把每个 step 对�
 | `step_data_model` | `docs/06-data-model.md` | `schema.sql`、Prisma schema、ORM models、ER 图、数据库迁移文件 |
 | `step_api_contract` | `docs/07-api-contract.md` | OpenAPI / Swagger spec、Postman collection、router 代码、`@RestController` 注解 |
 | `step_test_strategy` | `docs/08-test-strategy.md` | `tests/` 目录结构、CI 配置（`.github/workflows/`）、覆盖率目标、E2E 框架选择 |
-| `step_logic_backbone` | `docs/19-logic-backbone.md` | 已有的打分/决策/规则逻辑、公式定义、信号→动作映射 |
+| `step_logic_backbone` | `docs/07-logic-backbone.md` | 已有的打分/决策/规则逻辑、公式定义、信号→动作映射 |
 
 **PLAN 阶段**
 
@@ -1248,7 +1248,7 @@ OCN 的 MCP server（`ocn-mcp`）通过 stdio 暴露 7 个工具。**唯一已�
 | `navigator.where_am_i` | 状态快照。 | 否 |
 | `navigator.brief` | 当前 step 的 brief。 | 否 |
 | `navigator.run_gate` | 只读门禁聚合。 | 否 |
-| `navigator.create_artifact` | 用完整模板库创建产物（20 类：00–18 加 logic-backbone）。 | 仅文件系统 |
+| `navigator.create_artifact` | 用完整模板库创建产物（20 类：00–19，logic-backbone 在 07）。 | 仅文件系统 |
 | `navigator.capture_log` | 追加到 `docs/19-dev-log.md`（`type=dev`）或 `docs/18-research-log.md`（`type=research`）；**`type=decision` 强拒**。 | 仅文件系统 |
 | `navigator.detect_sop_version` | 比较已落盘 SOP profile 与内置 OCN SOP，输出漂移状态。 | 否 |
 | `navigator.generate_next_prompt` | 当前 step 的必填章节 + 治理提醒 + 不确定性策略 + 自检规则。 | 否 |
@@ -1314,7 +1314,7 @@ GA Prep 阶段是从 Phase 2 收口走到 beta candidate 准备的一段文档/�
 
 - **MVP 1–6 已完成**——§F.2 的 6 条 Execution Navigator 命令在 PR #63–#68 中陆续 ship 并合入 main；横切 review 修复在 PR #69 落地（[报告](./docs/reports/2026-05-04-execution-navigator-review-fixes-pr-a.md)）。系列收口：[`docs/reports/2026-05-04-execution-navigator-verdict-draft.md`](./docs/reports/2026-05-04-execution-navigator-verdict-draft.md)。
 - 当前外部包：`0.3.0-beta.0`——Planning Gatekeeper（§F.1）+ Execution Evidence Navigator（§F.2）+ Logic Backbone DESIGN 门禁。
-- **Logic Backbone 在 `0.3.0-beta.0` ship**——SOP 0.3.0 新增 DESIGN 阶段产物 `docs/19-logic-backbone.md`；`ocn check` 机器校验其计算/决策图（在缺角色、节点 id 重复、悬空引用、依赖循环、孤儿节点、未绑定触发器时阻断），通过则写出 `.ocoding/logic-graph.json`，`ocn brief` 把它汇总成执行顺序 + 触发器绑定。
+- **Logic Backbone 在 `0.3.0-beta.0` ship**——SOP 0.3.0 新增 DESIGN 阶段产物 `docs/07-logic-backbone.md`；`ocn check` 机器校验其计算/决策图（在缺角色、节点 id 重复、悬空引用、依赖循环、孤儿节点、未绑定触发器时阻断），通过则写出 `.ocoding/logic-graph.json`，`ocn brief` 把它汇总成执行顺序 + 触发器绑定。
 - 仍是 beta，非 GA。已在 Claude Desktop on Windows + WSL2 验证；Cursor 与 Cline 仍未验证。
 - 下一道门：在真实外部 repo 完成一次 dogfood，再考虑后续 release sync；GA promotion 仍由独立 DEC 把守。
 

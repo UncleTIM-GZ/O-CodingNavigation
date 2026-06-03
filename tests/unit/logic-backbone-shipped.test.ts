@@ -24,11 +24,8 @@ describe("shipped logic backbones", () => {
     expectValid(getTemplate("logic-backbone").template);
   });
 
-  it("docs/19-logic-backbone.md (OCN dogfood) validates clean", async () => {
-    const content = await fs.readFile(
-      join(process.cwd(), "docs", "19-logic-backbone.md"),
-      "utf8",
-    );
+  it("docs/07-logic-backbone.md (OCN dogfood) validates clean", async () => {
+    const content = await fs.readFile(join(process.cwd(), "docs", "07-logic-backbone.md"), "utf8");
     expectValid(content);
   });
 });

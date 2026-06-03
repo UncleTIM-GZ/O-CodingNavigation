@@ -34,7 +34,7 @@ v1.0.0 development:
 - Performance test passes the 50 ms threshold on the GitHub Actions
   ubuntu-latest runner.
 - Coverage hit 96% in `core/`, 84% in `cli/`, 91% project-wide — above
-  the thresholds in `docs/08-test-strategy.md`.
+  the thresholds in `docs/09-test-strategy.md`.
 
 ## Commands Run｜执行命令
 
@@ -57,7 +57,7 @@ bash scripts/smoke.sh   # smoke completed
   one downstream tooling case.
 - The benchmark threshold ended up being measured at 27 ms on the CI
   runner (well under the 50 ms target); recorded in
-  `docs/14-verification-report.md`.
+  `docs/15-verification-report.md`.
 
 ## Open Issues｜遗留问题
 

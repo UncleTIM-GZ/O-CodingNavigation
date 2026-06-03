@@ -9,17 +9,17 @@
 
 ## Summary｜摘要
 
-`mtt` v1.0.0 was built against `docs/10-build-plan.md`, delivering all
+`mtt` v1.0.0 was built against `docs/11-build-plan.md`, delivering all
 four CLI commands (`add`, `list`, `done`, `rm`) with atomic JSON
 storage, bilingual error envelope, smoke + perf tests, and a
-publishable npm package. Verification (`docs/14-verification-report.md`)
+publishable npm package. Verification (`docs/15-verification-report.md`)
 came back green; one transient verification-time flake was identified
-and fixed (`docs/16-failure-fix-log.md` Entry 1) and confirmed gone via
-50× regression repeats (`docs/17-regression-evidence.md`).
+and fixed (`docs/17-failure-fix-log.md` Entry 1) and confirmed gone via
+50× regression repeats (`docs/18-regression-evidence.md`).
 
 ## Acceptance Status｜验收状态
 
-Per `docs/15-acceptance-mapping.md`:
+Per `docs/16-acceptance-mapping.md`:
 
 - 7 / 7 acceptance items pass.
 - 0 fail, 0 waived.
@@ -27,7 +27,7 @@ Per `docs/15-acceptance-mapping.md`:
 
 ## Verification Status｜验证状态
 
-Per `docs/14-verification-report.md`:
+Per `docs/15-verification-report.md`:
 
 - Lint: pass (0 warnings).
 - Typecheck: pass.

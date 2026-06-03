@@ -46,7 +46,7 @@ describe("core/init.initProject", () => {
     expect(artifactsYaml).toMatch(/artifact_prd:/);
     expect(artifactsYaml).toMatch(/path: docs\/02-prd\.md/);
     expect(artifactsYaml).toMatch(/artifact_final_build_verdict:/);
-    expect(artifactsYaml).toMatch(/path: docs\/18-final-build-verdict\.md/);
+    expect(artifactsYaml).toMatch(/path: docs\/19-final-build-verdict\.md/);
   });
 
   // P1-003 — exercises the full canonical snapshot. If anyone reverts data.ts
@@ -110,18 +110,18 @@ describe("core/init.initProject", () => {
       "docs/04-technical-architecture.md",
       "docs/05-information-architecture.md",
       "docs/06-data-model.md",
-      "docs/07-api-contract.md",
-      "docs/08-test-strategy.md",
-      "docs/09-mvp-plan.md",
-      "docs/10-build-plan.md",
-      "docs/11-implementation-log.md",
-      "docs/12-change-evidence.md",
-      "docs/13-integration-notes.md",
-      "docs/14-verification-report.md",
-      "docs/15-acceptance-mapping.md",
-      "docs/16-failure-fix-log.md",
-      "docs/17-regression-evidence.md",
-      "docs/18-final-build-verdict.md",
+      "docs/08-api-contract.md",
+      "docs/09-test-strategy.md",
+      "docs/10-mvp-plan.md",
+      "docs/11-build-plan.md",
+      "docs/12-implementation-log.md",
+      "docs/13-change-evidence.md",
+      "docs/14-integration-notes.md",
+      "docs/15-verification-report.md",
+      "docs/16-acceptance-mapping.md",
+      "docs/17-failure-fix-log.md",
+      "docs/18-regression-evidence.md",
+      "docs/19-final-build-verdict.md",
     ];
     for (const path of artifactPaths) {
       expect(artifactsYaml, `${path} mapped in artifacts.yaml`).toContain(`path: ${path}`);

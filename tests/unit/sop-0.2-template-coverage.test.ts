@@ -8,11 +8,7 @@ import {
 } from "../../src/sops/default-ai-coding-sop/0.2.0/data.js";
 import { parseHeadings } from "../../src/core/artifact/markdown-parser.js";
 import { matchSection } from "../../src/core/artifact/required-section-matcher.js";
-import {
-  DOC_TYPES,
-  type DocType,
-  getTemplate,
-} from "../../src/core/templates/index.js";
+import { DOC_TYPES, type DocType, getTemplate } from "../../src/core/templates/index.js";
 import { writeArtifact } from "../../src/core/artifact/template-writer.js";
 import { createTempProject } from "../helpers/temp-project.js";
 
@@ -38,9 +34,7 @@ function deriveExpectations(): readonly TemplateExpectation[] {
       if (step.artifactPath === null) continue;
       // Map step id -> doc type by stripping the "step_" prefix and using
       // the same kebab transform the registry uses.
-      const docType = step.stepId
-        .replace(/^step_/, "")
-        .replace(/_/g, "-") as DocType;
+      const docType = step.stepId.replace(/^step_/, "").replace(/_/g, "-") as DocType;
       out.push({ stepId: step.stepId, artifactPath: step.artifactPath, docType });
     }
   }
@@ -58,7 +52,9 @@ describe("SOP 0.2.0 template coverage — every artifact id 00-18 has a template
     it(`registers a template for ${exp.docType} (${exp.stepId} -> ${exp.artifactPath})`, () => {
       expect(DOC_TYPES).toContain(exp.docType);
       const entry = getTemplate(exp.docType);
-      expect(entry.relativePath).toBe(exp.artifactPath);
+      // Path now comes from the active SOP profile (artifactPathForStep), not
+      // the registry — 0.3.0 renumbered, so the registry path is version-
+      // independent metadata and no longer equals the 0.2.0 profile path.
       expect(entry.template.length).toBeGreaterThan(0);
     });
   }
@@ -115,9 +111,7 @@ describe("SOP 0.2.0 template coverage — focus check on the 9 new strong-gated 
       const stepId = `step_${docType.replace(/-/g, "_")}`;
       const required = REQUIRED_SECTIONS_BY_STEP[stepId] ?? [];
       const headings = parseHeadings(entry.template);
-      const missing = required
-        .filter((s) => !matchSection(headings, s))
-        .map((s) => s.id);
+      const missing = required.filter((s) => !matchSection(headings, s)).map((s) => s.id);
       if (missing.length > 0) failures.push({ docType, missing });
     }
     expect(failures).toEqual([]);

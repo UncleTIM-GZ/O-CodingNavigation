@@ -44,7 +44,7 @@ scripts/smoke.sh
 9. Add bilingual error envelope to every command path.
 10. Write `scripts/smoke.sh`.
 11. Write `tests/perf/list-tag.bench.ts`; record threshold in
-    `docs/14-verification-report.md`.
+    `docs/15-verification-report.md`.
 
 ## Non-goals｜非目标
 
@@ -75,4 +75,4 @@ bash scripts/smoke.sh
 ```
 
 All must exit 0. Coverage must hit the thresholds in
-`docs/08-test-strategy.md`.
+`docs/09-test-strategy.md`.
