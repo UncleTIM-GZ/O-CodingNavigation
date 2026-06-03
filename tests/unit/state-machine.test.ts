@@ -37,13 +37,14 @@ describe("SopProfile state-machine API", () => {
     ]);
   });
 
-  it("returns the configured steps for state_design (5 steps including technical-architecture first)", () => {
+  it("returns the configured steps for state_design (6 steps; logic_backbone last under 0.3.0)", () => {
     expect(profile.stepsForState("state_design")).toEqual([
       "step_technical_architecture",
       "step_information_architecture",
       "step_data_model",
       "step_api_contract",
       "step_test_strategy",
+      "step_logic_backbone",
     ]);
   });
 
@@ -161,10 +162,18 @@ describe("nextStepFor", () => {
     });
   });
 
-  it("advances state_design final step into state_plan/step_mvp_plan", () => {
+  it("advances within state_design: test_strategy → logic_backbone (0.3.0)", () => {
     const next = nextStepFor(profile, {
       stateId: "state_design",
       stepId: "step_test_strategy",
+    });
+    expect(next).toEqual({ stateId: "state_design", stepId: "step_logic_backbone" });
+  });
+
+  it("advances state_design final step (logic_backbone) into state_plan/step_mvp_plan", () => {
+    const next = nextStepFor(profile, {
+      stateId: "state_design",
+      stepId: "step_logic_backbone",
     });
     expect(next).toEqual({ stateId: "state_plan", stepId: "step_mvp_plan" });
   });

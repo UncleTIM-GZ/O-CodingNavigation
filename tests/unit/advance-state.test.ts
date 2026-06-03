@@ -91,9 +91,9 @@ describe("advanceState", () => {
   });
 
   it("returns ERR_STATE_MACHINE at the terminal step (state_verify / step_final_build_verdict)", async () => {
-    // SOP 0.2.0 PR 4 (DEC-023) — runtime cutover. Walk all 19 steps via the
-    // bundled templates. Every step now has required sections; using the
-    // bundled template guarantees a passing gate.
+    // SOP 0.3.0 default — walk all 20 steps via the bundled templates. Every
+    // step now has required sections; using the bundled template guarantees a
+    // passing gate (the logic-backbone template ships a valid graph).
     const types: readonly string[] = [
       "project-brief",
       "scope",
@@ -104,6 +104,7 @@ describe("advanceState", () => {
       "data-model",
       "api-contract",
       "test-strategy",
+      "logic-backbone",
       "mvp-plan",
       "build-plan",
       "implementation-log",

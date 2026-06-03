@@ -1,6 +1,6 @@
 # Amendment AM-003 — Logic Backbone (machine-verifiable computation/decision graph)
 
-**Status**: Active (SOP 0.3.0 — additive, default flip deferred)
+**Status**: Active (SOP 0.3.0 — additive; runtime default flipped to 0.3.0)
 
 ## Date
 
@@ -66,26 +66,28 @@ prompts always see the logic spine.
    and the template registry maps one path per type; renumbering would force version-aware
    paths and break the frozen 0.2.0 suite. `step_logic_backbone` is ordered as the **last
    DESIGN step** (step order is the source of truth; file number is display-only per §4.1).
-2. **New SOP version 0.3.0, default deferred.** Adding a step is an additive minor bump
-   (§4.2): 0.2.0 stays frozen. The runtime default remains 0.2.0; 0.3.0 ships fully
-   implemented and tested, flip-ready — mirroring how 0.2.0 itself was staged (data+gate
-   first, default flip as a separate PR).
+2. **New SOP version 0.3.0, now the runtime default.** Adding a step is an additive
+   minor bump (§4.2): 0.2.0 stays frozen and importable via
+   `loadSopProfileByVersion("0.2.0")`. `loadSopProfile()` returns 0.3.0, so fresh
+   `ocn init` and every runtime path (gate / check / status / brief / advance / MCP)
+   enforce the logic-backbone step by default. The default profile now has 20 wired
+   steps (DESIGN grew from 5 to 6).
 
 ## Impact
 
-- Projects pinning 0.3.0 gain a mandatory, machine-checked logic backbone before BUILD.
+- Every fresh project gains a mandatory, machine-checked logic backbone before BUILD.
 - Five new node-id prefixes; one new artifact/step/template; one new `.ocoding/` file.
-- No breaking change to 0.2.0 or 0.1.0 projects (additive, version-isolated).
+- No breaking change to 0.1.0 / 0.2.0 (frozen, still importable by explicit version);
+  no migration layer is shipped (no old projects exist per user).
 - `navigator.create_artifact` MCP tool widened by one enum value (state advancement,
   gate enforcement, and decisions remain human-only per §4.8).
 
 ## Migration note
 
-To make the backbone enforced under the bare `ocn` CLI, a follow-up PR must flip the
-runtime default to 0.3.0 (updating the "19/20 wired steps" and default-version
-assertions), OR teach `loadSopProfile()` to resolve the version from the project's
-`.ocoding/config.yaml`. Until then, the gate is reachable via an explicit 0.3.0 profile
-(used by `tests/unit/logic-backbone-gate-runner.test.ts`).
+The runtime default is 0.3.0. `loadSopProfile()` does not yet resolve the version from a
+project's `.ocoding/config.yaml`; a project pinned to an older version still gets the
+default profile at runtime (acceptable per "no old projects exist"). Config-driven version
+resolution is a possible future refinement, not required here.
 
 ## References
 

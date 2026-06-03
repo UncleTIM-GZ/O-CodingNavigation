@@ -15,8 +15,9 @@ import {
 // implementation cannot drift (see src/core/gate/logic-backbone-validator.ts).
 //
 // Adding a step is an additive SOP minor bump (CLAUDE.md §4.2): 0.2.0 stays
-// frozen; new projects opt in by pinning 0.3.0. Renaming a stable id below
-// would be breaking — add a new version directory instead.
+// frozen and importable; 0.3.0 is the runtime default (AM-003 / DEC-025).
+// Renaming a stable id below would be breaking — add a new version directory
+// instead.
 
 export const PROFILE_ID = "default-ai-coding-sop";
 export const PROFILE_VERSION = "0.3.0";
@@ -52,9 +53,7 @@ export const STEPS_BY_STATE: Readonly<Record<StateId, readonly StepDef[]>> = {
   state_design: [...STEPS_BY_STATE_020.state_design, LOGIC_BACKBONE_STEP],
 };
 
-export const REQUIRED_SECTIONS_BY_STEP: Readonly<
-  Record<string, readonly RequiredSectionDef[]>
-> = {
+export const REQUIRED_SECTIONS_BY_STEP: Readonly<Record<string, readonly RequiredSectionDef[]>> = {
   ...REQUIRED_SECTIONS_BY_STEP_020,
   step_logic_backbone: LOGIC_BACKBONE_REQUIRED_SECTIONS,
 };

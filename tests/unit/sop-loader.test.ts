@@ -11,22 +11,23 @@ import {
 // path goes through 0.1.0 any more.
 
 describe("sop/loader.loadSopProfile", () => {
-  it("returns the default profile pinned to 0.2.0", () => {
+  it("returns the default profile pinned to 0.3.0", () => {
     const profile = loadSopProfile();
     expect(profile.id).toBe("default-ai-coding-sop");
-    expect(profile.version).toBe("0.2.0");
-    expect(DEFAULT_SOP_PROFILE_VERSION).toBe("0.2.0");
+    expect(profile.version).toBe("0.3.0");
+    expect(DEFAULT_SOP_PROFILE_VERSION).toBe("0.3.0");
   });
 
   it("provides yaml strings for sop / gates / artifacts / config", () => {
     const profile = loadSopProfile();
     expect(profile.sopYaml).toMatch(/profile: default-ai-coding-sop/);
-    expect(profile.sopYaml).toMatch(/version: 0\.2\.0/);
+    expect(profile.sopYaml).toMatch(/version: 0\.3\.0/);
     expect(profile.gatesYaml).toMatch(/section_product_form/);
     expect(profile.artifactsYaml).toMatch(/02-prd\.md/);
     expect(profile.artifactsYaml).toMatch(/18-final-build-verdict\.md/);
+    expect(profile.artifactsYaml).toMatch(/19-logic-backbone\.md/);
     expect(profile.defaultConfigYaml).toMatch(/tier: minimal/);
-    expect(profile.defaultConfigYaml).toMatch(/version: 0\.2\.0/);
+    expect(profile.defaultConfigYaml).toMatch(/version: 0\.3\.0/);
   });
 
   // Ensures runtime profile + persisted snapshot share the same (0.2.0) shape.
@@ -132,12 +133,12 @@ describe("sop/loader.loadSopProfile", () => {
     expect(total).toBe(10);
   });
 
-  it("loadSopProfileByVersion('0.2.0') is identical to the default", () => {
+  it("loadSopProfileByVersion('0.3.0') is identical to the default", () => {
     const def = loadSopProfile();
-    const v020 = loadSopProfileByVersion("0.2.0");
-    expect(def.version).toBe(v020.version);
-    expect(def.sopYaml).toBe(v020.sopYaml);
-    expect(def.gatesYaml).toBe(v020.gatesYaml);
-    expect(def.artifactsYaml).toBe(v020.artifactsYaml);
+    const v030 = loadSopProfileByVersion("0.3.0");
+    expect(def.version).toBe(v030.version);
+    expect(def.sopYaml).toBe(v030.sopYaml);
+    expect(def.gatesYaml).toBe(v030.gatesYaml);
+    expect(def.artifactsYaml).toBe(v030.artifactsYaml);
   });
 });

@@ -1,6 +1,5 @@
-// SOP 0.3.0 bundled default config. Adopted by a project when it pins 0.3.0
-// (sopProfile.version: 0.3.0). The runtime default remains 0.2.0 until the
-// default flip ships separately, mirroring how 0.2.0 was staged.
+// SOP 0.3.0 bundled default config. 0.3.0 is the runtime default
+// (AM-003 / DEC-025), so fresh `ocn init` writes this.
 export const defaultConfigYaml = `project:
   tier: minimal
   language: zh

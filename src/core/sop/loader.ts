@@ -45,18 +45,19 @@ import { sopYaml as sopYaml030 } from "../../sops/default-ai-coding-sop/0.3.0/so
 // `render.ts`. Adding a step requires editing data.ts only — both surfaces
 // pick it up automatically.
 //
-// SOP 0.2.0 PR 4 (DEC-023) — runtime cutover: `loadSopProfile()` now
-// returns 0.2.0 by default. Fresh `ocn init` writes
-// `sopProfileVersion: "0.2.0"` and renders the 0.2.0 snapshot files; gate /
-// check / status / brief / advance / MCP all see the 0.2.0 profile by
-// default. `loadSopProfileByVersion("0.1.0")` and `("0.2.0")` remain
-// available for tests / callers that need an explicit version, but no
-// default runtime path goes through 0.1.0 any more (no old projects exist
-// per user — no migration layer is shipped).
+// SOP 0.3.0 (AM-003 / DEC-025) — runtime cutover: `loadSopProfile()` now
+// returns 0.3.0 by default. Fresh `ocn init` writes
+// `sopProfileVersion: "0.3.0"` and renders the 0.3.0 snapshot files; gate /
+// check / status / brief / advance / MCP all see the 0.3.0 profile (= 0.2.0 +
+// step_logic_backbone) by default. `loadSopProfileByVersion("0.1.0")`,
+// `("0.2.0")`, and `("0.3.0")` remain available for tests / callers that need
+// an explicit version (no old projects exist per user — no migration layer is
+// shipped).
 
 // Re-export STATE_ORDER for backward compatibility with existing imports of
-// the runtime constant. Always reflects the default profile.
-export const STATE_ORDER: readonly StateId[] = STATE_ORDER_020;
+// the runtime constant. Always reflects the default profile. (0.3.0 keeps the
+// same 8 states as 0.2.0; only the DESIGN step list grew.)
+export const STATE_ORDER: readonly StateId[] = STATE_ORDER_030;
 
 export type SopProfileVersion = "0.1.0" | "0.2.0" | "0.3.0";
 
@@ -95,9 +96,7 @@ const PROFILE_SOURCES: Readonly<Record<SopProfileVersion, ProfileSource>> = {
     stepsByState: STEPS_BY_STATE_020,
     requiredSectionsByStep: REQUIRED_SECTIONS_BY_STEP_020,
   },
-  // SOP 0.3.0 — 0.2.0 + step_logic_backbone. Importable for projects that pin
-  // 0.3.0 and for the logic-backbone gate tests; the default stays 0.2.0 until
-  // the runtime flip ships separately (same staging used for 0.2.0).
+  // SOP 0.3.0 — 0.2.0 + step_logic_backbone. The runtime default (AM-003).
   "0.3.0": {
     id: PROFILE_ID_030,
     version: PROFILE_VERSION_030 as SopProfileVersion,
@@ -174,11 +173,12 @@ function getProfile(version: SopProfileVersion): SopProfile {
 }
 
 /**
- * Default runtime profile — flipped to 0.2.0 in SOP 0.2.0 PR 4 (DEC-023).
- * Every runtime path (init, status, brief, check, gate, advance, MCP) reads
- * this loader by default and therefore sees 0.2.0 from this commit forward.
+ * Default runtime profile — flipped to 0.3.0 (AM-003 / DEC-025); the prior
+ * default was 0.2.0 (DEC-023). Every runtime path (init, status, brief, check,
+ * gate, advance, MCP) reads this loader by default and therefore sees 0.3.0
+ * (= 0.2.0 + step_logic_backbone) from this commit forward.
  */
-export const DEFAULT_SOP_PROFILE_VERSION: SopProfileVersion = "0.2.0";
+export const DEFAULT_SOP_PROFILE_VERSION: SopProfileVersion = "0.3.0";
 
 export function loadSopProfile(): SopProfile {
   return getProfile(DEFAULT_SOP_PROFILE_VERSION);

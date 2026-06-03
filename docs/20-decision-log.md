@@ -2866,7 +2866,7 @@ Negative:
 
 ## DEC-025｜Logic Backbone — machine-verifiable computation/decision graph (SOP 0.3.0)
 
-**Status**: Active (additive; runtime default flip deferred)
+**Status**: Active (additive; runtime default flipped to 0.3.0)
 **Date**: 2026-06-03
 **Amendment**: AM-003 (`docs/amendments/2026-06-03-logic-backbone-amendment.md`)
 
@@ -2888,12 +2888,14 @@ Markdown-friendly authored doc + `.ocoding/` JSON projection (§4.10).
 
 - **Additive slot `docs/19`**, no renumbering of the frozen 00–18; DESIGN-phase position is
   set by step order, not file number (§4.1).
-- **New SOP 0.3.0** (additive minor bump, §4.2); runtime default stays 0.2.0 and 0.3.0
-  ships flip-ready — same staging used for 0.2.0.
+- **New SOP 0.3.0** (additive minor bump, §4.2) is the runtime default; `loadSopProfile()`
+  returns 0.3.0 (20 wired steps). 0.2.0 stays frozen and importable by explicit version.
 
 ### Out of scope (this DEC)
 
-- No runtime default flip to 0.3.0 (separate DEC-bound PR).
+- No config-driven SOP version resolution — `loadSopProfile()` returns the default; a
+  project pinned to an older version still gets the default at runtime (acceptable: no old
+  projects exist). A possible future refinement.
 - No new MCP write capability beyond the `create_artifact` enum value — advance / decisions
   / gate enforcement remain human-only (§4.8).
 - No empty-graph rule (a graph with no nodes passes vacuously by design).
