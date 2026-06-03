@@ -113,6 +113,7 @@ describe("ocn doc create — 5 supported types", () => {
       "failure-fix-log",
       "regression-evidence",
       "final-build-verdict",
+      "logic-backbone",
     ]);
   }, 30_000);
 

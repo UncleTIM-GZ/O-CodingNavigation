@@ -17,28 +17,124 @@ interface Step {
 }
 
 const FULL_PATH: readonly Step[] = [
-  { stateId: "state_discovery", stepId: "step_project_brief", docType: "project-brief", artifactPath: "docs/00-project-brief.md" },
-  { stateId: "state_spec", stepId: "step_scope", docType: "scope", artifactPath: "docs/01-scope.md" },
+  {
+    stateId: "state_discovery",
+    stepId: "step_project_brief",
+    docType: "project-brief",
+    artifactPath: "docs/00-project-brief.md",
+  },
+  {
+    stateId: "state_spec",
+    stepId: "step_scope",
+    docType: "scope",
+    artifactPath: "docs/01-scope.md",
+  },
   { stateId: "state_spec", stepId: "step_prd", docType: "prd", artifactPath: "docs/02-prd.md" },
-  { stateId: "state_spec", stepId: "step_acceptance_criteria", docType: "acceptance-criteria", artifactPath: "docs/03-acceptance-criteria.md" },
-  { stateId: "state_design", stepId: "step_technical_architecture", docType: "technical-architecture", artifactPath: "docs/04-technical-architecture.md" },
-  { stateId: "state_design", stepId: "step_information_architecture", docType: "information-architecture", artifactPath: "docs/05-information-architecture.md" },
-  { stateId: "state_design", stepId: "step_data_model", docType: "data-model", artifactPath: "docs/06-data-model.md" },
-  { stateId: "state_design", stepId: "step_api_contract", docType: "api-contract", artifactPath: "docs/07-api-contract.md" },
-  { stateId: "state_design", stepId: "step_test_strategy", docType: "test-strategy", artifactPath: "docs/08-test-strategy.md" },
-  { stateId: "state_plan", stepId: "step_mvp_plan", docType: "mvp-plan", artifactPath: "docs/09-mvp-plan.md" },
-  { stateId: "state_plan", stepId: "step_build_plan", docType: "build-plan", artifactPath: "docs/10-build-plan.md" },
-  { stateId: "state_build", stepId: "step_implementation_log", docType: "implementation-log", artifactPath: "docs/11-implementation-log.md" },
-  { stateId: "state_build", stepId: "step_change_evidence", docType: "change-evidence", artifactPath: "docs/12-change-evidence.md" },
-  { stateId: "state_build", stepId: "step_integration_notes", docType: "integration-notes", artifactPath: "docs/13-integration-notes.md" },
-  { stateId: "state_verify", stepId: "step_verification_report", docType: "verification-report", artifactPath: "docs/14-verification-report.md" },
-  { stateId: "state_verify", stepId: "step_acceptance_mapping", docType: "acceptance-mapping", artifactPath: "docs/15-acceptance-mapping.md" },
-  { stateId: "state_verify", stepId: "step_failure_fix_log", docType: "failure-fix-log", artifactPath: "docs/16-failure-fix-log.md" },
-  { stateId: "state_verify", stepId: "step_regression_evidence", docType: "regression-evidence", artifactPath: "docs/17-regression-evidence.md" },
-  { stateId: "state_verify", stepId: "step_final_build_verdict", docType: "final-build-verdict", artifactPath: "docs/18-final-build-verdict.md" },
+  {
+    stateId: "state_spec",
+    stepId: "step_acceptance_criteria",
+    docType: "acceptance-criteria",
+    artifactPath: "docs/03-acceptance-criteria.md",
+  },
+  {
+    stateId: "state_design",
+    stepId: "step_technical_architecture",
+    docType: "technical-architecture",
+    artifactPath: "docs/04-technical-architecture.md",
+  },
+  {
+    stateId: "state_design",
+    stepId: "step_information_architecture",
+    docType: "information-architecture",
+    artifactPath: "docs/05-information-architecture.md",
+  },
+  {
+    stateId: "state_design",
+    stepId: "step_data_model",
+    docType: "data-model",
+    artifactPath: "docs/06-data-model.md",
+  },
+  {
+    stateId: "state_design",
+    stepId: "step_api_contract",
+    docType: "api-contract",
+    artifactPath: "docs/07-api-contract.md",
+  },
+  {
+    stateId: "state_design",
+    stepId: "step_test_strategy",
+    docType: "test-strategy",
+    artifactPath: "docs/08-test-strategy.md",
+  },
+  {
+    stateId: "state_design",
+    stepId: "step_logic_backbone",
+    docType: "logic-backbone",
+    artifactPath: "docs/19-logic-backbone.md",
+  },
+  {
+    stateId: "state_plan",
+    stepId: "step_mvp_plan",
+    docType: "mvp-plan",
+    artifactPath: "docs/09-mvp-plan.md",
+  },
+  {
+    stateId: "state_plan",
+    stepId: "step_build_plan",
+    docType: "build-plan",
+    artifactPath: "docs/10-build-plan.md",
+  },
+  {
+    stateId: "state_build",
+    stepId: "step_implementation_log",
+    docType: "implementation-log",
+    artifactPath: "docs/11-implementation-log.md",
+  },
+  {
+    stateId: "state_build",
+    stepId: "step_change_evidence",
+    docType: "change-evidence",
+    artifactPath: "docs/12-change-evidence.md",
+  },
+  {
+    stateId: "state_build",
+    stepId: "step_integration_notes",
+    docType: "integration-notes",
+    artifactPath: "docs/13-integration-notes.md",
+  },
+  {
+    stateId: "state_verify",
+    stepId: "step_verification_report",
+    docType: "verification-report",
+    artifactPath: "docs/14-verification-report.md",
+  },
+  {
+    stateId: "state_verify",
+    stepId: "step_acceptance_mapping",
+    docType: "acceptance-mapping",
+    artifactPath: "docs/15-acceptance-mapping.md",
+  },
+  {
+    stateId: "state_verify",
+    stepId: "step_failure_fix_log",
+    docType: "failure-fix-log",
+    artifactPath: "docs/16-failure-fix-log.md",
+  },
+  {
+    stateId: "state_verify",
+    stepId: "step_regression_evidence",
+    docType: "regression-evidence",
+    artifactPath: "docs/17-regression-evidence.md",
+  },
+  {
+    stateId: "state_verify",
+    stepId: "step_final_build_verdict",
+    docType: "final-build-verdict",
+    artifactPath: "docs/18-final-build-verdict.md",
+  },
 ];
 
-describe("ocn — SOP 0.2.0 full 19-step flow (CLI)", () => {
+describe("ocn — SOP 0.3.0 full 20-step flow (CLI)", () => {
   let project: TempProject;
 
   beforeEach(async () => {
@@ -49,32 +145,34 @@ describe("ocn — SOP 0.2.0 full 19-step flow (CLI)", () => {
     await project.cleanup();
   });
 
-  it("fresh `ocn init` writes 0.2.0 state.json + snapshot files", async () => {
+  it("fresh `ocn init` writes 0.3.0 state.json + snapshot files", async () => {
     const initRes = await spawnOcn(["init", "--tier", "minimal"], { cwd: project.cwd });
     expect(initRes.exitCode).toBe(0);
 
     const state = JSON.parse(
       await fs.readFile(join(project.cwd, ".ocoding", "state.json"), "utf8"),
     );
-    expect(state.project.sopProfileVersion).toBe("0.2.0");
+    expect(state.project.sopProfileVersion).toBe("0.3.0");
     expect(state.currentStateId).toBe("state_discovery");
     expect(state.currentStepId).toBe("step_project_brief");
 
     const sopYaml = await fs.readFile(join(project.cwd, ".ocoding", "sop.yaml"), "utf8");
-    expect(sopYaml).toMatch(/version: 0\.2\.0/);
+    expect(sopYaml).toMatch(/version: 0\.3\.0/);
     expect(sopYaml).toContain("step_final_build_verdict");
+    expect(sopYaml).toContain("step_logic_backbone");
 
     const artifactsYaml = await fs.readFile(
       join(project.cwd, ".ocoding", "artifacts.yaml"),
       "utf8",
     );
     expect(artifactsYaml).toContain("docs/18-final-build-verdict.md");
+    expect(artifactsYaml).toContain("docs/19-logic-backbone.md");
 
     const configYaml = await fs.readFile(join(project.cwd, ".ocoding", "config.yaml"), "utf8");
-    expect(configYaml).toContain("0.2.0");
+    expect(configYaml).toContain("0.3.0");
   }, 30_000);
 
-  it("walks all 19 steps via doc create + advance and terminates cleanly at step_final_build_verdict", async () => {
+  it("walks all 20 steps via doc create + advance and terminates cleanly at step_final_build_verdict", async () => {
     await spawnOcn(["init", "--tier", "minimal"], { cwd: project.cwd });
 
     for (let i = 0; i < FULL_PATH.length; i++) {
