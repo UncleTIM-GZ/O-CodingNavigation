@@ -3078,6 +3078,69 @@ Error Code: N/A
 
 ⸻
 
+AC-LOGIC-001｜逻辑主干缺角色 / 悬空引用 / 环 / 孤儿 / 未绑定触发被拦截
+
+Phase: GA
+Priority: must
+Traceability: PRD 9.x｜Logic Backbone (AM-003 / DEC-025)
+Acceptance Method: automated test
+
+Given 当前步骤为 step_logic_backbone（SOP 0.3.0）
+And docs/19-logic-backbone.md 的 ocn-logic-graph 块含以下任一缺陷：
+
+某节点缺少有效 role
+某条边引用了未定义节点（悬空引用）
+驱动子图（feeds/serves/triggers）存在依赖环
+某 input/intermediate 节点无任何下游消费者（孤儿）
+某 role=trigger 节点没有 triggers 边指向目标（未绑定触发）
+
+When 运行 ocn check
+Then 必须返回 blocked，退出码 = 2，错误码 = ERR_ARTIFACT_INVALID
+And 双语消息必须逐条点名具体缺陷（节点 id / 环路径 / 悬空端点）
+And 不得写入 .ocoding/logic-graph.json
+
+Result: blocked
+Error Code: ERR_ARTIFACT_INVALID
+
+⸻
+
+AC-LOGIC-002｜逻辑主干缺图块或图不可解析被拦截
+
+Phase: GA
+Priority: must
+Traceability: PRD 9.x｜Logic Backbone (AM-003 / DEC-025)
+Acceptance Method: automated test
+
+Given 当前步骤为 step_logic_backbone
+When docs/19-logic-backbone.md 缺少 ocn-logic-graph 围栏块，或块内不是合法 YAML/JSON，或不符合 LogicGraph schema
+And 运行 ocn check
+Then 必须返回 blocked（ERR_ARTIFACT_INVALID），blockingReason 为
+  logic_backbone_graph_missing 或 logic_backbone_graph_invalid
+
+Result: blocked
+Error Code: ERR_ARTIFACT_INVALID
+
+⸻
+
+AC-LOGIC-003｜接线完整的逻辑主干通过并生成机器投影
+
+Phase: GA
+Priority: must
+Traceability: PRD 9.x｜Logic Backbone (AM-003 / DEC-025)
+Acceptance Method: automated test
+
+Given 当前步骤为 step_logic_backbone
+And docs/19-logic-backbone.md 含全部必需章节，且图无五类缺陷
+When 运行 ocn check
+Then 必须返回 pass
+And 必须在 .ocoding/logic-graph.json 写入规范化后的图（机器事实源）
+And ocn brief 必须输出该图的执行顺序（拓扑序）与 trigger 绑定摘要
+
+Result: pass
+Error Code: N/A
+
+⸻
+
 37. ADR-001 Dogfood Project 2 Selection｜第二个 Dogfood 项目选择
 
 本 ADR 应写入 docs/19-decision-log.md。
