@@ -44,7 +44,7 @@ Install OCN globally from npm:
 npm install -g o-coding-navigation
 ```
 
-As of v0.2.0-beta.2, npm latest and beta both point to the SOP 0.2.0 Plan → Build → Verify release. Use @beta when you want to pin the prerelease channel explicitly:
+As of v0.3.0-beta.0, npm latest and beta both point to the SOP 0.3.0 Plan → Build → Verify release with the Logic Backbone feature. Use @beta when you want to pin the prerelease channel explicitly:
 
 ```bash
 npm install -g o-coding-navigation@beta
@@ -165,7 +165,7 @@ type MCPToolResult<T> =
 | 1 | `navigator.where_am_i` | Snapshot of current state (project info, current state id, current step id, current artifact path, next-action hint) | No | No |
 | 2 | `navigator.brief` | Render a next-step brief for the current step | No | No |
 | 3 | `navigator.run_gate` | Aggregate the artifact gate for the current step (read-only — does NOT advance) | No | Audit only |
-| 4 | `navigator.create_artifact` | Create a doc from the 5-type template registry (`project-brief`, `scope`, `prd`, `acceptance-criteria`, `technical-architecture`) | No (state) | Yes (writes the doc + audit) |
+| 4 | `navigator.create_artifact` | Create a doc from the full template registry (20 types: 00–18 plus `logic-backbone`) | No (state) | Yes (writes the doc + audit) |
 | 5 | `navigator.capture_log` | Append to `docs/19-dev-log.md` (`type=dev`) or `docs/18-research-log.md` (`type=research`). **`type=decision` is hard-rejected** — see §3 | No | Yes (log file + audit) |
 | 6 | `navigator.detect_sop_version` | Compare project-locked SOP profile against bundled OCN SOP; returns drift status | No | No |
 | 7 | `navigator.generate_next_prompt` | Returns required sections + AI governance reminder + uncertainty policy + self-check rule for the current step | No | No |
@@ -178,7 +178,7 @@ type MCPToolResult<T> =
 
 // 4
 { projectRoot: string;
-  artifactType: "project-brief" | "scope" | "prd" | "acceptance-criteria" | "technical-architecture" }
+  artifactType: "project-brief" | "scope" | ... | "final-build-verdict" | "logic-backbone" /* 20 types: 00–18 + logic-backbone */ }
 
 // 5
 { projectRoot: string; type: "dev" | "research" | "decision"; message: string }
@@ -233,7 +233,7 @@ Read this before wiring `ocn-mcp` into any host:
 - **OCN MCP tools only ever operate inside `<projectRoot>/.ocoding/` and `<projectRoot>/docs/`.** No tool accepts a free-form path argument from the agent. Path-influencing inputs (`artifactType`, `type`) are constrained to small enums.
 - **Do NOT expose `ocn-mcp` to a remote, untrusted host.** Today's transport is local stdio only. There is no auth, no rate limiting, no sandbox. The trust boundary is the OS user account.
 - **The 4 forbidden tools do not exist on this server**: `navigator.advance_phase`, `navigator.capture_decision`, `navigator.reset_project`, `navigator.force_release_lock`. Attempting to call them returns a host-level "tool not found" error. State advancement, decision capture, project reset, and force-release-lock remain CLI-only and human-driven.
-- **An MCP agent CANNOT** advance state, capture decisions, reset the project, or force-release the lock. It CAN read state, render the next-step brief, prepare artifacts, run the read-only gate, create from the 5-type template registry, and capture `dev` / `research` logs.
+- **An MCP agent CANNOT** advance state, capture decisions, reset the project, or force-release the lock. It CAN read state, render the next-step brief, prepare artifacts, run the read-only gate, create from the full template registry (20 types: 00–18 plus `logic-backbone`), and capture `dev` / `research` logs.
 - **No authentication** is performed on the local stdio channel. Whatever process the OS user has launched as the MCP host has full access to the 7 allowed tools.
 - **No rate limiting**. Repeated tool calls are allowed; each is cheap and idempotent for the read-only tools.
 - **No sandboxing**. `ocn-mcp` runs with the user's OS permissions. Files outside the validated `projectRoot` are off-limits by construction (no tool has a path argument to escape via), but a compromised host could still call legitimate tools many times.
@@ -301,7 +301,7 @@ State-advancement, decision-capture, reset, and force-release-lock will **never*
 npm install -g o-coding-navigation
 ```
 
-从 v0.2.0-beta.2 开始，npm latest 与 beta 均指向 SOP 0.2.0 的 Plan → Build → Verify 闭环版本。如果希望明确固定在 beta 预发布通道，可以使用 @beta：
+从 v0.3.0-beta.0 开始，npm latest 与 beta 均指向 SOP 0.3.0 的 Plan → Build → Verify 闭环版本（含 Logic Backbone 特性）。如果希望明确固定在 beta 预发布通道，可以使用 @beta：
 
 ```bash
 npm install -g o-coding-navigation@beta
@@ -418,7 +418,7 @@ type MCPToolResult<T> =
 | 1 | `navigator.where_am_i` | 当前状态快照（项目信息、当前 state id、当前 step id、当前产物路径、下一步动作提示） | 否 | 否 |
 | 2 | `navigator.brief` | 渲染当前 step 的 brief | 否 | 否 |
 | 3 | `navigator.run_gate` | 当前 step 的产物门禁聚合（只读，不推进） | 否 | 仅审计 |
-| 4 | `navigator.create_artifact` | 用 5 类模板创建产物（`project-brief`、`scope`、`prd`、`acceptance-criteria`、`technical-architecture`） | 否（state） | 是（写产物 + 审计） |
+| 4 | `navigator.create_artifact` | 用完整模板注册表创建产物（20 类：00–18 加 `logic-backbone`） | 否（state） | 是（写产物 + 审计） |
 | 5 | `navigator.capture_log` | 追加到 `docs/19-dev-log.md`（`type=dev`）或 `docs/18-research-log.md`（`type=research`）。**`type=decision` 强拒**——见 §C | 否 | 是（日志文件 + 审计） |
 | 6 | `navigator.detect_sop_version` | 比较项目锁定的 SOP profile 与内置 OCN SOP，返回漂移状态 | 否 | 否 |
 | 7 | `navigator.generate_next_prompt` | 当前 step 的必填章节 + AI 治理提醒 + 不确定性策略 + 自检规则 | 否 | 否 |
@@ -433,7 +433,7 @@ type MCPToolResult<T> =
 
 // 4
 { projectRoot: string;
-  artifactType: "project-brief" | "scope" | "prd" | "acceptance-criteria" | "technical-architecture" }
+  artifactType: "project-brief" | "scope" | ... | "final-build-verdict" | "logic-backbone" /* 20 types: 00–18 + logic-backbone */ }
 
 // 5
 { projectRoot: string; type: "dev" | "research" | "decision"; message: string }
@@ -490,7 +490,7 @@ MCP server 故意拒绝暴露 4 个高风险操作。它们仅供人类通过 CL
 - **OCN MCP 工具只在 `<projectRoot>/.ocoding/` 与 `<projectRoot>/docs/` 内动作。** 没有任何工具接受来自 agent 的自由路径参数。会影响路径的输入（`artifactType`、`type`）都被约束在小集合 enum 内。
 - **不要把 `ocn-mcp` 暴露给远程、不可信 host。** 当前传输只支持本地 stdio，没有鉴权、没有限流、没有沙盒。信任边界就是操作系统用户账户。
 - **4 个被禁工具在 server 上根本不存在**：`navigator.advance_phase`、`navigator.capture_decision`、`navigator.reset_project`、`navigator.force_release_lock`。试图调用它们会得到 host 级"tool not found"。状态推进、决策捕获、项目重置、强制释放锁仍然是人类驱动的 CLI 路径。
-- **MCP agent 不能**推进状态、记录决策、重置项目、强制释放锁。它**可以**读状态、渲染下一步 brief、准备产物、跑只读门禁、用 5 类模板创建产物、捕获 `dev` / `research` 日志。
+- **MCP agent 不能**推进状态、记录决策、重置项目、强制释放锁。它**可以**读状态、渲染下一步 brief、准备产物、跑只读门禁、用完整模板注册表创建产物（20 类：00–18 加 `logic-backbone`）、捕获 `dev` / `research` 日志。
 - **本地 stdio 通道不做鉴权。** 操作系统用户启动的 host 进程拥有 7 个允许工具的全部访问权。
 - **不限流。** 重复调用是允许的；只读工具便宜且幂等。
 - **不沙盒。** `ocn-mcp` 以用户的 OS 权限运行。`projectRoot` 之外的文件按构造就够不到（没有任何工具有可逃逸的路径参数），但被攻陷的 host 仍然可以多次调用合法工具。

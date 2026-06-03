@@ -1,6 +1,6 @@
 # O'CodingNavigator (OCN) — 一页纸介绍 + 操作手册
 
-> 版本：`0.2.0-beta.2` · 适用范围：tester / 内部使用 · 状态：beta，非 GA
+> 版本：`0.3.0-beta.0` · 适用范围：tester / 内部使用 · 状态：beta，非 GA
 
 ---
 
@@ -8,7 +8,7 @@
 
 本地优先、MCP-first、状态机驱动的 AI Coding 工作流操作系统。CLI `ocn` + MCP 服务 `ocn-mcp`。所有数据落本地文件（Markdown + JSON + JSONL + YAML），无云、无数据库、不调 LLM。Apache-2.0。
 
-当前版本：`0.2.0-beta.2`（npm `latest` 与 `beta` 同指此版）。仅在 Claude Desktop on Windows + WSL2 验证。Cursor / Cline 未验证。仍是 beta，不是 GA。
+当前版本：`0.3.0-beta.0`（npm `latest` 与 `beta` 同指此版）。仅在 Claude Desktop on Windows + WSL2 验证。Cursor / Cline 未验证。仍是 beta，不是 GA。
 
 ---
 
@@ -23,6 +23,8 @@
 | **实现阶段卡死** | LFG / Codex / Claude Code 在 PR / CI / 修复循环里停滞 | Execution Navigator 6 命令读证据、出下一轮简报 |
 | **Verdict 草率** | 仅凭"CI 绿了"就 merge | `verdict draft` 综合 git / PR / AC / verify 信号，倾向保守 |
 | **审计缺失** | AI 改完什么、何时推进的，事后难复盘 | 所有 push 事件双轨写入 `.ocoding/audit-events.jsonl` 与 `docs/22-audit-trail.md` |
+
+Logic Backbone（SOP 0.3.0 新增）：DESIGN 阶段把系统的计算/决策图建成可机器校验的有向图，`ocn check` 拦截孤儿分数/悬空引用/环/未绑定触发，确保逻辑在 BUILD 前接好线。
 
 ---
 
@@ -53,7 +55,7 @@
 ```bash
 npm install -g o-coding-navigation        # 推荐
 npm install -g o-coding-navigation@beta   # 显式固定 beta
-ocn --version                              # → 0.2.0-beta.2
+ocn --version                              # → 0.3.0-beta.0
 ```
 
 要求：Node.js ≥ 20。
@@ -74,7 +76,7 @@ MCP 接入 Claude Desktop（Windows + WSL2）：在 `%APPDATA%\Claude\claude_des
 |---|---|
 | `ocn init [--tier minimal]` | 初始化 `.ocoding/` 与 `docs/` 骨架 |
 | `ocn status` | 当前 state / step / artifact 路径 |
-| `ocn doc create <type>` | 从模板写出 19 个 artifact 之一 |
+| `ocn doc create <type>` | 从模板写出 20 个 artifact 之一（00–18 加 `logic-backbone`） |
 | `ocn check` | 检查当前 step artifact 必需 section |
 | `ocn gate` | 只读门禁聚合，不改 state |
 | `ocn advance` | gate 通过则推进 step；锁保护，原子写入 |

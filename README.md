@@ -2,7 +2,7 @@
 
 > Local-first, MCP-first, state-machine-driven **AI coding workflow operating system**.
 > CLI: `ocn` · MCP: `ocn-mcp` · License: Apache-2.0
-> **Phase**: SOP 0.2.0 Plan → Build → Verify mainline · **Status**: pre-GA beta · **Public**: on npm as `latest` and `@beta` → [`0.2.0-beta.2`](https://www.npmjs.com/package/o-coding-navigation) · GitHub pre-release: [`v0.2.0-beta.2`](https://github.com/UncleTIM-GZ/O-CodingNavigation/releases/tag/v0.2.0-beta.2)
+> **Phase**: SOP 0.3.0 (Logic Backbone) mainline · **Status**: pre-GA beta · **Public**: on npm as `latest` and `@beta` → [`0.3.0-beta.0`](https://www.npmjs.com/package/o-coding-navigation) · GitHub pre-release: [`v0.3.0-beta.0`](https://github.com/UncleTIM-GZ/O-CodingNavigation/releases/tag/v0.3.0-beta.0)
 
 > 📑 This README has two parts:
 > **Part 1 — English** (sections 1 – 11) · **Part 2 — 中文版** (§§ A – K)
@@ -19,7 +19,7 @@ OCN turns AI coding from continuous-chat improvisation into a navigable, gated, 
 **Understand OCN**
 1. [What OCN is](#1-what-ocn-is)
 2. [Why OCN exists](#2-why-ocn-exists)
-3. [Current status](#3-current-status-sop-020-plan--build--verify-mainline)
+3. [Current status](#3-current-status-sop-030-logic-backbone-mainline)
    - 3.1 [Two-stage product model](#31-two-stage-product-model)
 
 **Use OCN**
@@ -52,6 +52,7 @@ OCN sells **discipline** — productized as:
 - a **state machine** (DISCOVERY → SPEC → DESIGN → PLAN → BUILD → VERIFY → SHIP → REFLECT) with forward-only transitions,
 - a **Step Artifact Gate** that blocks advancement when the current step's required sections are missing,
 - a **dual-track audit trail** (`.ocoding/audit/audit-events.jsonl` + `docs/22-audit-trail.md`),
+- a **Logic Backbone (new in SOP 0.3.0)** — a DESIGN-phase artifact whose computation/decision graph is machine-validated; `ocn check` blocks on orphan scores, dangling references, cycles, and unbound triggers, so the system's logic is wired before BUILD,
 - a **safe MCP surface** that lets agents read, prepare, and create artifacts but never advance state, capture decisions, reset the project, or force-release the lock.
 
 OCN is **not** a code generator, an IDE, a SaaS, a project-management tool, a notes app, or a scaffold-only doc factory.
@@ -69,14 +70,14 @@ Working with an AI coding agent for any non-trivial task tends to fail in four w
 
 OCN treats these as the same problem: *the AI coding loop has no rigorous notion of "where we are" and "what counts as done"*. OCN supplies both as code, not as exhortation.
 
-### 3. Current status (SOP 0.2.0 Plan → Build → Verify mainline)
+### 3. Current status (SOP 0.3.0 (Logic Backbone) mainline)
 
 | | |
 |---|---|
-| Phase | **SOP 0.2.0 Plan → Build → Verify mainline** — runtime cutover complete; plan-to-verify smoke covers all 19 steps |
+| Phase | **SOP 0.3.0 (Logic Backbone) mainline** — Plan → Build → Verify, now with a machine-verified DESIGN logic-backbone gate; plan-to-verify smoke covers all 20 steps |
 | Tests | full vitest suite green on Node 20 + Node 22 |
 | Coverage | meets the publish-time gate |
-| npm | `latest` → `0.2.0-beta.2`; `beta` → `0.2.0-beta.2`; `alpha` → `0.1.0-alpha.2` (historical; preserved) |
+| npm | `latest` → `0.3.0-beta.0`; `beta` → `0.3.0-beta.0`; `alpha` → `0.1.0-alpha.2` (historical; preserved) |
 | Maturity | **pre-GA beta** — not stable, not GA, beta only (for controlled testing / dogfood) |
 | External host validation | Validated with Claude Desktop on Windows with WSL2. Cursor and Cline are not yet verified. |
 | MCP transport | stdio only (HTTP/SSE not started) |
@@ -102,7 +103,7 @@ The two stages are connected: planning artifacts (00–10) must pass their gates
 - **MCP safe tools**: 7 read/prepare/create/log tools over stdio; 4 forbidden tools never registered (full list in §7); `projectRoot` validator + threat model ([`docs/security/mcp-threat-model.md`](./docs/security/mcp-threat-model.md)).
 - **Real MCP Host validation**: Claude Desktop on Windows with WSL2 validated end-to-end ([DEC-017](./docs/20-decision-log.md), [report](./docs/reports/2026-04-30-mcp-external-host-validation-report.md)). Cursor and Cline remain unverified.
 - **Executable example**: [`examples/discovery-to-plan/`](./examples/discovery-to-plan/) walks all 10 v1.0 SOP steps end-to-end via `scripts/smoke.sh`. Bundled fixtures derived verbatim from `src/core/templates/*.ts` so they cannot drift.
-- **npm publish discipline**: SOP 0.2.0 mainline published as `o-coding-navigation@0.2.0-beta.2` under strict pre-publish checklists, `prepublishOnly` gate, and `files` allowlist. `latest` and `beta` both point to `0.2.0-beta.2`; `alpha` is preserved at `0.1.0-alpha.2` for historical use. Annotated git tag `v0.2.0-beta.2` and matching GitHub pre-release published.
+- **npm publish discipline**: SOP 0.3.0 mainline published as `o-coding-navigation@0.3.0-beta.0` under strict pre-publish checklists, `prepublishOnly` gate, and `files` allowlist. `latest` and `beta` both point to `0.3.0-beta.0`; `alpha` is preserved at `0.1.0-alpha.2` for historical use. Annotated git tag `v0.3.0-beta.0` and matching GitHub pre-release published.
 
 **Not implemented (deliberately deferred — see §10)**
 
@@ -120,12 +121,12 @@ The two stages are connected: planning artifacts (00–10) must pass their gates
 npm install -g o-coding-navigation
 ```
 
-As of v0.2.0-beta.2, npm latest and beta both point to the SOP 0.2.0 Plan → Build → Verify release.
+As of v0.3.0-beta.0, npm latest and beta both point to the SOP 0.3.0 (Logic Backbone) release.
 
 Verify:
 
 ```bash
-ocn --version       # 0.2.0-beta.2
+ocn --version       # 0.3.0-beta.0
 ocn --help
 ocn-mcp             # starts the MCP stdio server; press Ctrl+C to exit
 ```
@@ -142,8 +143,8 @@ To uninstall: `npm uninstall -g o-coding-navigation`.
 
 | Channel | Version | npm tag | Notes |
 |---|---|---|---|
-| `latest` (recommended) | `0.2.0-beta.2` | `latest` | SOP 0.2.0 Plan → Build → Verify mainline. |
-| Beta (explicit prerelease pin) | `0.2.0-beta.2` | `beta` | Same artifact as `latest`; use `@beta` when you want to pin the prerelease channel explicitly. |
+| `latest` (recommended) | `0.3.0-beta.0` | `latest` | SOP 0.3.0 (Logic Backbone) mainline. |
+| Beta (explicit prerelease pin) | `0.3.0-beta.0` | `beta` | Same artifact as `latest`; use `@beta` when you want to pin the prerelease channel explicitly. |
 | Alpha (still available) | `0.1.0-alpha.2` | `alpha` | Prior pre-GA channel; preserved for historical use only. |
 
 Package home: https://www.npmjs.com/package/o-coding-navigation
@@ -374,7 +375,7 @@ So you can safely run them in an existing project root. Worst case: you already 
 
 Each step uses the §5.4 Steps 3–8 loop (pull brief → create template → AI fills using your material → `run_gate` → **you** type `ocn advance`). The difference from a greenfield project: because the content already exists, the AI mostly reorganises and aligns formats rather than inventing.
 
-SOP 0.2.0 ships `doc create` templates for all 19 steps. The table below maps every step to its artifact path and **where to mine the content from your existing project**:
+SOP 0.3.0 ships `doc create` templates for all 20 steps. The table below maps every step to its artifact path and **where to mine the content from your existing project**:
 
 **DISCOVERY phase**
 
@@ -399,6 +400,7 @@ SOP 0.2.0 ships `doc create` templates for all 19 steps. The table below maps ev
 | `step_data_model` | `docs/06-data-model.md` | `schema.sql`, Prisma schema, ORM models, ER diagrams, DB migration files |
 | `step_api_contract` | `docs/07-api-contract.md` | OpenAPI / Swagger spec, Postman collections, router code, `@RestController` annotations |
 | `step_test_strategy` | `docs/08-test-strategy.md` | `tests/` directory layout, CI config (`.github/workflows/`), coverage targets, E2E framework choice |
+| `step_logic_backbone` | `docs/19-logic-backbone.md` | Existing scoring/decision/rules logic, formula definitions, signal→action mappings |
 
 **PLAN phase**
 
@@ -525,15 +527,15 @@ All commands accept `--json` to emit a machine-readable `CommandResult` envelope
 | `ocn init [--tier minimal] [--json]` | Initialise an OCN project in the current directory. | Writes `.ocoding/`, `docs/`, the dual-track audit files. | `project_initialized` + state-write events |
 | `ocn status [--json]` | Show current state, current step, the relative path of the current step's artifact, and the next-action hint. | Read-only. | None (avoids log spam — pull-mode) |
 | `ocn brief [--json]` | Print the current-step brief for an AI coding session: required sections, governance reminders, uncertainty policy. | Read-only. | None (pull-mode) |
-| `ocn doc create <type> [--overwrite] [--json]` | Create one of the 19 supported artifacts from its bundled template (refuses to overwrite an existing file unless `--overwrite` is passed). | Writes the artifact under `docs/`. | `artifact_created` |
+| `ocn doc create <type> [--overwrite] [--json]` | Create one of the 20 supported artifacts from its bundled template (refuses to overwrite an existing file unless `--overwrite` is passed). | Writes the artifact under `docs/`. | `artifact_created` |
 | `ocn check [--json]` | Check the current step's artifact against its required sections. | Read-only. | `artifact_gate_run` + `artifact_gate_passed` / `artifact_gate_blocked` |
 | `ocn gate [--json]` | Read-only artifact gate aggregation for the current step. Same emission as `check`; never mutates state. | Read-only. | `artifact_gate_*` (no `correlationId`) |
 | `ocn advance [--json]` | Run gate, then advance to the next step on pass. Lock-protected; never partial. | Writes `state.json` (atomic). | Full advance chain with shared `correlationId` |
 
-`<type>` for `doc create` (SOP 0.2.0 ships templates for all 19 step artifacts):
+`<type>` for `doc create` (SOP 0.3.0 ships templates for all 20 steps):
 `project-brief`, `scope`, `prd`, `acceptance-criteria`, `technical-architecture`,
-`information-architecture`, `data-model`, `api-contract`, `test-strategy`, `mvp-plan`,
-`build-plan`, `implementation-log`, `change-evidence`, `integration-notes`,
+`information-architecture`, `data-model`, `api-contract`, `test-strategy`, `logic-backbone`,
+`mvp-plan`, `build-plan`, `implementation-log`, `change-evidence`, `integration-notes`,
 `verification-report`, `acceptance-mapping`, `failure-fix-log`, `regression-evidence`,
 `final-build-verdict`.
 
@@ -584,7 +586,7 @@ Full wiring guidance + per-tool envelopes: [`docs/mcp-usage.md`](./docs/mcp-usag
 | `navigator.where_am_i` | State snapshot. | No |
 | `navigator.brief` | Current-step brief. | No |
 | `navigator.run_gate` | Read-only gate aggregation. | No |
-| `navigator.create_artifact` | Create from the 5-type template registry. | Filesystem only |
+| `navigator.create_artifact` | Create from the full template registry (20 types: 00–18 plus logic-backbone). | Filesystem only |
 | `navigator.capture_log` | Append to `docs/19-dev-log.md` (`type=dev`) or `docs/18-research-log.md` (`type=research`). **`type=decision` is hard-rejected.** | Filesystem only |
 | `navigator.detect_sop_version` | Drift between locked profile and bundled OCN SOP. | No |
 | `navigator.generate_next_prompt` | Required sections + governance reminder + uncertainty policy + self-check rule. | No |
@@ -649,7 +651,8 @@ The GA Prep phase was a documentation, packaging, and operational-readiness audi
 **Execution Navigator MVP series (post-DEC-024)**
 
 - **MVP 1–6 complete** — the six Execution Navigator commands (§6.2) shipped in PRs #63–#68 and merged to main. Cross-cutting review fixes landed in PR #69 ([report](./docs/reports/2026-05-04-execution-navigator-review-fixes-pr-a.md)). Series closure: [`docs/reports/2026-05-04-execution-navigator-verdict-draft.md`](./docs/reports/2026-05-04-execution-navigator-verdict-draft.md).
-- Current external package: `0.2.0-beta.2` — Planning Gatekeeper (§6.1) + Execution Evidence Navigator (§6.2).
+- Current external package: `0.3.0-beta.0` — Planning Gatekeeper (§6.1) + Execution Evidence Navigator (§6.2) + the Logic Backbone DESIGN gate.
+- **Logic Backbone shipped in `0.3.0-beta.0`** — SOP 0.3.0 adds the DESIGN-phase `docs/19-logic-backbone.md` artifact; `ocn check` machine-validates its computation/decision graph (blocks on missing role, duplicate node id, dangling reference, dependency cycle, orphan node, unbound trigger) and on pass writes `.ocoding/logic-graph.json`, which `ocn brief` summarises as execution order + trigger bindings.
 - Still beta, not GA. Validated with Claude Desktop on Windows with WSL2; Cursor and Cline remain unverified.
 - Next gate: real external-repo dogfood pass before any further release sync; GA promotion remains gated on its own DEC.
 
@@ -680,7 +683,7 @@ CLI：`ocn`；MCP server：`ocn-mcp`；许可：Apache-2.0。
 **理解 OCN**
 - §A. [OCN 是什么](#a-ocn-是什么)
 - §B. [OCN 解决什么问题](#b-ocn-解决什么问题)
-- §C. [当前状态](#c-当前状态sop-020-plan--build--verify-主干)
+- §C. [当前状态](#c-当前状态sop-030逻辑主干-主干)
    - §C.1 [两阶段产品模型](#c1-两阶段产品模型)
 
 **使用 OCN**
@@ -713,6 +716,7 @@ OCN 把"纪律"产品化：
 - **状态机**：DISCOVERY → SPEC → DESIGN → PLAN → BUILD → VERIFY → SHIP → REFLECT，单向推进，不可回退；
 - **步骤产物门禁（Step Artifact Gate）**：当前 step 的必填章节缺失时，状态推进被阻断；
 - **双轨审计链**：`.ocoding/audit/audit-events.jsonl`（机器源）+ `docs/22-audit-trail.md`（人类可读）；
+- **逻辑主干（Logic Backbone，SOP 0.3.0 新增）**：一个 DESIGN 阶段产物，其计算/决策图由机器校验；`ocn check` 会在出现孤儿分值、悬空引用、循环依赖、未绑定触发器时阻断，让系统逻辑在 BUILD 之前就连通；
 - **安全的 MCP 工具面**：agent 可读、可准备、可创建产物，但**不能**推进状态、记录决策、重置项目、强制释放锁。
 
 OCN **不是**：代码生成器、IDE、SaaS、项目管理工具、笔记应用，也不是只会铺脚手架的"文档工厂"。
@@ -730,14 +734,14 @@ OCN **不是**：代码生成器、IDE、SaaS、项目管理工具、笔记应�
 
 OCN 把这四个问题视为同一个问题：*AI 编程闭环缺乏严肃的"我们在哪"和"什么算完成"*。OCN 用代码而不是嘴上嘱咐去回答这两个问题。
 
-### C. 当前状态（SOP 0.2.0 Plan → Build → Verify 主干）
+### C. 当前状态（SOP 0.3.0（逻辑主干）主干）
 
 | 项目 | 状态 |
 |---|---|
-| 阶段 | **SOP 0.2.0 Plan → Build → Verify 主干**——runtime 已切换；plan-to-verify smoke 覆盖全部 19 步 |
+| 阶段 | **SOP 0.3.0（逻辑主干）主干**——Plan → Build → Verify，现在多了一道机器校验的 DESIGN 逻辑主干门禁；plan-to-verify smoke 覆盖全部 20 步 |
 | 测试 | 完整 vitest 套件在 Node 20 + Node 22 全部通过 |
 | 覆盖率 | 满足发布门 |
-| npm | `latest` → `0.2.0-beta.2`；`beta` → `0.2.0-beta.2`；`alpha` → `0.1.0-alpha.2`（历史保留） |
+| npm | `latest` → `0.3.0-beta.0`；`beta` → `0.3.0-beta.0`；`alpha` → `0.1.0-alpha.2`（历史保留） |
 | 成熟度 | **pre-GA beta**——非稳定、非 GA、仅 beta（用于受控测试 / dogfood） |
 | 已验证 Host | 已在 Claude Desktop on Windows + WSL2 验证。Cursor 与 Cline 暂未验证。 |
 | MCP 传输 | 仅 stdio（HTTP/SSE 尚未启动） |
@@ -763,7 +767,7 @@ OCN 现在分为两个衔接阶段：
 - **MCP 安全工具**：stdio 上 7 个只读/准备/创建/日志类工具，4 个禁用工具不会被注册（详见 §G）；`projectRoot` 校验器 + 威胁模型（[`docs/security/mcp-threat-model.md`](./docs/security/mcp-threat-model.md)）。
 - **真实 Host 验证**：Claude Desktop on Windows + WSL2 已完成端到端验证（[DEC-017](./docs/20-decision-log.md)、[报告](./docs/reports/2026-04-30-mcp-external-host-validation-report.md)）。
 - **可执行示例**：[`examples/discovery-to-plan/`](./examples/discovery-to-plan/)，`scripts/smoke.sh` 跑完 v1.0 SOP 全部 10 个 step；fixture 直接来源于 `src/core/templates/*.ts`，避免漂移。
-- **npm 发布纪律**：SOP 0.2.0 主干以 `o-coding-navigation@0.2.0-beta.2` 形式发布，遵循严格的预发布清单与 `prepublishOnly` 门，`files` allowlist 收敛到 `dist/` + LICENSE + README + `docs/quickstart.md` + `docs/mcp-usage.md`；`latest` 与 `beta` 都指向 `0.2.0-beta.2`，`alpha` 仍保留在 `0.1.0-alpha.2`；`v0.2.0-beta.2` 为带注释的 git tag + GitHub pre-release。
+- **npm 发布纪律**：SOP 0.3.0 主干以 `o-coding-navigation@0.3.0-beta.0` 形式发布，遵循严格的预发布清单与 `prepublishOnly` 门，`files` allowlist 收敛到 `dist/` + LICENSE + README + `docs/quickstart.md` + `docs/mcp-usage.md`；`latest` 与 `beta` 都指向 `0.3.0-beta.0`，`alpha` 仍保留在 `0.1.0-alpha.2`；`v0.3.0-beta.0` 为带注释的 git tag + GitHub pre-release。
 
 **尚未实现（刻意延后，详见 §J）**
 
@@ -781,12 +785,12 @@ OCN 现在分为两个衔接阶段：
 npm install -g o-coding-navigation
 ```
 
-从 v0.2.0-beta.2 开始，npm latest 与 beta 均指向 SOP 0.2.0 的 Plan → Build → Verify 闭环版本。
+从 v0.3.0-beta.0 开始，npm latest 与 beta 均指向 SOP 0.3.0（逻辑主干）版本。
 
 安装后验证：
 
 ```bash
-ocn --version       # 0.2.0-beta.2
+ocn --version       # 0.3.0-beta.0
 ocn --help
 ocn-mcp             # 启动 MCP stdio server；按 Ctrl+C 退出
 ```
@@ -803,8 +807,8 @@ npm install -g o-coding-navigation@beta
 
 | 渠道 | 版本 | npm tag | 说明 |
 |---|---|---|---|
-| `latest`（推荐） | `0.2.0-beta.2` | `latest` | SOP 0.2.0 Plan → Build → Verify 主干。 |
-| Beta（显式预发布通道） | `0.2.0-beta.2` | `beta` | 与 `latest` 同一份产物；想明确固定在预发布通道时使用 `@beta`。 |
+| `latest`（推荐） | `0.3.0-beta.0` | `latest` | SOP 0.3.0（逻辑主干）主干。 |
+| Beta（显式预发布通道） | `0.3.0-beta.0` | `beta` | 与 `latest` 同一份产物；想明确固定在预发布通道时使用 `@beta`。 |
 | Alpha（仍可用） | `0.1.0-alpha.2` | `alpha` | 之前的 pre-GA 通道；仅作历史保留。 |
 
 包主页：https://www.npmjs.com/package/o-coding-navigation
@@ -1033,7 +1037,7 @@ OCN 的状态机起点**永远**是 `state_discovery / step_project_brief`。当
 
 每个 step 都走 §E.4 第 3–8 步循环（拿 brief → 建模板 → AI 据已有材料填 → `run_gate` → **你**敲 `ocn advance`）。区别是：因为内容已存在，AI 主要做"重组"和"格式对齐"，不是"创造"。
 
-SOP 0.2.0 的 19 个 step 全有 `doc create` 模板。下表把每个 step 对应的产物路径，以及**在你已有项目里去哪找这部分内容**列出来：
+SOP 0.3.0 的 20 个 step 全有 `doc create` 模板。下表把每个 step 对应的产物路径，以及**在你已有项目里去哪找这部分内容**列出来：
 
 **DISCOVERY 阶段**
 
@@ -1058,6 +1062,7 @@ SOP 0.2.0 的 19 个 step 全有 `doc create` 模板。下表把每个 step 对�
 | `step_data_model` | `docs/06-data-model.md` | `schema.sql`、Prisma schema、ORM models、ER 图、数据库迁移文件 |
 | `step_api_contract` | `docs/07-api-contract.md` | OpenAPI / Swagger spec、Postman collection、router 代码、`@RestController` 注解 |
 | `step_test_strategy` | `docs/08-test-strategy.md` | `tests/` 目录结构、CI 配置（`.github/workflows/`）、覆盖率目标、E2E 框架选择 |
+| `step_logic_backbone` | `docs/19-logic-backbone.md` | 已有的打分/决策/规则逻辑、公式定义、信号→动作映射 |
 
 **PLAN 阶段**
 
@@ -1184,15 +1189,15 @@ planning 阶段的 artifact（00–10）跑过门禁、项目进入实现阶段�
 | `ocn init [--tier minimal] [--json]` | 在当前目录初始化 OCN 项目。 | 写 `.ocoding/`、`docs/` 与双轨审计文件。 | `project_initialized` + state-write 事件 |
 | `ocn status [--json]` | 显示当前 state、当前 step、当前 step 产物的相对路径，以及下一步动作提示。 | 只读。 | 无（避免 pull 模式刷日志） |
 | `ocn brief [--json]` | 输出当前 step 的 brief：必填章节、治理提醒、不确定性策略。 | 只读。 | 无（pull 模式） |
-| `ocn doc create <type> [--overwrite] [--json]` | 用内置模板生成 19 类产物之一（撞名时拒绝写入，需显式 `--overwrite` 才覆盖）。 | 在 `docs/` 写产物。 | `artifact_created` |
+| `ocn doc create <type> [--overwrite] [--json]` | 用内置模板生成 20 类产物之一（撞名时拒绝写入，需显式 `--overwrite` 才覆盖）。 | 在 `docs/` 写产物。 | `artifact_created` |
 | `ocn check [--json]` | 检查当前 step 的产物是否满足必填章节。 | 只读。 | `artifact_gate_run` + `artifact_gate_passed` / `artifact_gate_blocked` |
 | `ocn gate [--json]` | 当前 step 的只读门禁聚合。和 `check` 输出相同；不改状态。 | 只读。 | `artifact_gate_*`（无 `correlationId`） |
 | `ocn advance [--json]` | 跑门禁，通过后推进到下一 step。带锁保护，永不部分写入。 | 原子写 `state.json`。 | 完整 advance 事件链，共享 `correlationId` |
 
-`doc create` 的 `<type>`（SOP 0.2.0 为全部 19 个 step 产物都提供了模板）：
+`doc create` 的 `<type>`（SOP 0.3.0 为全部 20 个 step 都提供了模板）：
 `project-brief`、`scope`、`prd`、`acceptance-criteria`、`technical-architecture`、
-`information-architecture`、`data-model`、`api-contract`、`test-strategy`、`mvp-plan`、
-`build-plan`、`implementation-log`、`change-evidence`、`integration-notes`、
+`information-architecture`、`data-model`、`api-contract`、`test-strategy`、`logic-backbone`、
+`mvp-plan`、`build-plan`、`implementation-log`、`change-evidence`、`integration-notes`、
 `verification-report`、`acceptance-mapping`、`failure-fix-log`、`regression-evidence`、
 `final-build-verdict`。
 
@@ -1243,7 +1248,7 @@ OCN 的 MCP server（`ocn-mcp`）通过 stdio 暴露 7 个工具。**唯一已�
 | `navigator.where_am_i` | 状态快照。 | 否 |
 | `navigator.brief` | 当前 step 的 brief。 | 否 |
 | `navigator.run_gate` | 只读门禁聚合。 | 否 |
-| `navigator.create_artifact` | 用 5 类模板创建产物。 | 仅文件系统 |
+| `navigator.create_artifact` | 用完整模板库创建产物（20 类：00–18 加 logic-backbone）。 | 仅文件系统 |
 | `navigator.capture_log` | 追加到 `docs/19-dev-log.md`（`type=dev`）或 `docs/18-research-log.md`（`type=research`）；**`type=decision` 强拒**。 | 仅文件系统 |
 | `navigator.detect_sop_version` | 比较已落盘 SOP profile 与内置 OCN SOP，输出漂移状态。 | 否 |
 | `navigator.generate_next_prompt` | 当前 step 的必填章节 + 治理提醒 + 不确定性策略 + 自检规则。 | 否 |
@@ -1308,7 +1313,8 @@ GA Prep 阶段是从 Phase 2 收口走到 beta candidate 准备的一段文档/�
 **Execution Navigator MVP 系列（DEC-024 之后）**
 
 - **MVP 1–6 已完成**——§F.2 的 6 条 Execution Navigator 命令在 PR #63–#68 中陆续 ship 并合入 main；横切 review 修复在 PR #69 落地（[报告](./docs/reports/2026-05-04-execution-navigator-review-fixes-pr-a.md)）。系列收口：[`docs/reports/2026-05-04-execution-navigator-verdict-draft.md`](./docs/reports/2026-05-04-execution-navigator-verdict-draft.md)。
-- 当前外部包：`0.2.0-beta.2`——Planning Gatekeeper（§F.1）+ Execution Evidence Navigator（§F.2）。
+- 当前外部包：`0.3.0-beta.0`——Planning Gatekeeper（§F.1）+ Execution Evidence Navigator（§F.2）+ Logic Backbone DESIGN 门禁。
+- **Logic Backbone 在 `0.3.0-beta.0` ship**——SOP 0.3.0 新增 DESIGN 阶段产物 `docs/19-logic-backbone.md`；`ocn check` 机器校验其计算/决策图（在缺角色、节点 id 重复、悬空引用、依赖循环、孤儿节点、未绑定触发器时阻断），通过则写出 `.ocoding/logic-graph.json`，`ocn brief` 把它汇总成执行顺序 + 触发器绑定。
 - 仍是 beta，非 GA。已在 Claude Desktop on Windows + WSL2 验证；Cursor 与 Cline 仍未验证。
 - 下一道门：在真实外部 repo 完成一次 dogfood，再考虑后续 release sync；GA promotion 仍由独立 DEC 把守。
 
