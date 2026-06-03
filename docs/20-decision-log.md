@@ -2899,3 +2899,50 @@ Markdown-friendly authored doc + `.ocoding/` JSON projection (§4.10).
 - No new MCP write capability beyond the `create_artifact` enum value — advance / decisions
   / gate enforcement remain human-only (§4.8).
 - No empty-graph rule (a graph with no nodes passes vacuously by design).
+
+## DEC-026｜Release marker for 0.3.0-beta.0 (Logic Backbone)
+
+Date: 2026-06-04
+
+### Status
+
+Accepted — authorised by the maintainer; executed as a maintainer release action.
+
+### Context
+
+SOP 0.3.0 (the Logic Backbone) landed on `main` via PR #74 (feature) and PR #75
+(release prep + docs). At this DEC's authoring time the published dist-tags were:
+
+```
+alpha:  0.1.0-alpha.2
+latest: 0.2.0-beta.2
+beta:   0.2.0-beta.2
+```
+
+`package.json` on `main` is `0.3.0-beta.0`. The pre-publish gate
+(`lint` + `typecheck` + `test:coverage` + `build`) is green (897 tests, 102 files).
+This release stays in the beta channel — a bare `0.3.0` would imply GA, which
+contradicts the project's pre-GA posture (DEC-018 / DEC-019 / DEC-021 / DEC-022).
+
+### Decision
+
+Publish `o-coding-navigation@0.3.0-beta.0` and adopt the matching source-control
+release marker.
+
+| Field | Value |
+| --- | --- |
+| npm version | `0.3.0-beta.0` |
+| npm dist-tags | `latest` → `0.3.0-beta.0`, `beta` → `0.3.0-beta.0`; `alpha` preserved at `0.1.0-alpha.2` |
+| Git tag | `v0.3.0-beta.0` (annotated) |
+| Tag target | the `main` commit carrying `package.json` `0.3.0-beta.0` + `docs/reports/2026-06-04-logic-backbone-0.3.0-beta.0.md` |
+| GitHub Release type | **pre-release** (`prerelease: true`) |
+| GitHub Release title | `O'CodingNavigator v0.3.0-beta.0` |
+| Release notes | `docs/reports/2026-06-04-logic-backbone-0.3.0-beta.0.md` §"GitHub pre-release notes" |
+
+### Boundary
+
+- This remains **beta, not GA**. No bare `0.3.0` tag; no GA promotion.
+- `latest` moves to `0.3.0-beta.0` (consistent with how `0.2.0-beta.2` held `latest`).
+- `alpha` is not touched (stays `0.1.0-alpha.2`).
+- No change to the SOP 0.1.0 / 0.2.0 frozen profiles (importable by explicit version).
+- Feature scope is governed by DEC-025 / AM-003; this DEC only authorises the release marker.

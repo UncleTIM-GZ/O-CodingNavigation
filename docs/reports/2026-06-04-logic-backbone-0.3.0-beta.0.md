@@ -64,3 +64,55 @@ Spawn-based CLI/e2e flows updated to walk all 20 steps (an `examples/plan-to-ver
 6. Publish a GitHub **pre-release** for `v0.3.0-beta.0`.
 7. Confirm `npm view o-coding-navigation dist-tags` shows `latest=beta=0.3.0-beta.0`,
    `alpha=0.1.0-alpha.2`.
+
+> Auth note: publishing uses the token in `~/.npmrc` (the repo `.npmrc` carries no
+> token). If it has expired (E401 / `npm whoami` fails), run `npm login` first; add
+> `--otp=<code>` if 2FA is enabled. Governance: DEC-026.
+
+## 6. GitHub pre-release notes (paste-ready)
+
+> Title: **O'CodingNavigator v0.3.0-beta.0** · mark as **pre-release**.
+
+```markdown
+## O'CodingNavigator v0.3.0-beta.0 — Logic Backbone
+
+> Pre-GA beta. `npm install -g o-coding-navigation@0.3.0-beta.0`
+> (npm `latest` + `beta`; `alpha` stays at `0.1.0-alpha.2`).
+
+### New — Logic Backbone (SOP 0.3.0)
+
+A new DESIGN-phase artifact, `docs/19-logic-backbone.md`, pins a system's
+**computation/decision graph** before BUILD so the logic can't drift. It models
+the system as a typed, role-bearing directed graph (DAG + DMN): node kinds
+(input / formula / score / judgment / signal), node roles (input / intermediate /
+terminal_explanatory / trigger / hint), and edges (feeds / serves / triggers /
+explains).
+
+`ocn check` machine-validates the graph and **blocks** (`ERR_ARTIFACT_INVALID`,
+exit 2) on:
+
+- a node missing a valid **role**
+- a **duplicate** node id
+- a **dangling reference** (edge to an undefined node)
+- a dependency **cycle**
+- an **orphan** node (an input/intermediate nothing consumes)
+- an **unbound trigger** (a `trigger` with no `triggers` edge to a target)
+
+On pass it writes `.ocoding/logic-graph.json` (machine source of truth), and
+`ocn brief` folds the **execution order + trigger bindings** into the BUILD-phase
+brief.
+
+### Changed
+
+- Runtime default SOP profile: **0.3.0** (= 0.2.0 + `step_logic_backbone`); the
+  pipeline now has **20 wired steps**. 0.1.0 / 0.2.0 remain frozen and importable
+  by explicit version.
+- `ocn doc create` registry and the `navigator.create_artifact` MCP tool gain the
+  `logic-backbone` type.
+
+### Verification
+
+`lint` + `typecheck` + `test:coverage` (897 tests, 102 files) + `build`, green.
+
+Design: AM-003 + DEC-025. Release: DEC-026. Feature PR #74, release PR #75.
+```
