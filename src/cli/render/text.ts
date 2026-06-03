@@ -37,6 +37,23 @@ function appendStatusBlock(out: string[], data: Record<string, unknown>): void {
   }
 }
 
+// SOP 0.3.0 — renders the logic-backbone summary (execution order + trigger
+// bindings) when the brief carries one.
+function appendLogicBackboneBlock(out: string[], value: unknown): void {
+  if (typeof value !== "object" || value === null) return;
+  const summary = value as Record<string, unknown>;
+  const order = summary["executionOrder"];
+  const triggers = summary["triggers"];
+  out.push("");
+  out.push("Logic Backbone｜逻辑主干:");
+  if (isStringArray(order)) {
+    out.push(`  Execution order: ${order.length === 0 ? "(none)" : order.join(" → ")}`);
+  }
+  if (isStringArray(triggers)) {
+    out.push(`  Triggers: ${triggers.length === 0 ? "(none)" : triggers.join(", ")}`);
+  }
+}
+
 function appendBriefBlock(out: string[], data: Record<string, unknown>): void {
   appendStatusBlock(out, data);
   if (typeof data["currentArtifactStatus"] === "string") {
@@ -57,6 +74,7 @@ function appendBriefBlock(out: string[], data: Record<string, unknown>): void {
       out.push(`  - ${action}`);
     }
   }
+  appendLogicBackboneBlock(out, data["logicBackbone"]);
   if (typeof data["aiGovernanceReminder"] === "string") {
     out.push("");
     out.push("AI Governance Reminder:");

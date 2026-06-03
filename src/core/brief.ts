@@ -4,6 +4,8 @@ import type { CommandResult } from "../types/result.js";
 import type { ProjectState } from "../types/state.js";
 import { computeArtifactGateStatus } from "./artifact/gate-status.js";
 import { parseHeadings } from "./artifact/markdown-parser.js";
+import { readLogicGraphProjection } from "./logic/logic-graph-store.js";
+import { summarizeLogicGraph, type LogicBackboneSummary } from "./logic/logic-graph-summary.js";
 import { blocked, ok } from "./result.js";
 import { msg } from "./i18n.js";
 import { loadSopProfile } from "./sop/loader.js";
@@ -20,17 +22,15 @@ export interface BriefData {
   /** Absolute path to the current step's artifact, OR empty when the step has
    *  no required artifact (BUILD/VERIFY/SHIP/REFLECT step stubs in PR #4). */
   readonly currentArtifactPath: string;
-  readonly currentArtifactStatus:
-    | "pass"
-    | "warning"
-    | "blocked"
-    | "missing"
-    | "not_applicable";
+  readonly currentArtifactStatus: "pass" | "warning" | "blocked" | "missing" | "not_applicable";
   readonly currentObjective: string;
   readonly currentBlockers: readonly string[];
   readonly nextActions: readonly string[];
   readonly aiGovernanceReminder: string;
   readonly uncertaintyPolicy: string;
+  /** Present once a validated logic backbone has been persisted (SOP 0.3.0).
+   *  Surfaces execution order + trigger bindings so BUILD cannot drift. */
+  readonly logicBackbone?: LogicBackboneSummary;
 }
 
 const AI_GOVERNANCE_REMINDER =
@@ -44,9 +44,7 @@ const UNCERTAINTY_POLICY =
 
 // PR #4 — brief uses the SOP profile to find the current step's artifact +
 // required sections, replacing the PR #1 hardcoded PRD path.
-export async function generateBrief(
-  opts: BriefOptions,
-): Promise<CommandResult<BriefData>> {
+export async function generateBrief(opts: BriefOptions): Promise<CommandResult<BriefData>> {
   let state: ProjectState;
   try {
     state = await readState(opts.cwd);
@@ -130,6 +128,12 @@ export async function generateBrief(
       ? `Run \`ocn advance\` to leave step ${state.currentStepId}.`
       : `Produce ${relativeArtifactPath} that passes the Step Artifact Gate (required sections present).`;
 
+  // Anti-drift: when a validated logic backbone exists, fold its execution
+  // order + trigger bindings into the brief so every BUILD-phase prompt sees
+  // the logic spine.
+  const graph = await readLogicGraphProjection(opts.cwd);
+  const logicBackbone = graph === null ? undefined : summarizeLogicGraph(graph);
+
   return ok(
     msg(
       `Brief for ${state.project.name} — ${state.currentStateId} / ${state.currentStepId}`,
@@ -146,6 +150,7 @@ export async function generateBrief(
       nextActions,
       aiGovernanceReminder: AI_GOVERNANCE_REMINDER,
       uncertaintyPolicy: UNCERTAINTY_POLICY,
+      ...(logicBackbone !== undefined ? { logicBackbone } : {}),
     },
   );
 }
