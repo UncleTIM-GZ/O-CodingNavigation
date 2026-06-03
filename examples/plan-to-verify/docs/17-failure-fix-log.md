@@ -36,7 +36,7 @@ stdout regex. Tracked under (illustrative) PR #44.
 ## Re-test Result｜回归结果
 
 **Entry 1.** `npm run test -- --repeat 50 round-trip` — 50/50 passes.
-Documented in `docs/17-regression-evidence.md`.
+Documented in `docs/18-regression-evidence.md`.
 
 ---
 

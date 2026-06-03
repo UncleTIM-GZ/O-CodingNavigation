@@ -34,7 +34,7 @@
 | `src/cli/`  | 84%       | 80%    | 90%      |
 | Project     | 91%       | 86%    | 95%      |
 
-All above the thresholds in `docs/08-test-strategy.md`.
+All above the thresholds in `docs/09-test-strategy.md`.
 
 ## Build Result｜构建结果
 
@@ -55,5 +55,5 @@ None. All quality gates green for v1.0.0.
 
 A previously red item — a flaky `done` integration test caused by
 non-deterministic ULID generation in the test harness — is recorded
-in `docs/16-failure-fix-log.md` and verified fixed in
-`docs/17-regression-evidence.md`.
+in `docs/17-failure-fix-log.md` and verified fixed in
+`docs/18-regression-evidence.md`.

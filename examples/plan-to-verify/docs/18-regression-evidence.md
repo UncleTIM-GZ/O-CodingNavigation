@@ -9,7 +9,7 @@
 
 ## Regression Scope｜回归范围
 
-- The `done` integration test fix from `docs/16-failure-fix-log.md`
+- The `done` integration test fix from `docs/17-failure-fix-log.md`
   Entry 1 (PR #44 illustrative).
 - The two preemptively-fixed stdout-parsing tests called out in the
   same fix log (Remaining Risk).

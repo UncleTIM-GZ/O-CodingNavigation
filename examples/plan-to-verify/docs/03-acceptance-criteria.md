@@ -33,7 +33,7 @@
 
 - AC-001..004: corresponding test exits 0; assertion messages all match.
 - AC-005: measured wall-clock < 50 ms on the CI runner; recorded in
-  `docs/14-verification-report.md`.
+  `docs/15-verification-report.md`.
 - AC-006: failure-injection harness reports "previous file intact".
 - AC-007: every command's `--json` output `JSON.parse`s without error.
 
@@ -47,7 +47,7 @@
 ## Human Review Requirement｜人工评审要求
 
 - AC-005 (performance) and AC-006 (atomic-write) require human reviewer
-  sign-off in `docs/15-acceptance-mapping.md` because automated thresholds
+  sign-off in `docs/16-acceptance-mapping.md` because automated thresholds
   alone do not capture intent (e.g. "is 50 ms still fast enough?").
 - AC-001..004, AC-007 are fully automatable; human review is "spot-check"
   during PR review.

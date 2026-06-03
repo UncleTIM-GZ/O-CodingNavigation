@@ -185,10 +185,10 @@ const REGISTRY: Readonly<Record<DocType, TemplateEntry>> = {
     relativePath: "docs/19-final-build-verdict.md",
     template: finalBuildVerdictTemplate,
   },
-  // SOP 0.3.0 — machine-verifiable logic backbone (DESIGN phase). Additive
-  // slot 19 avoids renumbering the frozen 00–18 contracts; its DESIGN-phase
-  // position is defined by step order in the 0.3.0 profile, not the file
-  // number (file numbers are display-only per CLAUDE.md §4.1).
+  // SOP 0.3.0 — machine-verifiable logic backbone (DESIGN phase) at docs/07,
+  // after the data model and before the API contract / test strategy (08-19
+  // shift +1). `doc create` resolves the path from the active SOP profile
+  // (artifactPathForStep), so relativePath here is just the default fallback.
   "logic-backbone": {
     type: "logic-backbone",
     artifactId: "artifact_logic_backbone",

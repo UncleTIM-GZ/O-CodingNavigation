@@ -47,7 +47,7 @@
 
 - AC-005 was measured on `ubuntu-latest` (Node 20). On a slower runner the
   threshold may need to be revisited — see Remaining Risks in
-  `docs/18-final-build-verdict.md`.
+  `docs/19-final-build-verdict.md`.
 - AC-006 uses a process-kill harness inside vitest; the harness is
   documented at the top of `tests/unit/store.test.ts`.
 
