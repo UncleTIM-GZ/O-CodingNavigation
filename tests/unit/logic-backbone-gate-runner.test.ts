@@ -9,7 +9,7 @@ import { seedState } from "../helpers/seed-state.js";
 import { createTempProject, type TempProject } from "../helpers/temp-project.js";
 
 const PROFILE_030 = loadSopProfileByVersion("0.3.0");
-const ARTIFACT = "docs/19-logic-backbone.md";
+const ARTIFACT = "docs/07-logic-backbone.md";
 
 // A doc carrying all five required sections; the graph body is parameterized.
 function makeDoc(graphYaml: string): string {

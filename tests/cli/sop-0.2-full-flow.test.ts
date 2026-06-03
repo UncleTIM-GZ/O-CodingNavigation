@@ -56,81 +56,81 @@ const FULL_PATH: readonly Step[] = [
   },
   {
     stateId: "state_design",
+    stepId: "step_logic_backbone",
+    docType: "logic-backbone",
+    artifactPath: "docs/07-logic-backbone.md",
+  },
+  {
+    stateId: "state_design",
     stepId: "step_api_contract",
     docType: "api-contract",
-    artifactPath: "docs/07-api-contract.md",
+    artifactPath: "docs/08-api-contract.md",
   },
   {
     stateId: "state_design",
     stepId: "step_test_strategy",
     docType: "test-strategy",
-    artifactPath: "docs/08-test-strategy.md",
-  },
-  {
-    stateId: "state_design",
-    stepId: "step_logic_backbone",
-    docType: "logic-backbone",
-    artifactPath: "docs/19-logic-backbone.md",
+    artifactPath: "docs/09-test-strategy.md",
   },
   {
     stateId: "state_plan",
     stepId: "step_mvp_plan",
     docType: "mvp-plan",
-    artifactPath: "docs/09-mvp-plan.md",
+    artifactPath: "docs/10-mvp-plan.md",
   },
   {
     stateId: "state_plan",
     stepId: "step_build_plan",
     docType: "build-plan",
-    artifactPath: "docs/10-build-plan.md",
+    artifactPath: "docs/11-build-plan.md",
   },
   {
     stateId: "state_build",
     stepId: "step_implementation_log",
     docType: "implementation-log",
-    artifactPath: "docs/11-implementation-log.md",
+    artifactPath: "docs/12-implementation-log.md",
   },
   {
     stateId: "state_build",
     stepId: "step_change_evidence",
     docType: "change-evidence",
-    artifactPath: "docs/12-change-evidence.md",
+    artifactPath: "docs/13-change-evidence.md",
   },
   {
     stateId: "state_build",
     stepId: "step_integration_notes",
     docType: "integration-notes",
-    artifactPath: "docs/13-integration-notes.md",
+    artifactPath: "docs/14-integration-notes.md",
   },
   {
     stateId: "state_verify",
     stepId: "step_verification_report",
     docType: "verification-report",
-    artifactPath: "docs/14-verification-report.md",
+    artifactPath: "docs/15-verification-report.md",
   },
   {
     stateId: "state_verify",
     stepId: "step_acceptance_mapping",
     docType: "acceptance-mapping",
-    artifactPath: "docs/15-acceptance-mapping.md",
+    artifactPath: "docs/16-acceptance-mapping.md",
   },
   {
     stateId: "state_verify",
     stepId: "step_failure_fix_log",
     docType: "failure-fix-log",
-    artifactPath: "docs/16-failure-fix-log.md",
+    artifactPath: "docs/17-failure-fix-log.md",
   },
   {
     stateId: "state_verify",
     stepId: "step_regression_evidence",
     docType: "regression-evidence",
-    artifactPath: "docs/17-regression-evidence.md",
+    artifactPath: "docs/18-regression-evidence.md",
   },
   {
     stateId: "state_verify",
     stepId: "step_final_build_verdict",
     docType: "final-build-verdict",
-    artifactPath: "docs/18-final-build-verdict.md",
+    artifactPath: "docs/19-final-build-verdict.md",
   },
 ];
 
@@ -165,8 +165,8 @@ describe("ocn — SOP 0.3.0 full 20-step flow (CLI)", () => {
       join(project.cwd, ".ocoding", "artifacts.yaml"),
       "utf8",
     );
-    expect(artifactsYaml).toContain("docs/18-final-build-verdict.md");
-    expect(artifactsYaml).toContain("docs/19-logic-backbone.md");
+    expect(artifactsYaml).toContain("docs/19-final-build-verdict.md");
+    expect(artifactsYaml).toContain("docs/07-logic-backbone.md");
 
     const configYaml = await fs.readFile(join(project.cwd, ".ocoding", "config.yaml"), "utf8");
     expect(configYaml).toContain("0.3.0");

@@ -19,7 +19,7 @@ None (new artifact + new SOP minor version).
 - `src/core/gate/logic-backbone-gate.ts` (parser + validator orchestration)
 - `src/core/gate/gate-runner.ts` (structural gate chained after the section gate for `step_logic_backbone`)
 - `src/core/logic/logic-graph-store.ts`, `logic-graph-summary.ts` (`.ocoding/logic-graph.json` projection + brief summary)
-- `src/core/templates/logic-backbone.ts` + registry (`docs/19-logic-backbone.md`)
+- `src/core/templates/logic-backbone.ts` + registry (`docs/07-logic-backbone.md`)
 - `src/sops/default-ai-coding-sop/0.3.0/*` (new profile = 0.2.0 + `step_logic_backbone`)
 - `src/core/sop/loader.ts` (0.3.0 ProfileSource; default stays 0.2.0)
 - `src/mcp/tools/create-artifact.ts` (`logic-backbone` enum value)
@@ -44,7 +44,7 @@ Event Modeling's command-vs-read-model distinction; architectural fitness functi
 ## Decision
 
 Add a DESIGN-phase artifact **`artifact_logic_backbone`** (step `step_logic_backbone`),
-authored as `docs/19-logic-backbone.md`. It carries five required sections (Nodes,
+authored as `docs/07-logic-backbone.md`. It carries five required sections (Nodes,
 Dependencies, Decision Bindings, Signals, Graph) and an embedded `ocn-logic-graph` fenced
 block (YAML). The graph models:
 
@@ -62,10 +62,16 @@ prompts always see the logic spine.
 
 **Two sub-decisions:**
 
-1. **Additive slot 19, no renumbering.** The 0.2.0 profile already occupies `docs/00–18`
-   and the template registry maps one path per type; renumbering would force version-aware
-   paths and break the frozen 0.2.0 suite. `step_logic_backbone` is ordered as the **last
-   DESIGN step** (step order is the source of truth; file number is display-only per §4.1).
+1. **Dependency-correct slot 07, renumbered (supersedes the initial additive-slot-19
+   approach).** The logic backbone is computation on the data model (its inputs/scores
+   derive from data-model fields), and the API contract exposes its outputs while the test
+   strategy tests its graph — so it must sit **after the data model and before the API
+   contract / test strategy**. It takes file slot **07**; `08-api-contract` … `19-final-
+   build-verdict` shift +1. The file number now equals the workflow order (no misleading
+   "19" that reads as written-last). To avoid per-version path collisions in the shared
+   template registry, `ocn doc create` now sources the path from the active SOP profile
+   (`artifactPathForStep`), not a hardcoded registry path — so 0.2.0 keeps its own numbering
+   while 0.3.0 uses the renumbered scheme.
 2. **New SOP version 0.3.0, now the runtime default.** Adding a step is an additive
    minor bump (§4.2): 0.2.0 stays frozen and importable via
    `loadSopProfileByVersion("0.2.0")`. `loadSopProfile()` returns 0.3.0, so fresh

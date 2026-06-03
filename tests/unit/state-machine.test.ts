@@ -37,14 +37,14 @@ describe("SopProfile state-machine API", () => {
     ]);
   });
 
-  it("returns the configured steps for state_design (6 steps; logic_backbone last under 0.3.0)", () => {
+  it("returns the configured steps for state_design (6 steps; logic_backbone after data_model under 0.3.0)", () => {
     expect(profile.stepsForState("state_design")).toEqual([
       "step_technical_architecture",
       "step_information_architecture",
       "step_data_model",
+      "step_logic_backbone",
       "step_api_contract",
       "step_test_strategy",
-      "step_logic_backbone",
     ]);
   });
 
@@ -89,30 +89,31 @@ describe("SopProfile state-machine API", () => {
       "docs/05-information-architecture.md",
     );
     expect(profile.artifactPathForStep("step_data_model")).toBe("docs/06-data-model.md");
-    expect(profile.artifactPathForStep("step_api_contract")).toBe("docs/07-api-contract.md");
-    expect(profile.artifactPathForStep("step_test_strategy")).toBe("docs/08-test-strategy.md");
-    expect(profile.artifactPathForStep("step_mvp_plan")).toBe("docs/09-mvp-plan.md");
-    // SOP 0.2.0 PR 4 — wired build/verify steps map to docs/10-18.
-    expect(profile.artifactPathForStep("step_build_plan")).toBe("docs/10-build-plan.md");
+    // SOP 0.3.0 — logic_backbone at 07, everything from api_contract shifts +1.
+    expect(profile.artifactPathForStep("step_logic_backbone")).toBe("docs/07-logic-backbone.md");
+    expect(profile.artifactPathForStep("step_api_contract")).toBe("docs/08-api-contract.md");
+    expect(profile.artifactPathForStep("step_test_strategy")).toBe("docs/09-test-strategy.md");
+    expect(profile.artifactPathForStep("step_mvp_plan")).toBe("docs/10-mvp-plan.md");
+    expect(profile.artifactPathForStep("step_build_plan")).toBe("docs/11-build-plan.md");
     expect(profile.artifactPathForStep("step_implementation_log")).toBe(
-      "docs/11-implementation-log.md",
+      "docs/12-implementation-log.md",
     );
-    expect(profile.artifactPathForStep("step_change_evidence")).toBe("docs/12-change-evidence.md");
+    expect(profile.artifactPathForStep("step_change_evidence")).toBe("docs/13-change-evidence.md");
     expect(profile.artifactPathForStep("step_integration_notes")).toBe(
-      "docs/13-integration-notes.md",
+      "docs/14-integration-notes.md",
     );
     expect(profile.artifactPathForStep("step_verification_report")).toBe(
-      "docs/14-verification-report.md",
+      "docs/15-verification-report.md",
     );
     expect(profile.artifactPathForStep("step_acceptance_mapping")).toBe(
-      "docs/15-acceptance-mapping.md",
+      "docs/16-acceptance-mapping.md",
     );
-    expect(profile.artifactPathForStep("step_failure_fix_log")).toBe("docs/16-failure-fix-log.md");
+    expect(profile.artifactPathForStep("step_failure_fix_log")).toBe("docs/17-failure-fix-log.md");
     expect(profile.artifactPathForStep("step_regression_evidence")).toBe(
-      "docs/17-regression-evidence.md",
+      "docs/18-regression-evidence.md",
     );
     expect(profile.artifactPathForStep("step_final_build_verdict")).toBe(
-      "docs/18-final-build-verdict.md",
+      "docs/19-final-build-verdict.md",
     );
   });
 
@@ -151,29 +152,26 @@ describe("nextStepFor", () => {
     });
   });
 
-  it("advances within state_design", () => {
+  it("advances within state_design: data_model → logic_backbone (0.3.0)", () => {
     const next = nextStepFor(profile, {
       stateId: "state_design",
       stepId: "step_data_model",
     });
-    expect(next).toEqual({
-      stateId: "state_design",
-      stepId: "step_api_contract",
-    });
-  });
-
-  it("advances within state_design: test_strategy → logic_backbone (0.3.0)", () => {
-    const next = nextStepFor(profile, {
-      stateId: "state_design",
-      stepId: "step_test_strategy",
-    });
     expect(next).toEqual({ stateId: "state_design", stepId: "step_logic_backbone" });
   });
 
-  it("advances state_design final step (logic_backbone) into state_plan/step_mvp_plan", () => {
+  it("advances within state_design: logic_backbone → api_contract (0.3.0)", () => {
     const next = nextStepFor(profile, {
       stateId: "state_design",
       stepId: "step_logic_backbone",
+    });
+    expect(next).toEqual({ stateId: "state_design", stepId: "step_api_contract" });
+  });
+
+  it("advances state_design final step (test_strategy) into state_plan/step_mvp_plan", () => {
+    const next = nextStepFor(profile, {
+      stateId: "state_design",
+      stepId: "step_test_strategy",
     });
     expect(next).toEqual({ stateId: "state_plan", stepId: "step_mvp_plan" });
   });

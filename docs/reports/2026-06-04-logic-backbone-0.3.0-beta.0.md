@@ -22,7 +22,7 @@ DEC-025 (`docs/20-decision-log.md`). Feature PR: #74 (merged to `main`).
 
 ## 2. What the Logic Backbone does
 
-The artifact `docs/19-logic-backbone.md` models a system as a typed, role-bearing
+The artifact `docs/07-logic-backbone.md` models a system as a typed, role-bearing
 directed graph (DAG + DMN): node **kind** = input/formula/score/judgment/signal;
 node **role** = input/intermediate/terminal_explanatory/trigger/hint; edges
 (upstream→downstream) = feeds / serves / triggers / explains.
@@ -51,7 +51,7 @@ brief to prevent logic drift.
 end-to-end: a mis-wired graph → BLOCKED naming every defect; a fixed graph →
 PASS + `.ocoding/logic-graph.json`; `ocn brief` prints execution order + triggers.
 Spawn-based CLI/e2e flows updated to walk all 20 steps (an `examples/plan-to-verify`
-`19-logic-backbone.md` fixture was added).
+`07-logic-backbone.md` fixture was added).
 
 ## 5. Publish checklist (executed by a maintainer with npm auth)
 
@@ -81,7 +81,7 @@ Spawn-based CLI/e2e flows updated to walk all 20 steps (an `examples/plan-to-ver
 
 ### New — Logic Backbone (SOP 0.3.0)
 
-A new DESIGN-phase artifact, `docs/19-logic-backbone.md`, pins a system's
+A new DESIGN-phase artifact, `docs/07-logic-backbone.md`, pins a system's
 **computation/decision graph** before BUILD so the logic can't drift. It models
 the system as a typed, role-bearing directed graph (DAG + DMN): node kinds
 (input / formula / score / judgment / signal), node roles (input / intermediate /

@@ -3631,7 +3631,7 @@ Artifact heading format:
 信号触发功能 vs 只是提示。逻辑主干在设计时未被文档化，实施时不断漂移、越后越乱。
 
 需求｜Requirement：OCN 在 DESIGN 阶段提供一个机器可校验的“逻辑主干”产物
-（`artifact_logic_backbone`，`docs/19-logic-backbone.md`，SOP 0.3.0 默认启用）。它把
+（`artifact_logic_backbone`，`docs/07-logic-backbone.md`，SOP 0.3.0 默认启用）。它把
 系统的计算/决策语义建成有类型、有角色的有向图（DAG + DMN：节点 kind =
 input/formula/score/judgment/signal，role = input/intermediate/terminal_explanatory/
 trigger/hint；边 = feeds/serves/triggers/explains，上游→下游）。

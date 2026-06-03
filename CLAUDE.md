@@ -40,7 +40,7 @@ All design decisions live in `docs/`. **Read them before answering design questi
 | `docs/06-api-contract.md` | DESIGN | CLI / Core / MCP contracts, exit codes, lock contracts |
 | `docs/07-test-strategy.md` | DESIGN | 8-layer test stack, Skeleton Spike validation |
 | `docs/08-mvp-plan.md` | PLAN | Phase 0 Skeleton Spike, Phase 1+ rollout |
-| `docs/19-logic-backbone.md` | DESIGN | **Logic Backbone** — machine-verifiable computation/decision graph (SOP 0.3.0, AM-003); also OCN's own dogfood backbone |
+| `docs/07-logic-backbone.md` | DESIGN | **Logic Backbone** — machine-verifiable computation/decision graph (SOP 0.3.0, AM-003); also OCN's own dogfood backbone |
 | `docs/20-decision-log.md` | — | Decision log (DEC-001 … DEC-025) |
 | `docs/amendments/` | — | Amendments (AM-001 … AM-003) — canonical record of divergences from the frozen `docs/0X` contracts |
 | `docs/AI Coding SOP v1.md` | — | Source SOP profile (rendered into `sops/default-ai-coding-sop/{0.1.0,0.2.0,0.3.0}/`; 0.3.0 is the runtime default) |
@@ -230,7 +230,7 @@ Status       : pre-GA beta, dogfooded; Skeleton Spike + SOP 0.2.0 cutover + SOP 
 
 - **Skeleton Spike (Phase 0) — done.** `init / status / brief / doc create / check` + the core engine (SOP loader, state store with lock+backup+atomic rename, markdown parser, required-section matcher, gate-status calculator, bilingual CommandResult renderer).
 - **SOP 0.2.0 — done.** `runGate`, `advanceState`, audit trail, full 19-step Plan→Build→Verify pipeline, MCP server (7 tools), Execution Navigator commands.
-- **SOP 0.3.0 — done (AM-003 / DEC-025).** The **Logic Backbone**: a DESIGN-phase artifact `docs/19-logic-backbone.md` whose computation/decision graph is machine-validated. `ocn check` blocks (`ERR_ARTIFACT_INVALID`, exit 2) on missing role / duplicate node id / dangling reference / dependency cycle / orphan node / unbound trigger; on pass it writes `.ocoding/logic-graph.json` and `ocn brief` surfaces execution order + trigger bindings. See `src/core/gate/logic-backbone-validator.ts` + `docs/amendments/2026-06-03-logic-backbone-amendment.md`.
+- **SOP 0.3.0 — done (AM-003 / DEC-025).** The **Logic Backbone**: a DESIGN-phase artifact `docs/07-logic-backbone.md` whose computation/decision graph is machine-validated. `ocn check` blocks (`ERR_ARTIFACT_INVALID`, exit 2) on missing role / duplicate node id / dangling reference / dependency cycle / orphan node / unbound trigger; on pass it writes `.ocoding/logic-graph.json` and `ocn brief` surfaces execution order + trigger bindings. See `src/core/gate/logic-backbone-validator.ts` + `docs/amendments/2026-06-03-logic-backbone-amendment.md`.
 
 ### Original Skeleton Spike acceptance (historical)
 

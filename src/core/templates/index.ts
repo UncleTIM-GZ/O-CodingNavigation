@@ -114,19 +114,19 @@ const REGISTRY: Readonly<Record<DocType, TemplateEntry>> = {
   "api-contract": {
     type: "api-contract",
     artifactId: "artifact_api_contract",
-    relativePath: "docs/07-api-contract.md",
+    relativePath: "docs/08-api-contract.md",
     template: apiContractTemplate,
   },
   "test-strategy": {
     type: "test-strategy",
     artifactId: "artifact_test_strategy",
-    relativePath: "docs/08-test-strategy.md",
+    relativePath: "docs/09-test-strategy.md",
     template: testStrategyTemplate,
   },
   "mvp-plan": {
     type: "mvp-plan",
     artifactId: "artifact_mvp_plan",
-    relativePath: "docs/09-mvp-plan.md",
+    relativePath: "docs/10-mvp-plan.md",
     template: mvpPlanTemplate,
   },
   // SOP 0.2.0 PR 2 — strong-gated build/verify templates. Stable ids mirror
@@ -134,55 +134,55 @@ const REGISTRY: Readonly<Record<DocType, TemplateEntry>> = {
   "build-plan": {
     type: "build-plan",
     artifactId: "artifact_build_plan",
-    relativePath: "docs/10-build-plan.md",
+    relativePath: "docs/11-build-plan.md",
     template: buildPlanTemplate,
   },
   "implementation-log": {
     type: "implementation-log",
     artifactId: "artifact_implementation_log",
-    relativePath: "docs/11-implementation-log.md",
+    relativePath: "docs/12-implementation-log.md",
     template: implementationLogTemplate,
   },
   "change-evidence": {
     type: "change-evidence",
     artifactId: "artifact_change_evidence",
-    relativePath: "docs/12-change-evidence.md",
+    relativePath: "docs/13-change-evidence.md",
     template: changeEvidenceTemplate,
   },
   "integration-notes": {
     type: "integration-notes",
     artifactId: "artifact_integration_notes",
-    relativePath: "docs/13-integration-notes.md",
+    relativePath: "docs/14-integration-notes.md",
     template: integrationNotesTemplate,
   },
   "verification-report": {
     type: "verification-report",
     artifactId: "artifact_verification_report",
-    relativePath: "docs/14-verification-report.md",
+    relativePath: "docs/15-verification-report.md",
     template: verificationReportTemplate,
   },
   "acceptance-mapping": {
     type: "acceptance-mapping",
     artifactId: "artifact_acceptance_mapping",
-    relativePath: "docs/15-acceptance-mapping.md",
+    relativePath: "docs/16-acceptance-mapping.md",
     template: acceptanceMappingTemplate,
   },
   "failure-fix-log": {
     type: "failure-fix-log",
     artifactId: "artifact_failure_fix_log",
-    relativePath: "docs/16-failure-fix-log.md",
+    relativePath: "docs/17-failure-fix-log.md",
     template: failureFixLogTemplate,
   },
   "regression-evidence": {
     type: "regression-evidence",
     artifactId: "artifact_regression_evidence",
-    relativePath: "docs/17-regression-evidence.md",
+    relativePath: "docs/18-regression-evidence.md",
     template: regressionEvidenceTemplate,
   },
   "final-build-verdict": {
     type: "final-build-verdict",
     artifactId: "artifact_final_build_verdict",
-    relativePath: "docs/18-final-build-verdict.md",
+    relativePath: "docs/19-final-build-verdict.md",
     template: finalBuildVerdictTemplate,
   },
   // SOP 0.3.0 — machine-verifiable logic backbone (DESIGN phase). Additive
@@ -192,7 +192,7 @@ const REGISTRY: Readonly<Record<DocType, TemplateEntry>> = {
   "logic-backbone": {
     type: "logic-backbone",
     artifactId: "artifact_logic_backbone",
-    relativePath: "docs/19-logic-backbone.md",
+    relativePath: "docs/07-logic-backbone.md",
     template: logicBackboneTemplate,
   },
 };

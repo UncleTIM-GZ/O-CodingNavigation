@@ -5,6 +5,7 @@ import { msg } from "./i18n.js";
 import { FileExistsError, writeArtifact } from "./artifact/template-writer.js";
 import { type DocType, DOC_TYPES, getTemplate, isDocType } from "./templates/index.js";
 import { createAuditEvent, safeAudit } from "./audit/index.js";
+import { loadSopProfile } from "./sop/loader.js";
 
 export type { DocType } from "./templates/index.js";
 
@@ -36,7 +37,13 @@ export async function createArtifact(
   }
 
   const entry = getTemplate(opts.type);
-  const artifactPath = join(opts.cwd, entry.relativePath);
+  // Path comes from the active SOP profile (version-aware), not a hardcoded
+  // registry path — so per-version numbering (e.g. 0.3.0's renumber) never
+  // diverges from where the gate looks. Falls back to the registry path only
+  // if the profile has no slot for this step.
+  const stepId = entry.artifactId.replace(/^artifact_/, "step_");
+  const relativePath = loadSopProfile().artifactPathForStep(stepId) ?? entry.relativePath;
+  const artifactPath = join(opts.cwd, relativePath);
 
   try {
     await writeArtifact(artifactPath, entry.template, opts.overwrite ?? false);

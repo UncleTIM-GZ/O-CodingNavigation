@@ -24,8 +24,8 @@ describe("sop/loader.loadSopProfile", () => {
     expect(profile.sopYaml).toMatch(/version: 0\.3\.0/);
     expect(profile.gatesYaml).toMatch(/section_product_form/);
     expect(profile.artifactsYaml).toMatch(/02-prd\.md/);
-    expect(profile.artifactsYaml).toMatch(/18-final-build-verdict\.md/);
-    expect(profile.artifactsYaml).toMatch(/19-logic-backbone\.md/);
+    expect(profile.artifactsYaml).toMatch(/19-final-build-verdict\.md/);
+    expect(profile.artifactsYaml).toMatch(/07-logic-backbone\.md/);
     expect(profile.defaultConfigYaml).toMatch(/tier: minimal/);
     expect(profile.defaultConfigYaml).toMatch(/version: 0\.3\.0/);
   });
@@ -82,18 +82,19 @@ describe("sop/loader.loadSopProfile", () => {
       ["step_technical_architecture", "docs/04-technical-architecture.md"],
       ["step_information_architecture", "docs/05-information-architecture.md"],
       ["step_data_model", "docs/06-data-model.md"],
-      ["step_api_contract", "docs/07-api-contract.md"],
-      ["step_test_strategy", "docs/08-test-strategy.md"],
-      ["step_mvp_plan", "docs/09-mvp-plan.md"],
-      ["step_build_plan", "docs/10-build-plan.md"],
-      ["step_implementation_log", "docs/11-implementation-log.md"],
-      ["step_change_evidence", "docs/12-change-evidence.md"],
-      ["step_integration_notes", "docs/13-integration-notes.md"],
-      ["step_verification_report", "docs/14-verification-report.md"],
-      ["step_acceptance_mapping", "docs/15-acceptance-mapping.md"],
-      ["step_failure_fix_log", "docs/16-failure-fix-log.md"],
-      ["step_regression_evidence", "docs/17-regression-evidence.md"],
-      ["step_final_build_verdict", "docs/18-final-build-verdict.md"],
+      ["step_logic_backbone", "docs/07-logic-backbone.md"],
+      ["step_api_contract", "docs/08-api-contract.md"],
+      ["step_test_strategy", "docs/09-test-strategy.md"],
+      ["step_mvp_plan", "docs/10-mvp-plan.md"],
+      ["step_build_plan", "docs/11-build-plan.md"],
+      ["step_implementation_log", "docs/12-implementation-log.md"],
+      ["step_change_evidence", "docs/13-change-evidence.md"],
+      ["step_integration_notes", "docs/14-integration-notes.md"],
+      ["step_verification_report", "docs/15-verification-report.md"],
+      ["step_acceptance_mapping", "docs/16-acceptance-mapping.md"],
+      ["step_failure_fix_log", "docs/17-failure-fix-log.md"],
+      ["step_regression_evidence", "docs/18-regression-evidence.md"],
+      ["step_final_build_verdict", "docs/19-final-build-verdict.md"],
     ];
     for (const [stepId, runtimePath] of checks) {
       expect(profile.artifactPathForStep(stepId)).toBe(runtimePath);

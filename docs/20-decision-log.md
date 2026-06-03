@@ -2873,7 +2873,7 @@ Negative:
 ### Decision
 
 Add a DESIGN-phase artifact `artifact_logic_backbone` / `step_logic_backbone`
-(`docs/19-logic-backbone.md`) that pins a system's computation/decision graph as a typed,
+(`docs/07-logic-backbone.md`) that pins a system's computation/decision graph as a typed,
 role-bearing directed graph and machine-validates it. `ocn check` blocks
 (`ERR_ARTIFACT_INVALID`, exit 2) on five drift defects — missing role, dangling reference,
 dependency cycle, orphan node, unbound trigger — and on pass persists
@@ -2886,8 +2886,12 @@ Markdown-friendly authored doc + `.ocoding/` JSON projection (§4.10).
 
 ### Sub-decisions
 
-- **Additive slot `docs/19`**, no renumbering of the frozen 00–18; DESIGN-phase position is
-  set by step order, not file number (§4.1).
+- **Dependency-correct slot `docs/07`, renumbered** (supersedes the initial additive-slot-19
+  idea). Logic backbone sits after the data model and before the API contract / test
+  strategy (it computes on the data; API exposes its outputs; test strategy tests its
+  graph). `08-api-contract` … `19-final-build-verdict` shift +1, so file number == workflow
+  order. Paths are sourced from the active SOP profile (`artifactPathForStep`), not a
+  hardcoded registry path, so 0.2.0 keeps its numbering while 0.3.0 uses the renumber.
 - **New SOP 0.3.0** (additive minor bump, §4.2) is the runtime default; `loadSopProfile()`
   returns 0.3.0 (20 wired steps). 0.2.0 stays frozen and importable by explicit version.
 
@@ -2946,3 +2950,37 @@ release marker.
 - `alpha` is not touched (stays `0.1.0-alpha.2`).
 - No change to the SOP 0.1.0 / 0.2.0 frozen profiles (importable by explicit version).
 - Feature scope is governed by DEC-025 / AM-003; this DEC only authorises the release marker.
+
+## DEC-027｜Renumber the logic backbone to its dependency-correct slot (docs/07)
+
+Date: 2026-06-04
+Amends: AM-003 / DEC-025 (supersedes their "additive slot 19" sub-decision)
+
+### Status
+
+Accepted — folded into 0.3.0 before its npm publish.
+
+### Context
+
+DEC-025 originally placed `step_logic_backbone` as an **additive slot 19** (last DESIGN
+step) to avoid renumbering the frozen 0.2.0 `00–18` set and the shared template registry.
+Review surfaced that this is dependency-incorrect and confusing: the file number 19 reads
+as "written last", and the test strategy (08) should test the logic backbone, so the
+backbone must precede it.
+
+### Decision
+
+Order by dependency, not by an additive file number. The logic backbone is **computation
+on the data model** (its inputs/scores derive from data-model fields); the API contract
+exposes its outputs and the test strategy tests its graph. Therefore:
+
+- Workflow position: **after `06-data-model`, before `08-api-contract` / `09-test-strategy`**.
+- File slot: **`docs/07-logic-backbone.md`**; `api-contract` … `final-build-verdict` shift
+  +1 (→ `08` … `19`). File number now equals workflow order.
+- Architecture: `ocn doc create` sources the artifact path from the active SOP profile
+  (`artifactPathForStep`), not a hardcoded registry path — so 0.2.0 keeps its numbering and
+  0.3.0 uses the renumber without a shared-registry collision.
+
+### Out of scope
+
+- 0.2.0 / 0.1.0 numbering unchanged (frozen). The npm package number stays `0.3.0-beta.0`.

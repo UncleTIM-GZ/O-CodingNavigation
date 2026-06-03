@@ -23,46 +23,46 @@ interface NewArtifact {
 }
 
 const NEW_ARTIFACTS: readonly NewArtifact[] = [
-  { type: "build-plan", stepId: "step_build_plan", file: "docs/10-build-plan.md" },
+  { type: "build-plan", stepId: "step_build_plan", file: "docs/11-build-plan.md" },
   {
     type: "implementation-log",
     stepId: "step_implementation_log",
-    file: "docs/11-implementation-log.md",
+    file: "docs/12-implementation-log.md",
   },
   {
     type: "change-evidence",
     stepId: "step_change_evidence",
-    file: "docs/12-change-evidence.md",
+    file: "docs/13-change-evidence.md",
   },
   {
     type: "integration-notes",
     stepId: "step_integration_notes",
-    file: "docs/13-integration-notes.md",
+    file: "docs/14-integration-notes.md",
   },
   {
     type: "verification-report",
     stepId: "step_verification_report",
-    file: "docs/14-verification-report.md",
+    file: "docs/15-verification-report.md",
   },
   {
     type: "acceptance-mapping",
     stepId: "step_acceptance_mapping",
-    file: "docs/15-acceptance-mapping.md",
+    file: "docs/16-acceptance-mapping.md",
   },
   {
     type: "failure-fix-log",
     stepId: "step_failure_fix_log",
-    file: "docs/16-failure-fix-log.md",
+    file: "docs/17-failure-fix-log.md",
   },
   {
     type: "regression-evidence",
     stepId: "step_regression_evidence",
-    file: "docs/17-regression-evidence.md",
+    file: "docs/18-regression-evidence.md",
   },
   {
     type: "final-build-verdict",
     stepId: "step_final_build_verdict",
-    file: "docs/18-final-build-verdict.md",
+    file: "docs/19-final-build-verdict.md",
   },
 ];
 

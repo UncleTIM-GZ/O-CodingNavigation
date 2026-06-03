@@ -3086,7 +3086,7 @@ Traceability: PRD 9.x｜Logic Backbone (AM-003 / DEC-025)
 Acceptance Method: automated test
 
 Given 当前步骤为 step_logic_backbone（SOP 0.3.0）
-And docs/19-logic-backbone.md 的 ocn-logic-graph 块含以下任一缺陷：
+And docs/07-logic-backbone.md 的 ocn-logic-graph 块含以下任一缺陷：
 
 某节点缺少有效 role
 某节点 id 重复
@@ -3113,7 +3113,7 @@ Traceability: PRD 9.x｜Logic Backbone (AM-003 / DEC-025)
 Acceptance Method: automated test
 
 Given 当前步骤为 step_logic_backbone
-When docs/19-logic-backbone.md 缺少 ocn-logic-graph 围栏块，或块内不是合法 YAML/JSON，或不符合 LogicGraph schema
+When docs/07-logic-backbone.md 缺少 ocn-logic-graph 围栏块，或块内不是合法 YAML/JSON，或不符合 LogicGraph schema
 And 运行 ocn check
 Then 必须返回 blocked（ERR_ARTIFACT_INVALID），blockingReason 为
   logic_backbone_graph_missing 或 logic_backbone_graph_invalid
@@ -3131,7 +3131,7 @@ Traceability: PRD 9.x｜Logic Backbone (AM-003 / DEC-025)
 Acceptance Method: automated test
 
 Given 当前步骤为 step_logic_backbone
-And docs/19-logic-backbone.md 含全部必需章节，且图无五类缺陷
+And docs/07-logic-backbone.md 含全部必需章节，且图无五类缺陷
 When 运行 ocn check
 Then 必须返回 pass
 And 必须在 .ocoding/logic-graph.json 写入规范化后的图（机器事实源）
