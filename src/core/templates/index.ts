@@ -9,6 +9,7 @@ import { finalBuildVerdictTemplate } from "./final-build-verdict.js";
 import { implementationLogTemplate } from "./implementation-log.js";
 import { informationArchitectureTemplate } from "./information-architecture.js";
 import { integrationNotesTemplate } from "./integration-notes.js";
+import { logicBackboneTemplate } from "./logic-backbone.js";
 import { mvpPlanTemplate } from "./mvp-plan.js";
 import { prdTemplate } from "./prd.js";
 import { projectBriefTemplate } from "./project-brief.js";
@@ -56,7 +57,8 @@ export type DocType =
   | "acceptance-mapping"
   | "failure-fix-log"
   | "regression-evidence"
-  | "final-build-verdict";
+  | "final-build-verdict"
+  | "logic-backbone";
 
 export interface TemplateEntry {
   readonly type: DocType;
@@ -182,6 +184,16 @@ const REGISTRY: Readonly<Record<DocType, TemplateEntry>> = {
     artifactId: "artifact_final_build_verdict",
     relativePath: "docs/18-final-build-verdict.md",
     template: finalBuildVerdictTemplate,
+  },
+  // SOP 0.3.0 — machine-verifiable logic backbone (DESIGN phase). Additive
+  // slot 19 avoids renumbering the frozen 00–18 contracts; its DESIGN-phase
+  // position is defined by step order in the 0.3.0 profile, not the file
+  // number (file numbers are display-only per CLAUDE.md §4.1).
+  "logic-backbone": {
+    type: "logic-backbone",
+    artifactId: "artifact_logic_backbone",
+    relativePath: "docs/19-logic-backbone.md",
+    template: logicBackboneTemplate,
   },
 };
 

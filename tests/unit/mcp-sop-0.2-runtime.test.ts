@@ -126,7 +126,7 @@ describe("MCP runtime under 0.2.0 cutover", () => {
     expect(result.ok).toBe(false);
   });
 
-  it("create_artifact input shape exposes all 19 0.2.0 ids in its enum", () => {
+  it("create_artifact input shape exposes all 0.2.0 ids plus the 0.3.0 logic-backbone in its enum", () => {
     // Pin the enum widening so it never silently shrinks again.
     const enumValues = createArtifactInputShape.artifactType.options;
     const expected = [
@@ -149,8 +149,10 @@ describe("MCP runtime under 0.2.0 cutover", () => {
       "failure-fix-log",
       "regression-evidence",
       "final-build-verdict",
+      // SOP 0.3.0 — machine-verifiable logic backbone (DESIGN phase).
+      "logic-backbone",
     ];
     expect(new Set(enumValues)).toEqual(new Set(expected));
-    expect(enumValues).toHaveLength(19);
+    expect(enumValues).toHaveLength(20);
   });
 });

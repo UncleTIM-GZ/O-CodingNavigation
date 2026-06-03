@@ -26,6 +26,17 @@ import {
 } from "../../sops/default-ai-coding-sop/0.2.0/data.js";
 import { gatesYaml as gatesYaml020 } from "../../sops/default-ai-coding-sop/0.2.0/gates.js";
 import { sopYaml as sopYaml020 } from "../../sops/default-ai-coding-sop/0.2.0/sop.js";
+import { artifactsYaml as artifactsYaml030 } from "../../sops/default-ai-coding-sop/0.3.0/artifacts.js";
+import { defaultConfigYaml as defaultConfigYaml030 } from "../../sops/default-ai-coding-sop/0.3.0/config.js";
+import {
+  PROFILE_ID as PROFILE_ID_030,
+  PROFILE_VERSION as PROFILE_VERSION_030,
+  REQUIRED_SECTIONS_BY_STEP as REQUIRED_SECTIONS_BY_STEP_030,
+  STATE_ORDER as STATE_ORDER_030,
+  STEPS_BY_STATE as STEPS_BY_STATE_030,
+} from "../../sops/default-ai-coding-sop/0.3.0/data.js";
+import { gatesYaml as gatesYaml030 } from "../../sops/default-ai-coding-sop/0.3.0/gates.js";
+import { sopYaml as sopYaml030 } from "../../sops/default-ai-coding-sop/0.3.0/sop.js";
 
 // P1-003 — the runtime profile and the persisted .ocoding/sop.yaml share a
 // single source of truth (data.ts). The loader is a thin adapter that wires
@@ -47,7 +58,7 @@ import { sopYaml as sopYaml020 } from "../../sops/default-ai-coding-sop/0.2.0/so
 // the runtime constant. Always reflects the default profile.
 export const STATE_ORDER: readonly StateId[] = STATE_ORDER_020;
 
-export type SopProfileVersion = "0.1.0" | "0.2.0";
+export type SopProfileVersion = "0.1.0" | "0.2.0" | "0.3.0";
 
 interface ProfileSource {
   readonly id: string;
@@ -83,6 +94,20 @@ const PROFILE_SOURCES: Readonly<Record<SopProfileVersion, ProfileSource>> = {
     stateOrder: STATE_ORDER_020,
     stepsByState: STEPS_BY_STATE_020,
     requiredSectionsByStep: REQUIRED_SECTIONS_BY_STEP_020,
+  },
+  // SOP 0.3.0 — 0.2.0 + step_logic_backbone. Importable for projects that pin
+  // 0.3.0 and for the logic-backbone gate tests; the default stays 0.2.0 until
+  // the runtime flip ships separately (same staging used for 0.2.0).
+  "0.3.0": {
+    id: PROFILE_ID_030,
+    version: PROFILE_VERSION_030 as SopProfileVersion,
+    sopYaml: sopYaml030,
+    gatesYaml: gatesYaml030,
+    artifactsYaml: artifactsYaml030,
+    defaultConfigYaml: defaultConfigYaml030,
+    stateOrder: STATE_ORDER_030,
+    stepsByState: STEPS_BY_STATE_030,
+    requiredSectionsByStep: REQUIRED_SECTIONS_BY_STEP_030,
   },
 };
 
