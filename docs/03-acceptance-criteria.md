@@ -3089,10 +3089,11 @@ Given 当前步骤为 step_logic_backbone（SOP 0.3.0）
 And docs/19-logic-backbone.md 的 ocn-logic-graph 块含以下任一缺陷：
 
 某节点缺少有效 role
+某节点 id 重复
 某条边引用了未定义节点（悬空引用）
 驱动子图（feeds/serves/triggers）存在依赖环
-某 input/intermediate 节点无任何下游消费者（孤儿）
-某 role=trigger 节点没有 triggers 边指向目标（未绑定触发）
+某 input/intermediate 节点无任何下游消费者（孤儿；仅指向未定义节点也算孤儿）
+某 role=trigger 节点没有 triggers 边指向已定义目标（未绑定触发）
 
 When 运行 ocn check
 Then 必须返回 blocked，退出码 = 2，错误码 = ERR_ARTIFACT_INVALID

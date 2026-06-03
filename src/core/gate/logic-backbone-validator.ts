@@ -1,9 +1,5 @@
 import type { BilingualMessage } from "../../types/i18n.js";
-import {
-  DRIVING_EDGE_KINDS,
-  LogicNodeRole,
-  type LogicGraph,
-} from "../../types/logic-backbone.js";
+import { DRIVING_EDGE_KINDS, LogicNodeRole, type LogicGraph } from "../../types/logic-backbone.js";
 import { msg } from "../i18n.js";
 
 // Validates a parsed logic backbone for the five drift defects. Pure function —
@@ -13,6 +9,7 @@ import { msg } from "../i18n.js";
 
 export type LogicIssueCode =
   | "missing_role"
+  | "duplicate_node_id"
   | "dangling_reference"
   | "cycle_detected"
   | "orphan_node"
@@ -42,6 +39,22 @@ function checkRoles(graph: LogicGraph): LogicBackboneIssue[] {
     if (role === undefined || !VALID_ROLES.has(role)) {
       issues.push({ code: "missing_role", nodeId: node.id });
     }
+  }
+  return issues;
+}
+
+// Duplicate ids would silently collapse during reachability analysis, masking
+// real defects — reject them up front.
+function checkDuplicateIds(graph: LogicGraph): LogicBackboneIssue[] {
+  const seen = new Set<string>();
+  const reported = new Set<string>();
+  const issues: LogicBackboneIssue[] = [];
+  for (const node of graph.nodes) {
+    if (seen.has(node.id) && !reported.has(node.id)) {
+      issues.push({ code: "duplicate_node_id", nodeId: node.id });
+      reported.add(node.id);
+    }
+    seen.add(node.id);
   }
   return issues;
 }
@@ -102,7 +115,10 @@ function checkConsumptionAndTriggers(
   const issues: LogicBackboneIssue[] = [];
   const drivesFrom = new Set<string>();
   const triggersFrom = new Set<string>();
+  // An edge only counts as real consumption when its target actually exists —
+  // a node whose only outgoing edge dangles is still an orphan / unbound.
   for (const edge of graph.edges) {
+    if (!validIds.has(edge.to)) continue;
     if (DRIVING_EDGE_KINDS.includes(edge.kind)) drivesFrom.add(edge.from);
     if (edge.kind === "triggers") triggersFrom.add(edge.from);
   }
@@ -123,6 +139,7 @@ export function validateLogicBackbone(graph: LogicGraph): LogicBackboneValidatio
   const ids = new Set(graph.nodes.map((n) => n.id));
   const issues: LogicBackboneIssue[] = [
     ...checkRoles(graph),
+    ...checkDuplicateIds(graph),
     ...checkDanglingRefs(graph, ids),
   ];
   const cycle = findCycle(graph, ids);
@@ -139,11 +156,10 @@ export function describeIssue(issue: LogicBackboneIssue): BilingualMessage {
   switch (issue.code) {
     case "missing_role":
       return msg(`node ${id} is missing a valid role`, `节点 ${id} 缺少有效的角色(role)`);
+    case "duplicate_node_id":
+      return msg(`duplicate node id: ${id}`, `节点 id 重复：${id}`);
     case "dangling_reference":
-      return msg(
-        `edge references undefined node: ${refs}`,
-        `边引用了未定义的节点：${refs}`,
-      );
+      return msg(`edge references undefined node: ${refs}`, `边引用了未定义的节点：${refs}`);
     case "cycle_detected":
       return msg(`dependency cycle detected: ${refs}`, `检测到依赖环：${refs}`);
     case "orphan_node":

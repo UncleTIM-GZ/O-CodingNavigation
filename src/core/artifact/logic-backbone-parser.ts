@@ -6,9 +6,9 @@ import { LogicGraph } from "../../types/logic-backbone.js";
 // as structured errors. Mirrors the defensive style of the execution-navigator
 // acceptance parser (src/core/execution-navigator/acceptance-parser.ts).
 //
-// The graph lives in a fenced code block tagged `ocn-logic-graph` (preferred),
-// or the first ```yaml / ```json block when no tagged block is present. The
-// block body is YAML (JSON is a YAML subset, so both load).
+// The graph lives in a fenced code block tagged exactly `ocn-logic-graph`. The
+// block body is YAML (JSON is a YAML subset, so both load). Untagged ```yaml /
+// ```json blocks are intentionally NOT picked up.
 
 export interface LogicBackboneParseResult {
   /** Whether a graph code block was present at all. */
@@ -53,10 +53,11 @@ function extractFencedBlocks(md: string): FencedBlock[] {
   return blocks;
 }
 
+// Strict by design: the graph MUST live in an `ocn-logic-graph` block. We do
+// not fall back to bare ```yaml / ```json fences — that risks silently capturing
+// an unrelated code block as the graph (a false pass OCN exists to prevent).
 function pickGraphBlock(blocks: readonly FencedBlock[]): FencedBlock | null {
-  const tagged = blocks.find((b) => b.info === GRAPH_FENCE_TAG);
-  if (tagged !== undefined) return tagged;
-  return blocks.find((b) => b.info === "yaml" || b.info === "json") ?? null;
+  return blocks.find((b) => b.info === GRAPH_FENCE_TAG) ?? null;
 }
 
 export function parseLogicBackbone(markdown: string): LogicBackboneParseResult {

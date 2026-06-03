@@ -240,13 +240,20 @@ export async function runGate(opts: RunGateOptions): Promise<CommandResult<GateR
       try {
         await writeLogicGraphProjection(opts.cwd, outcome.graph);
       } catch (err) {
-        return blocked(
-          "ERR_IO_OR_CONFIG",
-          msg(
-            `Failed to persist logic graph projection: ${(err as Error).message}`,
-            `逻辑图投影写入失败：${(err as Error).message}`,
+        const ioMessage = msg(
+          `Failed to persist logic graph projection: ${(err as Error).message}`,
+          `逻辑图投影写入失败：${(err as Error).message}`,
+        );
+        await safeAudit(
+          opts.cwd,
+          createAuditEvent(
+            baseAudit("artifact_gate_blocked", "blocked", ioMessage, {
+              status: "blocked",
+              reason: "logic_graph_projection_write_failed",
+            }),
           ),
         );
+        return blocked("ERR_IO_OR_CONFIG", ioMessage);
       }
     }
   }

@@ -35,10 +35,10 @@ describe("parseLogicBackbone", () => {
     expect(result.graph?.edges[0]?.kind).toBe("feeds");
   });
 
-  it("falls back to a ```yaml block when no tagged block exists", () => {
+  it("does NOT pick up an untagged ```yaml block (strict ocn-logic-graph only)", () => {
     const result = parseLogicBackbone(doc("yaml", VALID_GRAPH_YAML));
-    expect(result.found).toBe(true);
-    expect(result.graph?.nodes).toHaveLength(2);
+    expect(result.found).toBe(false);
+    expect(result.graph).toBeNull();
   });
 
   it("reports an error when the block is not valid YAML/JSON", () => {

@@ -91,6 +91,34 @@ describe("validateLogicBackbone", () => {
     expect(result.issues).toContainEqual({ code: "unbound_trigger", nodeId: "signal_quiet" });
   });
 
+  it("flags duplicate node ids (would otherwise silently collapse)", () => {
+    const g = baseGraph();
+    const dup = { id: "input_raw", kind: "input", role: "input", label: "dup" } as const;
+    const result = validateLogicBackbone({ ...g, nodes: [...g.nodes, dup] });
+    expect(result.status).toBe("blocked");
+    expect(result.issues).toContainEqual({ code: "duplicate_node_id", nodeId: "input_raw" });
+  });
+
+  it("flags a node whose only outgoing edge dangles as BOTH dangling and orphan", () => {
+    const graph: LogicGraph = {
+      nodes: [{ id: "input_lonely", kind: "input", role: "input", label: "lonely" }],
+      edges: [{ from: "input_lonely", to: "score_missing", kind: "feeds" }],
+    };
+    const codesFound = codes(graph);
+    expect(codesFound).toContain("dangling_reference");
+    expect(codesFound).toContain("orphan_node");
+  });
+
+  it("flags a trigger whose triggers edge points at a missing target as BOTH dangling and unbound", () => {
+    const graph: LogicGraph = {
+      nodes: [{ id: "signal_x", kind: "signal", role: "trigger", label: "x" }],
+      edges: [{ from: "signal_x", to: "judgment_missing", kind: "triggers" }],
+    };
+    const codesFound = codes(graph);
+    expect(codesFound).toContain("dangling_reference");
+    expect(codesFound).toContain("unbound_trigger");
+  });
+
   it("flags a node missing a valid role (defensive against unparsed input)", () => {
     const g = baseGraph();
     const badNode = { id: "score_x", kind: "score", label: "no role" } as unknown as LogicNode;
