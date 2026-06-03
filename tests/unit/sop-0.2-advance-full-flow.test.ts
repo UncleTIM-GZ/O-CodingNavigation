@@ -36,7 +36,12 @@ const FULL_PATH: readonly ExpectedLocation[] = [
     docType: "project-brief",
     artifactPath: "docs/00-project-brief.md",
   },
-  { stateId: "state_spec", stepId: "step_scope", docType: "scope", artifactPath: "docs/01-scope.md" },
+  {
+    stateId: "state_spec",
+    stepId: "step_scope",
+    docType: "scope",
+    artifactPath: "docs/01-scope.md",
+  },
   { stateId: "state_spec", stepId: "step_prd", docType: "prd", artifactPath: "docs/02-prd.md" },
   {
     stateId: "state_spec",
@@ -73,6 +78,13 @@ const FULL_PATH: readonly ExpectedLocation[] = [
     stepId: "step_test_strategy",
     docType: "test-strategy",
     artifactPath: "docs/08-test-strategy.md",
+  },
+  {
+    // SOP 0.3.0 — logic backbone is the last DESIGN step (additive slot 19).
+    stateId: "state_design",
+    stepId: "step_logic_backbone",
+    docType: "logic-backbone",
+    artifactPath: "docs/19-logic-backbone.md",
   },
   {
     stateId: "state_plan",
@@ -136,7 +148,7 @@ const FULL_PATH: readonly ExpectedLocation[] = [
   },
 ];
 
-describe("SOP 0.2.0 advance — full 19-step flow (PR 4 cutover)", () => {
+describe("SOP 0.3.0 advance — full 20-step flow (default cutover)", () => {
   let project: TempProject;
 
   beforeEach(async () => {
@@ -148,14 +160,14 @@ describe("SOP 0.2.0 advance — full 19-step flow (PR 4 cutover)", () => {
     await project.cleanup();
   });
 
-  it("FULL_PATH covers exactly 19 wired steps", () => {
-    expect(FULL_PATH).toHaveLength(19);
+  it("FULL_PATH covers exactly 20 wired steps", () => {
+    expect(FULL_PATH).toHaveLength(20);
   });
 
-  it("fresh init lands at state_discovery / step_project_brief under 0.2.0", async () => {
+  it("fresh init lands at state_discovery / step_project_brief under 0.3.0", async () => {
     const state = await readState(project.cwd);
     expect(state.project.sopProfileId).toBe("default-ai-coding-sop");
-    expect(state.project.sopProfileVersion).toBe("0.2.0");
+    expect(state.project.sopProfileVersion).toBe("0.3.0");
     expect(state.currentStateId).toBe("state_discovery");
     expect(state.currentStepId).toBe("step_project_brief");
   });
@@ -168,10 +180,9 @@ describe("SOP 0.2.0 advance — full 19-step flow (PR 4 cutover)", () => {
         stateBefore.currentStateId,
         `at iteration ${i} expected state_id ${here.stateId}`,
       ).toBe(here.stateId);
-      expect(
-        stateBefore.currentStepId,
-        `at iteration ${i} expected step_id ${here.stepId}`,
-      ).toBe(here.stepId);
+      expect(stateBefore.currentStepId, `at iteration ${i} expected step_id ${here.stepId}`).toBe(
+        here.stepId,
+      );
 
       // doc create must succeed (0.2.0 templates cover all required headings).
       const created = await createArtifact({ cwd: project.cwd, type: here.docType });
@@ -182,7 +193,9 @@ describe("SOP 0.2.0 advance — full 19-step flow (PR 4 cutover)", () => {
       expect(checked.ok, `check after ${here.docType}`).toBe(true);
       if (checked.ok) {
         expect(checked.data?.status).toBe("pass");
-        expect(checked.data?.artifactPath).toMatch(new RegExp(here.artifactPath.replace(/\//g, "\\/")));
+        expect(checked.data?.artifactPath).toMatch(
+          new RegExp(here.artifactPath.replace(/\//g, "\\/")),
+        );
       }
 
       // gate must pass too.
@@ -219,13 +232,13 @@ describe("SOP 0.2.0 advance — full 19-step flow (PR 4 cutover)", () => {
     expect(finalState.currentStepId).toBe("step_final_build_verdict");
   }, 180_000);
 
-  it("status / brief reflect the 0.2.0 profile and current step at every stop", async () => {
+  it("status / brief reflect the 0.3.0 profile and current step at every stop", async () => {
     // Quick spot-check at three positions: start, middle (mvp_plan), and
     // after walking to verification_report.
     const status0 = await getStatus({ cwd: project.cwd });
     expect(status0.ok).toBe(true);
     if (status0.ok) {
-      expect(status0.data?.project.sopProfileVersion).toBe("0.2.0");
+      expect(status0.data?.project.sopProfileVersion).toBe("0.3.0");
       expect(status0.data?.currentStepId).toBe("step_project_brief");
       expect(status0.data?.currentArtifactPath).toMatch(/00-project-brief\.md$/);
     }
@@ -237,8 +250,8 @@ describe("SOP 0.2.0 advance — full 19-step flow (PR 4 cutover)", () => {
       expect(brief0.data?.currentBlockers.length).toBeGreaterThan(0);
     }
 
-    // Walk to step_mvp_plan.
-    for (let i = 0; i < 9; i++) {
+    // Walk to step_mvp_plan (10 steps now: + step_logic_backbone in DESIGN).
+    for (let i = 0; i < 10; i++) {
       const here = FULL_PATH[i]!;
       await createArtifact({ cwd: project.cwd, type: here.docType });
       const advanced = await advanceState({ cwd: project.cwd });
@@ -267,7 +280,7 @@ describe("SOP 0.2.0 advance — full 19-step flow (PR 4 cutover)", () => {
     }
   });
 
-  it("loadSopProfile() default lists all 19 wired steps in the canonical order", () => {
+  it("loadSopProfile() default lists all 20 wired steps in the canonical order", () => {
     const profile = loadSopProfile();
     const flat: string[] = [];
     for (const stateId of profile.stateOrder) {

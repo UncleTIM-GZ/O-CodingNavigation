@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Plan-to-verify smoke script (SOP 0.2.0).
+# Plan-to-verify smoke script (SOP 0.3.0).
 #
 # Walks the example end-to-end against a temporary OCN project, exercising
-# all 19 wired SOP 0.2.0 steps from `step_project_brief` through
+# all 20 wired SOP 0.3.0 steps from `step_project_brief` through
 # `step_final_build_verdict`. Uses the repo's built CLI
 # (`dist/cli/index.js`) so it does NOT require a global npm install and
 # does NOT pollute any user environment.
@@ -11,7 +11,7 @@
 # reached. After the loop, the script asserts the final state is
 # `state_verify` / `step_final_build_verdict`.
 #
-# This smoke is the SOP 0.2.0 sibling of `examples/discovery-to-plan/scripts/smoke.sh`
+# This smoke is the SOP 0.3.0 sibling of `examples/discovery-to-plan/scripts/smoke.sh`
 # (which only walks docs 00-09 under the legacy 0.1.0 wired step set).
 
 set -euo pipefail
@@ -35,12 +35,12 @@ TMP_PROJECT="$(mktemp -d -t ocn-plan-to-verify-XXXXXX)"
 trap 'rm -rf "$TMP_PROJECT"' EXIT
 echo "Temp project: $TMP_PROJECT"
 
-# 1. ocn init — fresh DISCOVERY state (SOP 0.2.0).
+# 1. ocn init — fresh DISCOVERY state (SOP 0.3.0).
 echo
 echo "=== ocn init ==="
 ( cd "$TMP_PROJECT" && OCN init --tier minimal )
 
-# 1a. Assert the project is on SOP 0.2.0.
+# 1a. Assert the project is on SOP 0.3.0.
 STATE_JSON="$TMP_PROJECT/.ocoding/state.json"
 if [ ! -f "$STATE_JSON" ]; then
   echo "ERROR: $STATE_JSON not produced by \`ocn init\`." >&2
@@ -53,8 +53,8 @@ INIT_VERSION="$(node -e '
   process.stdout.write(j.project?.sopProfileVersion ?? "");
 ' "$STATE_JSON")"
 
-if [ "$INIT_VERSION" != "0.2.0" ]; then
-  echo "ERROR: expected sopProfileVersion=0.2.0 but got '$INIT_VERSION'" >&2
+if [ "$INIT_VERSION" != "0.3.0" ]; then
+  echo "ERROR: expected sopProfileVersion=0.3.0 but got '$INIT_VERSION'" >&2
   exit 66
 fi
 
@@ -72,14 +72,14 @@ echo
 echo "=== ocn status (initial) ==="
 ( cd "$TMP_PROJECT" && OCN status )
 
-# 4. Walk all 19 wired steps. Each iteration:
+# 4. Walk all 20 wired steps. Each iteration:
 #    a) status snapshot for visibility,
 #    b) check (must exit 0 — required sections present),
 #    c) gate (must exit 0 — same engine, distinct exit code),
-#    d) advance (expected to succeed for steps 1..18; the final advance
+#    d) advance (expected to succeed for steps 1..19; the final advance
 #       past step_final_build_verdict is expected to fail with
 #       ERR_STATE_MACHINE per the runtime cutover contract).
-EXPECTED_STEPS=19
+EXPECTED_STEPS=20
 i=0
 prev_step=""
 while [ $i -lt $EXPECTED_STEPS ]; do

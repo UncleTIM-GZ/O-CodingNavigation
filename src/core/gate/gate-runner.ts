@@ -9,8 +9,10 @@ import { parseHeadings } from "../artifact/markdown-parser.js";
 import type { CreateAuditEventInput } from "../audit/audit-event.js";
 import { createAuditEvent, safeAudit } from "../audit/index.js";
 import { msg } from "../i18n.js";
+import { writeLogicGraphProjection } from "../logic/logic-graph-store.js";
 import { blocked, ok } from "../result.js";
 import { loadSopProfile } from "../sop/loader.js";
+import { evaluateLogicBackbone } from "./logic-backbone-gate.js";
 import { StateInvalidError, StateNotFoundError, readState } from "../state/state-store.js";
 
 export interface RunGateOptions {
@@ -203,6 +205,57 @@ export async function runGate(opts: RunGateOptions): Promise<CommandResult<GateR
       ),
     );
     return blocked("ERR_GATE_FAILED", message, result);
+  }
+
+  // SOP 0.3.0 — structural gate for the logic backbone. Runs only after the
+  // required-section gate passes; validates the embedded graph (orphans,
+  // dangling refs, cycles, unbound triggers, missing roles) and, on pass,
+  // persists the normalized projection as the machine source of truth.
+  if (state.currentStepId === "step_logic_backbone") {
+    const outcome = evaluateLogicBackbone(content);
+    if (!outcome.ok) {
+      const lbResult: GateResult = {
+        status: "blocked",
+        currentStateId: state.currentStateId,
+        currentStepId: state.currentStepId,
+        artifactPath: relativeArtifactPath,
+        missingRequiredSectionIds: [],
+        ...(outcome.blockingReasons !== undefined
+          ? { blockingReasons: outcome.blockingReasons }
+          : {}),
+      };
+      await safeAudit(
+        opts.cwd,
+        createAuditEvent(
+          baseAudit("artifact_gate_blocked", "blocked", outcome.message, {
+            status: "blocked",
+            reason: outcome.blockingReasons?.[0],
+            issues: outcome.issues,
+          }),
+        ),
+      );
+      return blocked("ERR_ARTIFACT_INVALID", outcome.message, lbResult);
+    }
+    if (outcome.graph !== undefined) {
+      try {
+        await writeLogicGraphProjection(opts.cwd, outcome.graph);
+      } catch (err) {
+        const ioMessage = msg(
+          `Failed to persist logic graph projection: ${(err as Error).message}`,
+          `逻辑图投影写入失败：${(err as Error).message}`,
+        );
+        await safeAudit(
+          opts.cwd,
+          createAuditEvent(
+            baseAudit("artifact_gate_blocked", "blocked", ioMessage, {
+              status: "blocked",
+              reason: "logic_graph_projection_write_failed",
+            }),
+          ),
+        );
+        return blocked("ERR_IO_OR_CONFIG", ioMessage);
+      }
+    }
   }
 
   // pass (warning state currently unused; reserved for PR #5+)

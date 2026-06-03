@@ -57,7 +57,7 @@ describe("ocn init — audit trail", () => {
     const data = projectInit?.data as Record<string, unknown> | undefined;
     expect(data?.["tier"]).toBe("minimal");
     expect(data?.["sopProfileId"]).toBe("default-ai-coding-sop");
-    expect(data?.["sopProfileVersion"]).toBe("0.2.0");
+    expect(data?.["sopProfileVersion"]).toBe("0.3.0");
   }, 30_000);
 
   it("a second `ocn init` (already-initialized) does NOT emit project_initialized again", async () => {

@@ -2863,3 +2863,39 @@ Negative:
 - No Cursor / Cline validation claim — DEC-019 boundary stands.
 - No removal or rollback of the SOP 0.2.0 code.
 - No deprecation of the `0–10` strong gates.
+
+## DEC-025｜Logic Backbone — machine-verifiable computation/decision graph (SOP 0.3.0)
+
+**Status**: Active (additive; runtime default flipped to 0.3.0)
+**Date**: 2026-06-03
+**Amendment**: AM-003 (`docs/amendments/2026-06-03-logic-backbone-amendment.md`)
+
+### Decision
+
+Add a DESIGN-phase artifact `artifact_logic_backbone` / `step_logic_backbone`
+(`docs/19-logic-backbone.md`) that pins a system's computation/decision graph as a typed,
+role-bearing directed graph and machine-validates it. `ocn check` blocks
+(`ERR_ARTIFACT_INVALID`, exit 2) on five drift defects — missing role, dangling reference,
+dependency cycle, orphan node, unbound trigger — and on pass persists
+`.ocoding/logic-graph.json`, which `ocn brief` summarizes (execution order + triggers) to
+stop BUILD-phase logic drift.
+
+Paradigm: DAG + DMN hybrid + Event-Modeling trigger/hint distinction (prior art: dbt's
+ref-DAG, DMN decision-requirements, architectural fitness functions). Source of truth:
+Markdown-friendly authored doc + `.ocoding/` JSON projection (§4.10).
+
+### Sub-decisions
+
+- **Additive slot `docs/19`**, no renumbering of the frozen 00–18; DESIGN-phase position is
+  set by step order, not file number (§4.1).
+- **New SOP 0.3.0** (additive minor bump, §4.2) is the runtime default; `loadSopProfile()`
+  returns 0.3.0 (20 wired steps). 0.2.0 stays frozen and importable by explicit version.
+
+### Out of scope (this DEC)
+
+- No config-driven SOP version resolution — `loadSopProfile()` returns the default; a
+  project pinned to an older version still gets the default at runtime (acceptable: no old
+  projects exist). A possible future refinement.
+- No new MCP write capability beyond the `create_artifact` enum value — advance / decisions
+  / gate enforcement remain human-only (§4.8).
+- No empty-graph rule (a graph with no nodes passes vacuously by design).

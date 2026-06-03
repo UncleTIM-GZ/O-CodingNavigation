@@ -30,22 +30,22 @@ describe("MCP runtime under 0.2.0 cutover", () => {
     await project.cleanup();
   });
 
-  it("navigator.where_am_i reports sopProfileVersion 0.2.0 for a fresh project", async () => {
+  it("navigator.where_am_i reports sopProfileVersion 0.3.0 for a fresh project", async () => {
     const result = await whereAmI.handler({ projectRoot: project.cwd });
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.data?.project.sopProfileVersion).toBe("0.2.0");
+      expect(result.data?.project.sopProfileVersion).toBe("0.3.0");
       expect(result.data?.currentStateId).toBe("state_discovery");
       expect(result.data?.currentStepId).toBe("step_project_brief");
       expect(result.data?.currentArtifactPath).toMatch(/00-project-brief\.md$/);
     }
   });
 
-  it("navigator.brief reflects the 0.2.0 current step + artifact", async () => {
+  it("navigator.brief reflects the 0.3.0 current step + artifact", async () => {
     const result = await brief.handler({ projectRoot: project.cwd });
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.data?.project.sopProfileVersion).toBe("0.2.0");
+      expect(result.data?.project.sopProfileVersion).toBe("0.3.0");
       expect(result.data?.currentStepId).toBe("step_project_brief");
       // 0.2.0 project_brief requires 7 sections; missing artifact reports them.
       expect(result.data?.currentArtifactStatus).toBe("missing");
@@ -53,12 +53,12 @@ describe("MCP runtime under 0.2.0 cutover", () => {
     }
   });
 
-  it("navigator.detect_sop_version reports 0.2.0 / 0.2.0 with no diff", async () => {
+  it("navigator.detect_sop_version reports 0.3.0 / 0.3.0 with no diff", async () => {
     const result = await detectSopVersionTool.handler({ projectRoot: project.cwd });
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.data?.lockedSopProfileVersion).toBe("0.2.0");
-      expect(result.data?.currentOcnSopProfileVersion).toBe("0.2.0");
+      expect(result.data?.lockedSopProfileVersion).toBe("0.3.0");
+      expect(result.data?.currentOcnSopProfileVersion).toBe("0.3.0");
       expect(result.data?.diffDetected).toBe(false);
       expect(result.data?.snapshotDriftDetected).toBe(false);
       expect(result.data?.snapshotDriftReason).toBe("snapshot_in_sync");
@@ -126,7 +126,7 @@ describe("MCP runtime under 0.2.0 cutover", () => {
     expect(result.ok).toBe(false);
   });
 
-  it("create_artifact input shape exposes all 19 0.2.0 ids in its enum", () => {
+  it("create_artifact input shape exposes all 0.2.0 ids plus the 0.3.0 logic-backbone in its enum", () => {
     // Pin the enum widening so it never silently shrinks again.
     const enumValues = createArtifactInputShape.artifactType.options;
     const expected = [
@@ -149,8 +149,10 @@ describe("MCP runtime under 0.2.0 cutover", () => {
       "failure-fix-log",
       "regression-evidence",
       "final-build-verdict",
+      // SOP 0.3.0 — machine-verifiable logic backbone (DESIGN phase).
+      "logic-backbone",
     ];
     expect(new Set(enumValues)).toEqual(new Set(expected));
-    expect(enumValues).toHaveLength(19);
+    expect(enumValues).toHaveLength(20);
   });
 });

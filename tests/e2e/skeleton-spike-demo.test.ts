@@ -42,7 +42,7 @@ describe("0.2.0 demo path (full e2e, walks DISCOVERY→SPEC via advance)", () =>
     const status = JSON.parse(statusResult.stdout);
     expect(status.data.currentStateId).toBe("state_discovery");
     expect(status.data.currentStepId).toBe("step_project_brief");
-    expect(status.data.project.sopProfileVersion).toBe("0.2.0");
+    expect(status.data.project.sopProfileVersion).toBe("0.3.0");
 
     // 3. Walk: step_project_brief → step_scope → step_prd
     await spawnOcn(["doc", "create", "project-brief"], { cwd });

@@ -27,8 +27,8 @@ describe("ocn init", () => {
     expect(state.currentStepId).toBe("step_project_brief");
     expect(state.project.tier).toBe("minimal");
     expect(state.project.sopProfileId).toBe("default-ai-coding-sop");
-    // SOP 0.2.0 PR 4 (DEC-023) — fresh init pins to 0.2.0.
-    expect(state.project.sopProfileVersion).toBe("0.2.0");
+    // SOP 0.3.0 (AM-003 / DEC-025) — fresh init pins to 0.3.0.
+    expect(state.project.sopProfileVersion).toBe("0.3.0");
 
     await fs.access(join(project.cwd, ".ocoding", "sop.yaml"));
     await fs.access(join(project.cwd, ".ocoding", "gates.yaml"));

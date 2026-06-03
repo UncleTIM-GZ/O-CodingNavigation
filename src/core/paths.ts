@@ -11,6 +11,9 @@ export const Paths = {
   // so the on-disk snapshot fully expresses the runtime profile.
   artifactsFile: (root: string): string => join(root, ".ocoding", "artifacts.yaml"),
   configFile: (root: string): string => join(root, ".ocoding", "config.yaml"),
+  // SOP 0.3.0 — validated logic-backbone graph projection (machine source of
+  // truth for runtime queries; regenerated whenever the gate passes).
+  logicGraphFile: (root: string): string => join(root, ".ocoding", "logic-graph.json"),
   docsDir: (root: string): string => join(root, "docs"),
   prdFile: (root: string): string => join(root, "docs", "02-prd.md"),
 } as const;

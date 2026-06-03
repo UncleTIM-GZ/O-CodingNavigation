@@ -178,10 +178,10 @@ describe("sop 0.2.0 — canonical YAML emission", () => {
 describe("sop 0.2.0 — runtime cutover guard (PR 4 of DEC-023)", () => {
   // DEC-023 — PR 4 cuts the runtime default over to 0.2.0. These guards
   // pin that behavior; reverting the loader to 0.1.0 would break them.
-  it("loadSopProfile() returns 0.2.0 by default", () => {
+  it("loadSopProfile() returns 0.3.0 by default", () => {
     const profile = loadSopProfile();
     expect(profile.id).toBe("default-ai-coding-sop");
-    expect(profile.version).toBe("0.2.0");
+    expect(profile.version).toBe("0.3.0");
   });
 
   it("loaded profile YAML is the 0.2.0 rendering with all 19 wired steps", () => {

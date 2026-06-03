@@ -3624,6 +3624,24 @@ README is bilingual
 Artifact 标题格式：
 Artifact heading format:
 
+## 9.x Logic Backbone｜逻辑主干 (AM-003 / DEC-025)
+
+问题｜Problem：briefing 常常“结构齐全但逻辑未接线”——模块、指标、公式都列全，但
+运行时没人说得清先算什么、哪个公式服务哪个判断、哪个分数进下一层 vs 只做解释、哪个
+信号触发功能 vs 只是提示。逻辑主干在设计时未被文档化，实施时不断漂移、越后越乱。
+
+需求｜Requirement：OCN 在 DESIGN 阶段提供一个机器可校验的“逻辑主干”产物
+（`artifact_logic_backbone`，`docs/19-logic-backbone.md`，SOP 0.3.0 默认启用）。它把
+系统的计算/决策语义建成有类型、有角色的有向图（DAG + DMN：节点 kind =
+input/formula/score/judgment/signal，role = input/intermediate/terminal_explanatory/
+trigger/hint；边 = feeds/serves/triggers/explains，上游→下游）。
+
+`ocn check` 在章节门禁之后运行结构门禁，对五类漂移缺陷（缺角色、悬空引用、依赖环、
+孤儿节点、未绑定触发）返回 blocked（退出码 2，ERR_ARTIFACT_INVALID）并逐条点名；
+通过后把规范化图写入 `.ocoding/logic-graph.json`（机器事实源，§4.10），`ocn brief`
+据此输出执行顺序 + 触发清单摘要，使 BUILD 阶段不再漂移。范式参考 dbt 的 ref-DAG、
+DMN 决策需求图、架构适应度函数。验收见 AC-LOGIC-001/002/003。
+
 ## Scenarios｜使用场景
 
 MCP 结构化返回示例：

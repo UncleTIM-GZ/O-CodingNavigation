@@ -32,8 +32,10 @@ export const createArtifactInputShape = {
       "failure-fix-log",
       "regression-evidence",
       "final-build-verdict",
+      // SOP 0.3.0 — machine-verifiable logic backbone (DESIGN phase).
+      "logic-backbone",
     ])
-    .describe("One of the supported SOP 0.2.0 template ids (00-18)."),
+    .describe("One of the supported SOP template ids (00-18, plus logic-backbone)."),
   overwrite: z.boolean().optional(),
 };
 const createArtifactSchema = z.object(createArtifactInputShape);
