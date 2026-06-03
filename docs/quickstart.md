@@ -36,12 +36,12 @@
 npm install -g o-coding-navigation
 ```
 
-As of v0.2.0-beta.2, npm latest and beta both point to the SOP 0.2.0 Plan → Build → Verify release.
+As of v0.3.0-beta.0, npm latest and beta both point to the SOP 0.3.0 Plan → Build → Verify release with the Logic Backbone feature.
 
 Then verify both binaries are on your PATH:
 
 ```bash
-ocn --version       # 0.2.0-beta.2
+ocn --version       # 0.3.0-beta.0
 ocn --help
 ocn-mcp             # starts the MCP stdio server; press Ctrl+C to exit
 ```
@@ -58,7 +58,7 @@ To uninstall: `npm uninstall -g o-coding-navigation`.
 
 **Prerequisites**: Node.js ≥ 20.
 
-Current npm dist-tags: `latest = 0.2.0-beta.2`, `beta = 0.2.0-beta.2`, `alpha = 0.1.0-alpha.2` (historical; preserved).
+Current npm dist-tags: `latest = 0.3.0-beta.0`, `beta = 0.3.0-beta.0`, `alpha = 0.1.0-alpha.2` (historical; preserved).
 
 ### 1.2 Alternative — local development from source
 
@@ -205,11 +205,11 @@ After `doc create project-brief` you'll also see `docs/00-project-brief.md`. Aft
 | `ERR_IO_OR_CONFIG: project not initialized` | Running a command before `ocn init`. | `ocn init` first. |
 | `ERR_GATE_FAILED` from `ocn check` / `ocn gate` / `ocn advance` | Current artifact is missing a required section. | Read the bilingual `missingRequiredSectionIds` list and add those headings. |
 | `ERR_STATE_MACHINE` from `ocn advance` | Already at the last wired step (DISCOVERY → PLAN have steps; BUILD onward have state IDs only). | This is expected once you reach the end of the wired step map. Future PRs will wire BUILD/VERIFY/SHIP/REFLECT steps. |
-| `ERR_ARTIFACT_INVALID` from `ocn doc create <type>` | `<type>` is not one of the 5 supported. | Pick from `project-brief`, `scope`, `prd`, `acceptance-criteria`, `technical-architecture`. |
+| `ERR_ARTIFACT_INVALID` from `ocn doc create <type>` | `<type>` is not one of the 20 supported. | Pick from the full registry (00–18 plus `logic-backbone`), e.g. `project-brief`, `scope`, `prd`, `acceptance-criteria`, `technical-architecture`, `logic-backbone`. |
 | `ERR_IO_OR_CONFIG: lock acquire timeout` | A previous `ocn advance` was killed mid-write and the lock is stale. | Wait 30 s for the stale-recovery path to fire automatically, or inspect `.ocoding/.lock` — if its PID is not running, it is safe to delete. |
 | `ocn-mcp` writes nothing on stderr but the host shows nothing happening | MCP stdio is silent on the success path by design (audit fallback uses a silent logger). | Use the host's tool-list view to confirm 7 tools loaded. |
 | `ocn` not found after `npm install -g …` | Global npm bin not on `PATH`. | `echo $(npm prefix -g)/bin` and add to `PATH`. |
-| `ocn --version` does not show `0.2.0-beta.2` | Installed an older cached version. | Re-install: `npm install -g o-coding-navigation@latest`, or pin the prerelease explicitly with `npm install -g o-coding-navigation@beta`. |
+| `ocn --version` does not show `0.3.0-beta.0` | Installed an older cached version. | Re-install: `npm install -g o-coding-navigation@latest`, or pin the prerelease explicitly with `npm install -g o-coding-navigation@beta`. |
 | Claude Desktop does not show OCN tools after editing the config | Config edits require a clean restart. | Fully quit Claude Desktop (system tray included) and reopen. Confirm 7 `navigator.*` tools appear. |
 
 If you suspect a real bug, run with `--json` to capture the full `CommandResult` envelope and file an issue with that JSON.
@@ -301,12 +301,12 @@ Every tool requires an absolute `projectRoot` argument. The host (or your prompt
 npm install -g o-coding-navigation
 ```
 
-从 v0.2.0-beta.2 开始，npm latest 与 beta 均指向 SOP 0.2.0 的 Plan → Build → Verify 闭环版本。
+从 v0.3.0-beta.0 开始，npm latest 与 beta 均指向 SOP 0.3.0 的 Plan → Build → Verify 闭环版本（含 Logic Backbone 特性）。
 
 安装后验证两个二进制都在 `PATH` 上：
 
 ```bash
-ocn --version       # 0.2.0-beta.2
+ocn --version       # 0.3.0-beta.0
 ocn --help
 ocn-mcp             # 启动 MCP stdio server；按 Ctrl+C 退出（stdin EOF 时也会自动退出）
 ```
@@ -323,7 +323,7 @@ npm install -g o-coding-navigation@beta
 
 **前置依赖**：Node.js ≥ 20。
 
-当前 npm dist-tag：`latest = 0.2.0-beta.2`、`beta = 0.2.0-beta.2`、`alpha = 0.1.0-alpha.2`（历史保留）。
+当前 npm dist-tag：`latest = 0.3.0-beta.0`、`beta = 0.3.0-beta.0`、`alpha = 0.1.0-alpha.2`（历史保留）。
 
 ### A.2 备选——从源码本地开发
 
@@ -470,11 +470,11 @@ ocn-demo/
 | `ERR_IO_OR_CONFIG: project not initialized` | 在 `ocn init` 之前就跑了别的命令。 | 先 `ocn init`。 |
 | `ocn check` / `ocn gate` / `ocn advance` 抛 `ERR_GATE_FAILED` | 当前产物缺必填章节。 | 看双语 `missingRequiredSectionIds` 列表，把缺的章节标题补上。 |
 | `ocn advance` 抛 `ERR_STATE_MACHINE` | 已到达"被挂上 step 的最后一步"（DISCOVERY → PLAN 有 step；BUILD 之后只有 state ID）。 | 这是预期行为。后续 PR 才会给 BUILD/VERIFY/SHIP/REFLECT 加 step。 |
-| `ocn doc create <type>` 抛 `ERR_ARTIFACT_INVALID` | `<type>` 不在 5 类之内。 | 选 `project-brief`、`scope`、`prd`、`acceptance-criteria`、`technical-architecture`。 |
+| `ocn doc create <type>` 抛 `ERR_ARTIFACT_INVALID` | `<type>` 不在 20 类之内。 | 从完整注册表里选（00–18 加 `logic-backbone`），如 `project-brief`、`scope`、`prd`、`acceptance-criteria`、`technical-architecture`、`logic-backbone`。 |
 | `ERR_IO_OR_CONFIG: lock acquire timeout` | 上一次 `ocn advance` 中途被杀，锁残留。 | 等 30 秒等陈旧锁回收触发，或检查 `.ocoding/.lock`——里面的 PID 已经不在跑就可以删。 |
 | `ocn-mcp` stderr 一片空，但 host 也没动静 | MCP stdio 在成功路径上**故意**安静（audit fallback 走 silent logger）。 | 看 host 的 tools 面板，确认 7 个工具加载成功。 |
 | `npm install -g …` 之后 `ocn` 找不到 | npm 全局 bin 不在 `PATH` 上。 | `echo $(npm prefix -g)/bin`，把它加进 `PATH`。 |
-| `ocn --version` 不是 `0.2.0-beta.2` | 安装到了旧的缓存版本。 | 重新安装：`npm install -g o-coding-navigation@latest`，或显式固定预发布通道：`npm install -g o-coding-navigation@beta`。 |
+| `ocn --version` 不是 `0.3.0-beta.0` | 安装到了旧的缓存版本。 | 重新安装：`npm install -g o-coding-navigation@latest`，或显式固定预发布通道：`npm install -g o-coding-navigation@beta`。 |
 | 改完配置但 Claude Desktop 看不到 OCN 工具 | 配置改动需要一次干净的重启。 | **完全退出** Claude Desktop（含系统托盘）再重启，确认看到 7 个 `navigator.*` 工具。 |
 
 如果你怀疑是真 bug，加 `--json` 把完整 `CommandResult` envelope 抓下来，附在 issue 里。

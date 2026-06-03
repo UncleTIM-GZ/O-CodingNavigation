@@ -1,9 +1,10 @@
 # O'CodingNavigator (OCN) — Claude Code Working Contract
 
-> Generated: 2026-04-28
-> SOP Profile: `default-ai-coding-sop@0.1.0`
-> Current State: `state_plan`
-> Current Step: `step_mvp_plan` → next is **Skeleton Spike (Phase 0)**
+> Generated: 2026-04-28 · Updated: 2026-06-04
+> SOP Profile: `default-ai-coding-sop@0.3.0` (runtime default; 0.1.0 / 0.2.0 frozen + importable)
+> Current State: shipped — Planning Gatekeeper + Execution Navigator + **Logic Backbone** are implemented and on `main`.
+> Published: `o-coding-navigation@0.3.0-beta.0` (pre-GA beta).
+> Skeleton Spike (Phase 0) is **complete**; the sections below that describe it are kept as historical context.
 
 ---
 
@@ -39,9 +40,12 @@ All design decisions live in `docs/`. **Read them before answering design questi
 | `docs/06-api-contract.md` | DESIGN | CLI / Core / MCP contracts, exit codes, lock contracts |
 | `docs/07-test-strategy.md` | DESIGN | 8-layer test stack, Skeleton Spike validation |
 | `docs/08-mvp-plan.md` | PLAN | Phase 0 Skeleton Spike, Phase 1+ rollout |
-| `docs/AI Coding SOP v1.md` | — | Source SOP profile (becomes `sops/default-ai-coding-sop/0.1.0/`) |
+| `docs/19-logic-backbone.md` | DESIGN | **Logic Backbone** — machine-verifiable computation/decision graph (SOP 0.3.0, AM-003); also OCN's own dogfood backbone |
+| `docs/20-decision-log.md` | — | Decision log (DEC-001 … DEC-025) |
+| `docs/amendments/` | — | Amendments (AM-001 … AM-003) — canonical record of divergences from the frozen `docs/0X` contracts |
+| `docs/AI Coding SOP v1.md` | — | Source SOP profile (rendered into `sops/default-ai-coding-sop/{0.1.0,0.2.0,0.3.0}/`; 0.3.0 is the runtime default) |
 
-> **Rule**: When answering "what should X do?" — quote the doc + section. If the doc disagrees with what you remember, **the doc wins**.
+> **Rule**: When answering "what should X do?" — quote the doc + section. If the doc disagrees with what you remember, **the doc wins**. The `docs/0X` design contracts are **frozen**; divergences live in `docs/amendments/` (an amendment is canonical for its divergence — do not rewrite the frozen doc).
 
 ---
 
@@ -215,42 +219,31 @@ DISCOVERY → SPEC → DESIGN → PLAN → BUILD → VERIFY → SHIP → REFLECT
 ## 6. Current Project Position｜本项目当前位置
 
 ```
-State        : state_plan
-Step         : step_mvp_plan (just completed)
-Next Step    : Phase 0 — Skeleton Spike (BEFORE BUILD)
-Tier         : minimal (default for OCN dogfood alpha)
-Release Lane : v1.0-alpha
+SOP Profile  : default-ai-coding-sop@0.3.0 (runtime default)
+Published    : o-coding-navigation@0.3.0-beta.0 (npm latest + beta; alpha preserved at 0.1.0-alpha.2)
+Surface      : Planning Gatekeeper (00–19) + Execution Navigator (exec/github/evidence/verify/verdict) + MCP (7 tools)
+State machine: 20 wired steps across DISCOVERY → SPEC → DESIGN → PLAN → BUILD → VERIFY (SHIP/REFLECT stubs)
+Status       : pre-GA beta, dogfooded; Skeleton Spike + SOP 0.2.0 cutover + SOP 0.3.0 logic backbone all shipped
 ```
 
-### Phase 0 Skeleton Spike Scope (Read `docs/08-mvp-plan.md`)
+### What shipped (high level)
 
-Implement ONLY 5 commands and the minimum core engine surface:
-- `ocn init`, `ocn status`, `ocn brief`, `ocn doc create prd`, `ocn check`
-- Core: `initProject`, `getStatus`, `generateBrief`, `createArtifact`, `checkCurrentArtifact`
-- Internal: SOP Loader (minimal), state read/write, artifact template writer, Markdown AST parser, RequiredSection canonical/alias matcher, ArtifactGateStatus calculator, CommandResult renderer
+- **Skeleton Spike (Phase 0) — done.** `init / status / brief / doc create / check` + the core engine (SOP loader, state store with lock+backup+atomic rename, markdown parser, required-section matcher, gate-status calculator, bilingual CommandResult renderer).
+- **SOP 0.2.0 — done.** `runGate`, `advanceState`, audit trail, full 19-step Plan→Build→Verify pipeline, MCP server (7 tools), Execution Navigator commands.
+- **SOP 0.3.0 — done (AM-003 / DEC-025).** The **Logic Backbone**: a DESIGN-phase artifact `docs/19-logic-backbone.md` whose computation/decision graph is machine-validated. `ocn check` blocks (`ERR_ARTIFACT_INVALID`, exit 2) on missing role / duplicate node id / dangling reference / dependency cycle / orphan node / unbound trigger; on pass it writes `.ocoding/logic-graph.json` and `ocn brief` surfaces execution order + trigger bindings. See `src/core/gate/logic-backbone-validator.ts` + `docs/amendments/2026-06-03-logic-backbone-amendment.md`.
 
-**Skeleton Spike DOES NOT implement**: `runGate`, `advanceState`, `captureLog`, `captureDecision`, `createBaseline`, SOP diff/upgrade/version, `runDoctor`, `resetProject`, `recordTestResult`, MCP server.
+### Original Skeleton Spike acceptance (historical)
 
-### What "Skeleton Spike pass" means
-
-The minimal main path runs end-to-end:
+The original false-completion-detection main path — still the canonical demo of OCN's value:
 ```
-empty dir
-→ ocn init --tier minimal
-→ ocn status
-→ ocn doc create prd
-→ user/AI writes a PRD INTENTIONALLY missing "Scenarios | 使用场景"
-→ ocn check          ⇒ blocked, exit code = 2
-→ user/AI adds Scenarios section
-→ ocn check          ⇒ pass or warning
-→ ocn brief          ⇒ AI can resume context without natural-language re-explanation
+empty dir → ocn init → ocn doc create <step> → write artifact missing a required section
+→ ocn check ⇒ blocked (exit 2) → add the section → ocn check ⇒ pass → ocn brief ⇒ AI resumes context
 ```
-
-**The product value being validated is detection of false-completion, not document generation.**
+**The product value is detection of false-completion, not document generation** — now extended by the logic-backbone gate to detect *logically-un-wired* completion, not just missing sections.
 
 ---
 
-## 7. Project Structure｜项目结构（待 Skeleton Spike 时创建）
+## 7. Project Structure｜项目结构
 
 ```
 .
@@ -414,9 +407,9 @@ These are the rules OCN itself will inject via `ocn brief`. While we're building
 **AI MUST NOT:**
 - Modify `.ocoding/state.json` directly (only Core Engine writes it, with lock).
 - Change SOP profile content without an explicit Decision Log entry.
-- Advance project state without the user running `ocn advance` (when implemented) — for now, advance is human-only.
+- Advance project state without the user running `ocn advance` — advance is human-only.
 - Delete or rewrite any `docs/0X-*.md` file without showing diff and getting confirmation.
-- Implement `runGate` / `advanceState` / MCP server inside Skeleton Spike.
+- Rewrite a frozen `docs/0X` design contract instead of adding an amendment under `docs/amendments/`.
 - Expose `navigator.advance_phase` MCP tool in v1.0.
 - Add features outside the current state's scope (`docs/01-scope.md` is law).
 - Skip pre-commit lint/typecheck/test (CLAUDE.md §9).
@@ -445,7 +438,7 @@ These remain unresolved and need a Decision Log entry when chosen:
 
 - [ ] Package manager: npm vs pnpm (default to **npm** unless decided otherwise — already implied by `npm package` in §27 of project brief)
 - [ ] ESLint config: `@typescript-eslint/recommended` + import order
-- [ ] Git hook tool: `husky` vs `simple-git-hooks` (defer until Skeleton Spike works)
+- [x] Git hook tool: **husky** (in use — pre-commit runs lint + typecheck + test)
 - [ ] CI provider: GitHub Actions (Phase 1)
 
 When resolved, write to `docs/19-decision-log.md` with format from `docs/01-scope.md` §5.13.
