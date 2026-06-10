@@ -14,6 +14,9 @@ export const Paths = {
   // SOP 0.3.0 — validated logic-backbone graph projection (machine source of
   // truth for runtime queries; regenerated whenever the gate passes).
   logicGraphFile: (root: string): string => join(root, ".ocoding", "logic-graph.json"),
+  // SOP 0.4.0 (AM-004) — readiness rulebook snapshot + verdict ledger.
+  readinessRulesFile: (root: string): string => join(root, ".ocoding", "readiness-rules.yaml"),
+  readinessFile: (root: string): string => join(root, ".ocoding", "readiness.json"),
   docsDir: (root: string): string => join(root, "docs"),
   prdFile: (root: string): string => join(root, "docs", "02-prd.md"),
 } as const;

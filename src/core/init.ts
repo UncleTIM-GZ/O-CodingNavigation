@@ -7,7 +7,7 @@ import { blocked, ok } from "./result.js";
 import { msg } from "./i18n.js";
 import { LockTimeoutError, withLock } from "./state/lock.js";
 import { writeStateUnlocked } from "./state/state-store.js";
-import { loadSopProfile } from "./sop/loader.js";
+import { loadSopProfile, loadSopProfileByVersion, type SopProfileVersion } from "./sop/loader.js";
 import { createAuditEvent, makeLockAuditHook, safeAudit } from "./audit/index.js";
 
 export interface InitOptions {
@@ -15,6 +15,9 @@ export interface InitOptions {
   readonly tier?: Tier;
   readonly projectName?: string;
   readonly projectId?: string;
+  /** AM-004 — explicit profile pin (e.g. "0.4.0" for readiness dogfood);
+   *  defaults to the runtime default profile. */
+  readonly sopVersion?: SopProfileVersion;
 }
 
 export interface InitData {
@@ -55,7 +58,8 @@ export async function initProject(opts: InitOptions): Promise<CommandResult<Init
   await fs.mkdir(ocodingDir, { recursive: true });
 
   const tier: Tier = opts.tier ?? "minimal";
-  const profile = loadSopProfile();
+  const profile =
+    opts.sopVersion !== undefined ? loadSopProfileByVersion(opts.sopVersion) : loadSopProfile();
 
   const state: ProjectState = {
     schemaVersion: "1.0",
@@ -109,6 +113,12 @@ export async function initProject(opts: InitOptions): Promise<CommandResult<Init
         // map invisible to anything that read .ocoding/ as ground truth.
         await fs.writeFile(Paths.artifactsFile(opts.cwd), profile.artifactsYaml, "utf8");
         await fs.writeFile(Paths.configFile(opts.cwd), profile.defaultConfigYaml, "utf8");
+        // AM-004 — profiles that bundle a readiness rulebook get it
+        // snapshotted alongside sop/gates/artifacts so .ocoding/ fully
+        // expresses the runtime profile (0.1.0–0.3.0 write nothing here).
+        if (profile.readinessYaml !== undefined) {
+          await fs.writeFile(Paths.readinessRulesFile(opts.cwd), profile.readinessYaml, "utf8");
+        }
         // We already hold the outer lock; use the unlocked variant to avoid
         // a self-acquire deadlock.
         await writeStateUnlocked(opts.cwd, state);
