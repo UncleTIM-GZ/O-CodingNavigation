@@ -40,4 +40,20 @@ export const projectBriefTemplate = `# Project Brief｜项目简报
 ## Non-goals｜非目标
 
 <!-- Explicitly out-of-scope outcomes. Naming them prevents scope creep. -->
+
+## Readiness Declarations｜就绪声明
+
+<!-- SOP 0.4.0 readiness block — machine source for this doc's readiness
+     fields (inert on older profiles). R1: fill pointers/parameters only
+     (numbers, IDs, thresholds, paths) — never conclusions; booleans are
+     schema-illegal. Unfilled fields evaluate as UNKNOWN (silence is never
+     pass). Uncomment the example lines under \`fields:\` with real values. -->
+
+\`\`\`ocn-readiness
+artifact: artifact_brief
+fields: {}
+# 填法（取消注释并填真实值）:
+# fields:
+#   problem_statement: "一句话问题定义"        # not_empty
+\`\`\`
 `;

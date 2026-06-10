@@ -85,4 +85,22 @@ export const prdTemplate = `# Product Requirements Document｜产品需求文档
 - [ ] Users｜用户
 - [ ] Scenarios｜使用场景
 - [ ] Requirements｜需求
+
+## Readiness Declarations｜就绪声明
+
+<!-- SOP 0.4.0 readiness block — machine source for this doc's readiness
+     fields (inert on older profiles). R1: fill pointers/parameters only
+     (numbers, IDs, thresholds, paths) — never conclusions; booleans are
+     schema-illegal. Unfilled fields evaluate as UNKNOWN (silence is never
+     pass). Uncomment the example lines under \`fields:\` with real values. -->
+
+\`\`\`ocn-readiness
+artifact: artifact_prd
+fields: {}
+# 填法（取消注释并填真实值）:
+# fields:
+#   requirements: 5                            # count_gte:1（结构化需求条数）
+#   security_constraints: 2                    # count_gte:1（显式安全约束条数）
+#   value_proposition: "为谁解决什么"           # not_empty
+\`\`\`
 `;
