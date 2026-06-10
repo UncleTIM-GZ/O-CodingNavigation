@@ -225,3 +225,20 @@ export function loadSopProfile(): SopProfile {
 export function loadSopProfileByVersion(version: SopProfileVersion): SopProfile {
   return getProfile(version);
 }
+
+/**
+ * AM-004 minimal pin resolution. `loadSopProfile()` historically ignores the
+ * project's pinned version (AM-003 migration note); that is acceptable for
+ * 0.1.0–0.3.0 pins but would make the readiness gate structurally unreachable
+ * for a project initialized with `--sop-version 0.4.0`. So: honor the pin
+ * ONLY when the pinned profile carries a readiness rulebook (0.4.0+); every
+ * older pin keeps today's behavior (default profile) — zero regression for
+ * existing projects and fixtures.
+ */
+export function resolveProfileForProject(pinnedVersion: string): SopProfile {
+  if (pinnedVersion in PROFILE_SOURCES) {
+    const pinned = getProfile(pinnedVersion as SopProfileVersion);
+    if (pinned.readinessYaml !== undefined) return pinned;
+  }
+  return loadSopProfile();
+}

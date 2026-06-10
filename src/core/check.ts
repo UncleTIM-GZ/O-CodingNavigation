@@ -10,7 +10,8 @@ import { parseHeadings } from "./artifact/markdown-parser.js";
 import { createAuditEvent, safeAudit } from "./audit/index.js";
 import { msg } from "./i18n.js";
 import { blocked, ok } from "./result.js";
-import { loadSopProfile } from "./sop/loader.js";
+import { runReadinessGate } from "./gate/readiness-gate.js";
+import { resolveProfileForProject } from "./sop/loader.js";
 import { StateInvalidError, StateNotFoundError, readState } from "./state/state-store.js";
 
 export interface CheckOptions {
@@ -136,7 +137,8 @@ export async function checkCurrentArtifact(opts: CheckOptions): Promise<CommandR
     throw err;
   }
 
-  const profile = loadSopProfile();
+  // AM-004 — honor a 0.4.0+ pin (readiness); older pins keep the default.
+  const profile = resolveProfileForProject(state.project.sopProfileVersion);
   const stepId = state.currentStepId;
   const stateId = state.currentStateId;
 
@@ -278,6 +280,20 @@ export async function checkCurrentArtifact(opts: CheckOptions): Promise<CommandR
       status: "blocked",
       missingRequiredSectionIds: missing,
     } satisfies CheckData);
+  }
+
+  // SOP 0.4.0 (AM-004) — readiness cross-cutting gate, after the section
+  // gate. Open world: FAIL and UNKNOWN both block (exit 1, with fix_hints).
+  if (profile.readinessYaml !== undefined) {
+    const readiness = await runReadinessGate({ cwd: opts.cwd, profile, state });
+    if (!readiness.ok) {
+      await emitGateResult("artifact_gate_blocked", "blocked", "blocked", [], readiness.message);
+      return blocked("ERR_GATE_FAILED", readiness.message, {
+        artifactPath,
+        status: "blocked",
+        missingRequiredSectionIds: [],
+      } satisfies CheckData);
+    }
   }
 
   const message = passMessage(stepId);

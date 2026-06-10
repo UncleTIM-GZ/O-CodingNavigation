@@ -6,6 +6,8 @@ import { computeArtifactGateStatus } from "./artifact/gate-status.js";
 import { parseHeadings } from "./artifact/markdown-parser.js";
 import { readLogicGraphProjection } from "./logic/logic-graph-store.js";
 import { summarizeLogicGraph, type LogicBackboneSummary } from "./logic/logic-graph-summary.js";
+import { readReadinessLedger } from "./readiness/readiness-store.js";
+import type { ReadinessLedger } from "../types/readiness.js";
 import { blocked, ok } from "./result.js";
 import { msg } from "./i18n.js";
 import { loadSopProfile } from "./sop/loader.js";
@@ -31,6 +33,8 @@ export interface BriefData {
   /** Present once a validated logic backbone has been persisted (SOP 0.3.0).
    *  Surfaces execution order + trigger bindings so BUILD cannot drift. */
   readonly logicBackbone?: LogicBackboneSummary;
+  /** Present once a readiness evaluation has been persisted (SOP 0.4.0). */
+  readonly readiness?: ReadinessBriefSummary;
 }
 
 const AI_GOVERNANCE_REMINDER =
@@ -134,6 +138,12 @@ export async function generateBrief(opts: BriefOptions): Promise<CommandResult<B
   const graph = await readLogicGraphProjection(opts.cwd);
   const logicBackbone = graph === null ? undefined : summarizeLogicGraph(graph);
 
+  // SOP 0.4.0 (AM-004) — fold the last readiness evaluation into the brief
+  // so the unmet-readiness worklist (with fix_hints) travels with every
+  // prompt. Absent when the project has never been evaluated (pre-0.4.0).
+  const ledger = await readReadinessLedger(opts.cwd);
+  const readiness = ledger === null ? undefined : summarizeReadiness(ledger);
+
   return ok(
     msg(
       `Brief for ${state.project.name} — ${state.currentStateId} / ${state.currentStepId}`,
@@ -151,6 +161,33 @@ export async function generateBrief(opts: BriefOptions): Promise<CommandResult<B
       aiGovernanceReminder: AI_GOVERNANCE_REMINDER,
       uncertaintyPolicy: UNCERTAINTY_POLICY,
       ...(logicBackbone !== undefined ? { logicBackbone } : {}),
+      ...(readiness !== undefined ? { readiness } : {}),
     },
   );
+}
+
+/** Compact readiness summary for the brief: counts + open items with hints. */
+export interface ReadinessBriefSummary {
+  readonly tier: string;
+  readonly counts: string;
+  /** block-severity FAIL/UNKNOWN items as "id: fix_hint" lines. */
+  readonly openItems: readonly string[];
+  /** warn-severity FAIL/UNKNOWN items (never block; surfaced here only). */
+  readonly warnings: readonly string[];
+}
+
+function summarizeReadiness(ledger: ReadinessLedger): ReadinessBriefSummary {
+  const count = (v: string): number => ledger.checks.filter((c) => c.verdict === v).length;
+  const open = ledger.checks.filter(
+    (c) => c.severity === "block" && (c.verdict === "FAIL" || c.verdict === "UNKNOWN"),
+  );
+  const warnings = ledger.checks.filter(
+    (c) => c.severity === "warn" && (c.verdict === "FAIL" || c.verdict === "UNKNOWN"),
+  );
+  return {
+    tier: ledger.tier,
+    counts: `PASS ${count("PASS")} / FAIL ${count("FAIL")} / UNKNOWN ${count("UNKNOWN")} / NA ${count("NA")}`,
+    openItems: open.map((c) => `${c.id} [${c.verdict}]: ${c.fixHint.zh}`),
+    warnings: warnings.map((c) => `${c.id}: ${c.fixHint.zh}`),
+  };
 }

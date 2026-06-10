@@ -54,6 +54,47 @@ function appendLogicBackboneBlock(out: string[], value: unknown): void {
   }
 }
 
+function appendReadinessSummaryBlock(out: string[], value: unknown): void {
+  if (typeof value !== "object" || value === null) return;
+  const summary = value as Record<string, unknown>;
+  out.push("");
+  out.push("Readiness｜角色就绪:");
+  if (typeof summary["tier"] === "string" && typeof summary["counts"] === "string") {
+    out.push(`  Tier ${summary["tier"]} — ${summary["counts"]}`);
+  }
+  if (isStringArray(summary["openItems"]) && summary["openItems"].length > 0) {
+    out.push("  Open (blocks advance):");
+    for (const item of summary["openItems"]) out.push(`    - ${item}`);
+  }
+  if (isStringArray(summary["warnings"]) && summary["warnings"].length > 0) {
+    out.push("  Warnings (non-blocking):");
+    for (const item of summary["warnings"]) out.push(`    - ${item}`);
+  }
+}
+
+function appendReadinessListBlock(out: string[], data: Record<string, unknown>): void {
+  const ledger = isRecord(data["ledger"]) ? data["ledger"] : null;
+  if (ledger === null) return;
+  out.push("");
+  out.push(`Readiness｜角色就绪 (tier ${String(ledger["tier"])}):`);
+  const checks = ledger["checks"];
+  if (!Array.isArray(checks)) return;
+  for (const raw of checks) {
+    if (!isRecord(raw)) continue;
+    const verdict = String(raw["verdict"]);
+    if (verdict === "NA") continue;
+    out.push(
+      `  [${verdict}] ${String(raw["id"])} (${String(raw["role"])}, ${String(raw["severity"])})`,
+    );
+    if (verdict === "FAIL" || verdict === "UNKNOWN") {
+      const hint = isRecord(raw["fixHint"]) ? raw["fixHint"] : null;
+      if (hint !== null) out.push(`      → ${String(hint["zh"])}`);
+    }
+  }
+  const na = checks.filter((c) => isRecord(c) && c["verdict"] === "NA").length;
+  if (na > 0) out.push(`  (+${na} not applicable at this tier)`);
+}
+
 function appendBriefBlock(out: string[], data: Record<string, unknown>): void {
   appendStatusBlock(out, data);
   if (typeof data["currentArtifactStatus"] === "string") {
@@ -75,6 +116,7 @@ function appendBriefBlock(out: string[], data: Record<string, unknown>): void {
     }
   }
   appendLogicBackboneBlock(out, data["logicBackbone"]);
+  appendReadinessSummaryBlock(out, data["readiness"]);
   if (typeof data["aiGovernanceReminder"] === "string") {
     out.push("");
     out.push("AI Governance Reminder:");
@@ -416,7 +458,9 @@ export function renderText<T>(result: CommandResult<T>, locale: "zh" | "en"): st
   if (result.ok && isRecord(result.data)) {
     const data = result.data;
     lines.push("");
-    if (data["command"] === "exec.status" && data["implemented"] === true) {
+    if (data["command"] === "readiness.list") {
+      appendReadinessListBlock(lines, data);
+    } else if (data["command"] === "exec.status" && data["implemented"] === true) {
       appendExecStatusBlock(lines, data);
     } else if (data["command"] === "github.analyze_pr" && data["implemented"] === true) {
       appendGithubAnalyzePrBlock(lines, data);

@@ -101,6 +101,32 @@ export const CommandProbe = z
 export const RepoProbe = z.discriminatedUnion("type", [PathProbe, CommandProbe]);
 export type RepoProbe = z.infer<typeof RepoProbe>;
 
+/** Per-check evaluated outcome persisted in the ledger. */
+export const ReadinessCheckOutcome = z
+  .object({
+    id: z.string(),
+    role: z.string(),
+    layer: ReadinessLayer,
+    severity: ReadinessSeverity,
+    verdict: ReadinessVerdict,
+    /** Field-level notes (which predicate failed / which input is missing). */
+    detail: z.string(),
+    fixHint: ReadinessFixHint,
+  })
+  .strict();
+export type ReadinessCheckOutcome = z.infer<typeof ReadinessCheckOutcome>;
+
+/** `.ocoding/readiness.json` — machine projection of the last evaluation. */
+export const ReadinessLedger = z
+  .object({
+    evaluatedAt: z.string(),
+    tier: ReadinessTier,
+    rulebookVersion: z.string(),
+    checks: z.array(ReadinessCheckOutcome),
+  })
+  .strict();
+export type ReadinessLedger = z.infer<typeof ReadinessLedger>;
+
 export const ReadinessRulebook = z
   .object({
     version: z.string().min(1),

@@ -11,8 +11,9 @@ import { createAuditEvent, safeAudit } from "../audit/index.js";
 import { msg } from "../i18n.js";
 import { writeLogicGraphProjection } from "../logic/logic-graph-store.js";
 import { blocked, ok } from "../result.js";
-import { loadSopProfile } from "../sop/loader.js";
+import { resolveProfileForProject } from "../sop/loader.js";
 import { evaluateLogicBackbone } from "./logic-backbone-gate.js";
+import { runReadinessGate } from "./readiness-gate.js";
 import { StateInvalidError, StateNotFoundError, readState } from "../state/state-store.js";
 
 export interface RunGateOptions {
@@ -79,7 +80,9 @@ export async function runGate(opts: RunGateOptions): Promise<CommandResult<GateR
     throw err;
   }
 
-  const profile = opts.profile ?? loadSopProfile();
+  // AM-004 — honor the project's pinned profile when it carries a readiness
+  // rulebook (0.4.0+); all older pins keep the default-profile behavior.
+  const profile = opts.profile ?? resolveProfileForProject(state.project.sopProfileVersion);
   const required = profile.requiredSectionsForStep(state.currentStepId);
   const relativeArtifactPath = profile.artifactPathForStep(state.currentStepId);
 
@@ -255,6 +258,34 @@ export async function runGate(opts: RunGateOptions): Promise<CommandResult<GateR
         );
         return blocked("ERR_IO_OR_CONFIG", ioMessage);
       }
+    }
+  }
+
+  // SOP 0.4.0 (AM-004) — readiness cross-cutting gate. Runs after the
+  // section (and logic-backbone) gates on profiles that bundle a rulebook;
+  // open-world blocking: FAIL and UNKNOWN both block, with fix_hints.
+  if (profile.readinessYaml !== undefined) {
+    const readiness = await runReadinessGate({ cwd: opts.cwd, profile, state });
+    if (!readiness.ok) {
+      const rdResult: GateResult = {
+        status: "blocked",
+        currentStateId: state.currentStateId,
+        currentStepId: state.currentStepId,
+        artifactPath: relativeArtifactPath,
+        missingRequiredSectionIds: [],
+        blockingReasons: ["readiness_not_met"],
+      };
+      await safeAudit(
+        opts.cwd,
+        createAuditEvent(
+          baseAudit("artifact_gate_blocked", "blocked", readiness.message, {
+            status: "blocked",
+            reason: "readiness_not_met",
+            blockingCheckIds: readiness.blocking.map((c) => c.id),
+          }),
+        ),
+      );
+      return blocked("ERR_GATE_FAILED", readiness.message, rdResult);
     }
   }
 
