@@ -29,7 +29,7 @@ export function registerReadinessCommand(program: Command): void {
     .requiredOption("--reason <reason>", "Why this check does not apply here")
     .requiredOption(
       "--probe <command>",
-      "Precondition probe (shell command; exit 0 = precondition holds)",
+      "Precondition probe — executed via `/bin/sh -c` on every gate run; exit 0 = precondition holds. Keep it a lightweight check (e.g. `test -f`, `grep`).",
     )
     .option("--json", "Emit machine-readable JSON CommandResult", false)
     .action(async (checkId: string, rawOpts: { reason: string; probe: string; json: boolean }) => {

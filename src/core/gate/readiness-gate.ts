@@ -49,6 +49,8 @@ export async function runReadinessGate(opts: {
   readonly cwd: string;
   readonly profile: SopProfile;
   readonly state: ProjectState;
+  /** W1 — false in read-only contexts (MCP): probe commands are not run. */
+  readonly executeCommands?: boolean;
 }): Promise<ReadinessGateOutcome> {
   const yamlText = opts.profile.readinessYaml;
   if (yamlText === undefined) {
@@ -107,6 +109,7 @@ export async function runReadinessGate(opts: {
     commands,
     waivers,
     currentStateId: opts.state.currentStateId,
+    executeCommands: opts.executeCommands ?? true,
   });
   try {
     await writeReadinessLedger(opts.cwd, ledger);

@@ -173,6 +173,46 @@ checks:
     expect(byId.get("rdy_solo_doc")?.verdict).toBe("UNKNOWN"); // no prd doc at all
   });
 
+  it("executeCommands:false skips command probes → UNKNOWN (W1, read-only)", async () => {
+    await fs.mkdir(join(project.cwd, ".git"), { recursive: true });
+    const rb = parseReadinessRulebook(`
+version: 0.0.1
+artifact_aliases: {}
+repo_probes:
+  test_command_passes: { type: command, run: "<cmd>", expect_exit: 0 }
+checks:
+  - id: rdy_cmd
+    role: qa_engineer
+    layer: delivery
+    concern: tests
+    tier_required: [solo]
+    requires: [repo.test_command_passes]
+    severity: block
+    scenario: "Given repo When check Then tests pass"
+    check:
+      test_command_passes: true
+    fix_hint: { zh: "跑测试", en: "run tests" }
+`).rulebook;
+    const exec = await evaluateReadiness({
+      root: project.cwd,
+      rulebook: rb!,
+      projectTier: "minimal",
+      commands: { test: "exit 0" },
+      executeCommands: true,
+    });
+    expect(exec.checks.find((c) => c.id === "rdy_cmd")?.verdict).toBe("PASS");
+    const readonly = await evaluateReadiness({
+      root: project.cwd,
+      rulebook: rb!,
+      projectTier: "minimal",
+      commands: { test: "exit 0" },
+      executeCommands: false,
+    });
+    const c = readonly.checks.find((x) => x.id === "rdy_cmd");
+    expect(c?.verdict).toBe("UNKNOWN");
+    expect(c?.detail).toContain("read-only");
+  });
+
   it("declared block values flip UNKNOWN→PASS/FAIL; ledger roundtrips", async () => {
     await fs.mkdir(join(project.cwd, "docs"), { recursive: true });
     await fs.writeFile(

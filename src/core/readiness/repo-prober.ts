@@ -3,6 +3,7 @@ import { promises as fs } from "node:fs";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import type { RepoProbe } from "../../types/readiness.js";
+import { assertPathInsideRoot } from "../security/project-root.js";
 import { globToRegExp } from "./artifact-resolver.js";
 import type { ProjectCommands } from "./project-config.js";
 
@@ -46,11 +47,12 @@ async function statNonEmpty(path: string): Promise<boolean> {
 async function pathPatternHits(root: string, pattern: string): Promise<boolean> {
   if (pattern.includes("#")) {
     const [file = "", key = ""] = pattern.split("#");
+    const target = join(root, file);
+    // Defense-in-depth: a future user-supplied rulebook must not read outside
+    // the project root via a "../" pattern.
+    if (!assertPathInsideRoot(root, target)) return false;
     try {
-      const raw = JSON.parse(await fs.readFile(join(root, file), "utf8")) as Record<
-        string,
-        unknown
-      >;
+      const raw = JSON.parse(await fs.readFile(target, "utf8")) as Record<string, unknown>;
       const value = raw[key];
       return value !== null && typeof value === "object" && Object.keys(value).length > 0;
     } catch {
@@ -61,6 +63,7 @@ async function pathPatternHits(root: string, pattern: string): Promise<boolean> 
   const segments = clean.split("/");
   const last = segments.pop() ?? "";
   const dir = join(root, ...segments);
+  if (!assertPathInsideRoot(root, dir)) return false;
   if (!last.includes("*")) {
     return statNonEmpty(join(dir, last));
   }
@@ -108,10 +111,15 @@ export async function runCommandProbe(
       ? { status: "pass", detail: `\`${command}\` exited 0` }
       : { status: "fail", detail: `\`${command}\` exited 0, expected ${expectExit}` };
   } catch (err) {
-    const code = (err as { code?: number }).code ?? 1;
-    return code === expectExit
-      ? { status: "pass", detail: `\`${command}\` exited ${code}` }
-      : { status: "fail", detail: `\`${command}\` exited ${code}, expected ${expectExit}` };
+    // A timeout/kill has a non-numeric (or null) code — report it honestly
+    // rather than as a fake "exited 1" (mirrors waiver-probe.ts).
+    const rawCode = (err as { code?: number | string | null }).code;
+    if (typeof rawCode !== "number") {
+      return { status: "fail", detail: `\`${command}\` timed out or could not run` };
+    }
+    return rawCode === expectExit
+      ? { status: "pass", detail: `\`${command}\` exited ${rawCode}` }
+      : { status: "fail", detail: `\`${command}\` exited ${rawCode}, expected ${expectExit}` };
   }
 }
 

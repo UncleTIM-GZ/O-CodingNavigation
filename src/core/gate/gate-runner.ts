@@ -13,7 +13,7 @@ import { writeLogicGraphProjection } from "../logic/logic-graph-store.js";
 import { blocked, ok } from "../result.js";
 import { resolveProfileForProject } from "../sop/loader.js";
 import { evaluateLogicBackbone } from "./logic-backbone-gate.js";
-import { runReadinessGate } from "./readiness-gate.js";
+import { readinessStepBlockOrNull } from "./readiness-step.js";
 import { StateInvalidError, StateNotFoundError, readState } from "../state/state-store.js";
 
 export interface RunGateOptions {
@@ -34,6 +34,9 @@ export interface RunGateOptions {
    * advance behavior does NOT change in PR 3.
    */
   readonly profile?: SopProfile;
+  /** W1 — false for read-only callers (MCP run_gate): readiness probe
+   *  commands are NOT executed (reported UNKNOWN). Defaults to true. */
+  readonly executeCommands?: boolean;
 }
 
 const ENOENT = "ENOENT";
@@ -123,8 +126,41 @@ export async function runGate(opts: RunGateOptions): Promise<CommandResult<GateR
     ),
   );
 
-  // Step has no required artifact — auto-pass with not_applicable.
+  // SOP 0.4.0 (AM-004) — readiness cross-cutting gate. Cross-cutting: it runs
+  // whether or not the step has a required artifact (so a no-artifact step
+  // cannot advance past unmet readiness). Shared with `ocn check`.
+  const readinessOrNull = (): Promise<CommandResult<GateResult> | null> =>
+    readinessStepBlockOrNull<GateResult>({
+      cwd: opts.cwd,
+      profile,
+      state,
+      executeCommands: opts.executeCommands ?? true,
+      buildBlockedData: () => ({
+        status: "blocked",
+        currentStateId: state.currentStateId,
+        currentStepId: state.currentStepId,
+        ...(relativeArtifactPath !== null ? { artifactPath: relativeArtifactPath } : {}),
+        missingRequiredSectionIds: [],
+        blockingReasons: ["readiness_not_met"],
+      }),
+      emitAudit: (message, ids) =>
+        safeAudit(
+          opts.cwd,
+          createAuditEvent(
+            baseAudit("artifact_gate_blocked", "blocked", message, {
+              status: "blocked",
+              reason: "readiness_not_met",
+              blockingCheckIds: ids,
+            }),
+          ),
+        ),
+    });
+
+  // Step has no required artifact — readiness still applies (cross-cutting),
+  // then auto-pass with not_applicable.
   if (relativeArtifactPath === null) {
+    const readinessBlock = await readinessOrNull();
+    if (readinessBlock !== null) return readinessBlock;
     const result: GateResult = {
       status: "not_applicable",
       currentStateId: state.currentStateId,
@@ -261,33 +297,9 @@ export async function runGate(opts: RunGateOptions): Promise<CommandResult<GateR
     }
   }
 
-  // SOP 0.4.0 (AM-004) — readiness cross-cutting gate. Runs after the
-  // section (and logic-backbone) gates on profiles that bundle a rulebook;
-  // open-world blocking: FAIL and UNKNOWN both block, with fix_hints.
-  if (profile.readinessYaml !== undefined) {
-    const readiness = await runReadinessGate({ cwd: opts.cwd, profile, state });
-    if (!readiness.ok) {
-      const rdResult: GateResult = {
-        status: "blocked",
-        currentStateId: state.currentStateId,
-        currentStepId: state.currentStepId,
-        artifactPath: relativeArtifactPath,
-        missingRequiredSectionIds: [],
-        blockingReasons: ["readiness_not_met"],
-      };
-      await safeAudit(
-        opts.cwd,
-        createAuditEvent(
-          baseAudit("artifact_gate_blocked", "blocked", readiness.message, {
-            status: "blocked",
-            reason: "readiness_not_met",
-            blockingCheckIds: readiness.blocking.map((c) => c.id),
-          }),
-        ),
-      );
-      return blocked("ERR_GATE_FAILED", readiness.message, rdResult);
-    }
-  }
+  // SOP 0.4.0 (AM-004) — readiness gate after the section / logic gates.
+  const readinessBlock = await readinessOrNull();
+  if (readinessBlock !== null) return readinessBlock;
 
   // pass (warning state currently unused; reserved for PR #5+)
   const result: GateResult = {

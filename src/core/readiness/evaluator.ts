@@ -34,6 +34,9 @@ export interface EvaluateReadinessOptions {
   /** P4 — current state id; a waiver only applies in the state it was
    *  granted in (stale otherwise → re-affirm). */
   readonly currentStateId?: string;
+  /** W1 — when false (MCP / read-only callers) command + test_list probes
+   *  are NOT executed; they report UNKNOWN. Defaults to true. */
+  readonly executeCommands?: boolean;
   readonly now?: () => Date;
 }
 
@@ -143,15 +146,63 @@ async function evalArtifactField(
   return { status: outcome.status, note: `${field}: ${outcome.note}` };
 }
 
+/** Shared per-run caches + lazily-bound probes, threaded into every rule. */
+interface RuleEvalContext {
+  readonly tier: ReadinessTier;
+  readonly artifactPaths: ReadonlyMap<string, string | null>;
+  readonly probeCache: Map<string, ProbeResult>;
+  readonly blockCache: Map<string, Readonly<Record<string, unknown>> | null>;
+  readonly getCollection: () => Promise<TestCollection>;
+  readonly probeWaiver: (probe: string) => Promise<{ ok: boolean; detail: string }>;
+}
+
+async function evalField(
+  opts: EvaluateReadinessOptions,
+  rule: ReadinessRule,
+  field: string,
+  ctx: RuleEvalContext,
+  repoFacts: ReadonlySet<string>,
+): Promise<FieldVerdict> {
+  if (AC_TRACE_FIELDS.has(field)) {
+    return evalAcTraceField(opts, field, ctx.artifactPaths, ctx.blockCache, ctx.getCollection);
+  }
+  if (isDerivedField(field)) {
+    return { status: "unknown", note: `${field}: engine capability not yet shipped (P3+)` };
+  }
+  if (repoFacts.has(field)) {
+    const probe = opts.rulebook.repo_probes[field];
+    if (probe === undefined) return { status: "unknown", note: `${field}: probe not defined` };
+    // W1 — in a read-only context (MCP) never execute project commands; the
+    // command probe reports UNKNOWN instead (open world: not run ≠ pass).
+    if (probe.type === "command" && opts.executeCommands === false) {
+      return {
+        status: "unknown",
+        note: `repo.${field}: command probe skipped (read-only context)`,
+      };
+    }
+    let result = ctx.probeCache.get(field);
+    if (result === undefined) {
+      result = await runRepoProbe(opts.root, field, probe, opts.commands);
+      ctx.probeCache.set(field, result);
+    }
+    return describeProbe(field, result);
+  }
+  if (rule.requires.every((r) => r.startsWith("repo."))) {
+    // Content check on a repo-probed file (README fields) — deterministic
+    // extractors; fields without one stay UNKNOWN.
+    const readmeProbe = opts.rulebook.repo_probes["readme"];
+    const patterns =
+      readmeProbe !== undefined && readmeProbe.type === "path" ? readmeProbe.any : ["README*"];
+    const content = await evalReadmeContentField(opts.root, field, patterns);
+    return { status: content.status, note: content.note };
+  }
+  return evalArtifactField(opts, rule, field, ctx.artifactPaths, ctx.blockCache);
+}
+
 async function evaluateRule(
   opts: EvaluateReadinessOptions,
   rule: ReadinessRule,
-  tier: ReadinessTier,
-  artifactPaths: ReadonlyMap<string, string | null>,
-  probeCache: Map<string, ProbeResult>,
-  blockCache: Map<string, Readonly<Record<string, unknown>> | null>,
-  getCollection: () => Promise<TestCollection>,
-  probeWaiver: (probe: string) => Promise<{ ok: boolean; detail: string }>,
+  ctx: RuleEvalContext,
 ): Promise<ReadinessCheckOutcome> {
   const base = {
     id: rule.id,
@@ -160,52 +211,21 @@ async function evaluateRule(
     severity: rule.severity,
     fixHint: rule.fix_hint,
   };
-  if (!rule.tier_required.includes(tier)) {
-    return { ...base, verdict: "NA", detail: `not required at tier ${tier}` };
+  if (!rule.tier_required.includes(ctx.tier)) {
+    return { ...base, verdict: "NA", detail: `not required at tier ${ctx.tier}` };
   }
-
   const repoFacts = new Set(
     rule.requires.filter((r) => r.startsWith("repo.")).map((r) => r.slice("repo.".length)),
   );
   const verdicts: FieldVerdict[] = [];
   for (const field of Object.keys(rule.check)) {
-    if (AC_TRACE_FIELDS.has(field)) {
-      verdicts.push(await evalAcTraceField(opts, field, artifactPaths, blockCache, getCollection));
-    } else if (isDerivedField(field)) {
-      verdicts.push({
-        status: "unknown",
-        note: `${field}: engine capability not yet shipped (P3+)`,
-      });
-    } else if (repoFacts.has(field)) {
-      const probe = opts.rulebook.repo_probes[field];
-      if (probe === undefined) {
-        verdicts.push({ status: "unknown", note: `${field}: probe not defined` });
-        continue;
-      }
-      let result = probeCache.get(field);
-      if (result === undefined) {
-        result = await runRepoProbe(opts.root, field, probe, opts.commands);
-        probeCache.set(field, result);
-      }
-      verdicts.push(describeProbe(field, result));
-    } else if (rule.requires.every((r) => r.startsWith("repo."))) {
-      // Content check on a repo-probed file (README fields). P3: dedicated
-      // deterministic extractors; fields without one stay UNKNOWN.
-      const readmeProbe = opts.rulebook.repo_probes["readme"];
-      const patterns =
-        readmeProbe !== undefined && readmeProbe.type === "path" ? readmeProbe.any : ["README*"];
-      const content = await evalReadmeContentField(opts.root, field, patterns);
-      verdicts.push({ status: content.status, note: content.note });
-    } else {
-      verdicts.push(await evalArtifactField(opts, rule, field, artifactPaths, blockCache));
-    }
+    verdicts.push(await evalField(opts, rule, field, ctx, repoFacts));
   }
-
   const failed = verdicts.filter((v) => v.status === "fail");
   const unknown = verdicts.filter((v) => v.status === "unknown");
   const verdict = failed.length > 0 ? "FAIL" : unknown.length > 0 ? "UNKNOWN" : "PASS";
   const detail = verdicts.map((v) => v.note).join("; ");
-  return applyWaiver(opts, rule, { ...base, verdict, detail }, probeWaiver);
+  return applyWaiver(opts, rule, { ...base, verdict, detail }, ctx.probeWaiver);
 }
 
 /**
@@ -254,10 +274,14 @@ export async function evaluateReadiness(opts: EvaluateReadinessOptions): Promise
   const probeCache = new Map<string, ProbeResult>();
   const blockCache = new Map<string, Readonly<Record<string, unknown>> | null>();
   // Lazy, once-per-run test collection (only runs when an AC-trace field is
-  // actually evaluated at this tier).
+  // actually evaluated at this tier). W1 — skipped (UNKNOWN) in a read-only
+  // context: passing no test_list makes the collector report unconfigured.
   let collection: Promise<TestCollection> | null = null;
   const getCollection = (): Promise<TestCollection> =>
-    (collection ??= collectTestNodes(opts.root, opts.commands.test_list));
+    (collection ??= collectTestNodes(
+      opts.root,
+      opts.executeCommands === false ? undefined : opts.commands.test_list,
+    ));
   // P4 — waiver precondition probes, deduped per probe command per run.
   const waiverProbeCache = new Map<string, Promise<{ ok: boolean; detail: string }>>();
   const probeWaiver = (probe: string): Promise<{ ok: boolean; detail: string }> => {
@@ -269,20 +293,17 @@ export async function evaluateReadiness(opts: EvaluateReadinessOptions): Promise
     return cached;
   };
 
+  const ctx: RuleEvalContext = {
+    tier,
+    artifactPaths,
+    probeCache,
+    blockCache,
+    getCollection,
+    probeWaiver,
+  };
   const checks: ReadinessCheckOutcome[] = [];
   for (const rule of opts.rulebook.checks) {
-    checks.push(
-      await evaluateRule(
-        opts,
-        rule,
-        tier,
-        artifactPaths,
-        probeCache,
-        blockCache,
-        getCollection,
-        probeWaiver,
-      ),
-    );
+    checks.push(await evaluateRule(opts, rule, ctx));
   }
   const now = opts.now ?? ((): Date => new Date());
   return {

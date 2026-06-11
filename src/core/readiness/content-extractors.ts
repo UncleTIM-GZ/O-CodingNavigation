@@ -1,5 +1,6 @@
 import { promises as fs } from "node:fs";
 import { join } from "node:path";
+import { assertPathInsideRoot } from "../security/project-root.js";
 import { globToRegExp } from "./artifact-resolver.js";
 
 // SOP 0.4.0 P3 — deterministic README content extractors for the two
@@ -23,13 +24,15 @@ export interface ContentVerdict {
 
 const EMAIL_RE = /[\w.+-]+@[\w-]+\.[\w.-]{2,}/;
 const ISSUES_URL_RE = /https?:\/\/\S*(issues|discussions)/i;
-const QUICKSTART_HEADING_RE = /^#{1,4}\s.*(quick ?start|getting started|usage|install|用法|快速上手|快速开始|安装|使用)/im;
+const QUICKSTART_HEADING_RE =
+  /^#{1,4}\s.*(quick ?start|getting started|usage|install|用法|快速上手|快速开始|安装|使用)/im;
 const FENCED_BLOCK_RE = /^```/m;
 
 async function readFirstMatch(root: string, patterns: readonly string[]): Promise<string | null> {
   for (const pattern of patterns) {
     const slash = pattern.lastIndexOf("/");
     const dir = slash === -1 ? root : join(root, pattern.slice(0, slash));
+    if (!assertPathInsideRoot(root, dir)) continue;
     const namePattern = slash === -1 ? pattern : pattern.slice(slash + 1);
     const re = globToRegExp(namePattern);
     let names: string[] = [];

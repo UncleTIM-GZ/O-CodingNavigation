@@ -32,7 +32,9 @@ export interface ReadinessBlockParseResult {
 const FENCE_RE = /^```ocn-readiness[ \t]*\r?\n([\s\S]*?)^```[ \t]*$/m;
 
 export function parseReadinessBlock(markdown: string): ReadinessBlockParseResult {
-  const match = FENCE_RE.exec(markdown);
+  // Normalize CRLF so a Windows-authored closing fence / trailing \r cannot
+  // leak into the last YAML value (which then fails the strict key regex).
+  const match = FENCE_RE.exec(markdown.replace(/\r\n/g, "\n"));
   if (match === null) {
     return { found: false, block: null, errors: [] };
   }
@@ -48,9 +50,7 @@ export function parseReadinessBlock(markdown: string): ReadinessBlockParseResult
   }
   const parsed = ReadinessBlock.safeParse(raw);
   if (!parsed.success) {
-    const details = parsed.error.issues
-      .slice(0, 5)
-      .map((i) => `${i.path.join(".")}: ${i.message}`);
+    const details = parsed.error.issues.slice(0, 5).map((i) => `${i.path.join(".")}: ${i.message}`);
     return { found: true, block: null, errors: details };
   }
   return { found: true, block: parsed.data, errors: [] };
