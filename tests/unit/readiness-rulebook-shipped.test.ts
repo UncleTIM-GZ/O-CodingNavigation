@@ -26,16 +26,17 @@ describe("shipped readiness rulebook (SOP 0.4.0)", () => {
     }
   });
 
-  it("ships on the 0.4.0 profile only", () => {
+  it("ships on the 0.4.0+ profiles only (0.5.0 re-exports the 0.4.0 rulebook)", () => {
     expect(loadSopProfileByVersion("0.4.0").readinessYaml).toBe(readinessYaml);
+    expect(loadSopProfileByVersion("0.5.0").readinessYaml).toBe(readinessYaml);
     expect(loadSopProfileByVersion("0.3.0").readinessYaml).toBeUndefined();
     expect(loadSopProfileByVersion("0.2.0").readinessYaml).toBeUndefined();
   });
 
-  it("runtime default IS 0.4.0 and carries the readiness rulebook (DEC-030 cutover)", async () => {
+  it("runtime default IS 0.5.0 and carries the readiness rulebook (DEC-032 cutover)", async () => {
     const { DEFAULT_SOP_PROFILE_VERSION, loadSopProfile } =
       await import("../../src/core/sop/loader.js");
-    expect(DEFAULT_SOP_PROFILE_VERSION).toBe("0.4.0");
+    expect(DEFAULT_SOP_PROFILE_VERSION).toBe("0.5.0");
     expect(loadSopProfile().readinessYaml).toBe(readinessYaml);
   });
 });

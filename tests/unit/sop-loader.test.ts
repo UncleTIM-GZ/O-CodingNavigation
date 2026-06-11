@@ -5,29 +5,30 @@ import {
   loadSopProfileByVersion,
 } from "../../src/core/sop/loader.js";
 
-// SOP 0.4.0 (DEC-030) — runtime cutover. The default `loadSopProfile()`
-// now returns 0.4.0 (= 0.3.0 + readiness rulebook); 0.1.0/0.2.0/0.3.0 remain
+// SOP 0.5.0 (DEC-032) — runtime cutover. The default `loadSopProfile()`
+// now returns 0.5.0 (= 0.4.0 + task backbone); 0.1.0–0.4.0 remain
 // importable via `loadSopProfileByVersion` for tests that explicitly pin a
 // frozen profile, but no default runtime path goes through them any more.
 
 describe("sop/loader.loadSopProfile", () => {
-  it("returns the default profile pinned to 0.4.0 (DEC-030)", () => {
+  it("returns the default profile pinned to 0.5.0 (DEC-032)", () => {
     const profile = loadSopProfile();
     expect(profile.id).toBe("default-ai-coding-sop");
-    expect(profile.version).toBe("0.4.0");
-    expect(DEFAULT_SOP_PROFILE_VERSION).toBe("0.4.0");
+    expect(profile.version).toBe("0.5.0");
+    expect(DEFAULT_SOP_PROFILE_VERSION).toBe("0.5.0");
   });
 
   it("provides yaml strings for sop / gates / artifacts / config", () => {
     const profile = loadSopProfile();
     expect(profile.sopYaml).toMatch(/profile: default-ai-coding-sop/);
-    expect(profile.sopYaml).toMatch(/version: 0\.4\.0/);
+    expect(profile.sopYaml).toMatch(/version: 0\.5\.0/);
     expect(profile.gatesYaml).toMatch(/section_product_form/);
+    expect(profile.gatesYaml).toMatch(/section_task_specs/);
     expect(profile.artifactsYaml).toMatch(/02-prd\.md/);
     expect(profile.artifactsYaml).toMatch(/19-final-build-verdict\.md/);
     expect(profile.artifactsYaml).toMatch(/07-logic-backbone\.md/);
     expect(profile.defaultConfigYaml).toMatch(/tier: minimal/);
-    expect(profile.defaultConfigYaml).toMatch(/version: 0\.4\.0/);
+    expect(profile.defaultConfigYaml).toMatch(/version: 0\.5\.0/);
   });
 
   // Ensures runtime profile + persisted snapshot share the same (0.2.0) shape.
@@ -134,12 +135,26 @@ describe("sop/loader.loadSopProfile", () => {
     expect(total).toBe(10);
   });
 
-  it("loadSopProfileByVersion('0.4.0') is identical to the default (DEC-030)", () => {
+  it("loadSopProfileByVersion('0.5.0') is identical to the default (DEC-032)", () => {
     const def = loadSopProfile();
+    const v050 = loadSopProfileByVersion("0.5.0");
+    expect(def.version).toBe(v050.version);
+    expect(def.sopYaml).toBe(v050.sopYaml);
+    expect(def.gatesYaml).toBe(v050.gatesYaml);
+    expect(def.artifactsYaml).toBe(v050.artifactsYaml);
+  });
+
+  it("0.5.0 delta vs 0.4.0 is exactly the build-plan Task Specs section (DEC-032)", () => {
     const v040 = loadSopProfileByVersion("0.4.0");
-    expect(def.version).toBe(v040.version);
-    expect(def.sopYaml).toBe(v040.sopYaml);
-    expect(def.gatesYaml).toBe(v040.gatesYaml);
-    expect(def.artifactsYaml).toBe(v040.artifactsYaml);
+    const v050 = loadSopProfileByVersion("0.5.0");
+    expect(v040.requiredSectionsForStep("step_build_plan").map((r) => r.id)).not.toContain(
+      "section_task_specs",
+    );
+    expect(v050.requiredSectionsForStep("step_build_plan").map((r) => r.id)).toContain(
+      "section_task_specs",
+    );
+    expect(v050.requiredSectionsForStep("step_prd")).toEqual(
+      v040.requiredSectionsForStep("step_prd"),
+    );
   });
 });

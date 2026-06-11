@@ -3180,3 +3180,56 @@ Claude Code, then review + `ocn advance` in the terminal.
 - Other agents (Cursor/Codex wiring) — `agent` command group leaves room.
 - Auto-advance / autonomous looping — advance stays human-only by design.
 - `ocn init --with-agent` convenience flag — possible follow-up.
+
+## DEC-032｜Task Backbone — BUILD 态的实施任务循环（SOP 0.5.0）
+
+Date: 2026-06-12
+Implements: AM-007; full design in `docs/task-backbone-proposal.md` (accepted 2026-06-12)
+
+### Status
+
+Accepted — implementation authorized (P0–P3 + SOP 0.5.0 cutover).
+
+### Context
+
+Lattice dogfood (2026-06-12) exposed the FOURTH false-completion class —
+**receipt-only completion** — and its terminal form, the **run-through**: an
+entire SOP round (build receipts + verify docs, all honestly stating "no
+code") passed every gate; `next-prompt` never authorized coding; the chain
+nearly terminated with implementation never scheduled. Section, logic,
+readiness gates and human advance all failed to stop it: the state machine
+was a treadmill, not a gatekeeper.
+
+### Decision
+
+Convert "implementation actually happened per plan" (unverifiable) into
+"every task spec's frozen verify command passed" (verifiable):
+
+1. **Task Spec Block** in `docs/11-build-plan.md` (`## Task Specs｜任务规格`):
+   per-task mini-spec `goal/traces/touches/verify/dod` (+ optional
+   `depends/phase/timeout`). Splitting quality is gated BEFORE entering BUILD.
+2. **Six hard defects** block the build-plan gate (exit 2): duplicate id,
+   missing required field, dangling traces (AC ids via the acceptance
+   parser's canonical AC-NNN form), dangling touches (logic-graph nodes),
+   dangling/cyclic depends, zero tasks.
+3. **Ledger** `.ocoding/task-ledger.json` written on gate pass; verify
+   commands HASH-FROZEN at that moment (R4 — referee not on the player's
+   write path). Done status survives regeneration only while the hash holds.
+4. **`ocn task list / task check`** — completion is decided ONLY by the
+   frozen verify command exiting 0 (no manual-done channel); drift → refuse
+   with re-gate instruction. `task_completed` push audit.
+5. **`/ocn-next` BUILD dispatch** — first pending task with cleared depends
+   becomes the nine-section objective; ledger absent → legacy fallback
+   (zero regression for ≤0.4.0 pins).
+6. **Transition gate** — `ocn advance` out of `state_build` blocked while
+   pending tasks remain: 任务台账不清，不准进 VERIFY.
+7. MCP exposure: none for `task check` (runs arbitrary commands); brief
+   carries the ledger summary read-only.
+8. Ships as **SOP 0.5.0** (build-plan template + required section
+   `section_task_specs`); 0.4.0 frozen + importable; `ocn sop upgrade`
+   migrates (step set unchanged → cursor compatibility holds).
+
+### Out of scope
+
+- Receipt auto-generation from ledger+audit (0.6.0 candidate).
+- Multi-command verify lists; task-level waivers (edit plan → re-gate).

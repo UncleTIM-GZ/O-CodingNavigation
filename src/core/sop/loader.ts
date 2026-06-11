@@ -49,6 +49,18 @@ import {
 import { gatesYaml as gatesYaml040 } from "../../sops/default-ai-coding-sop/0.4.0/gates.js";
 import { readinessYaml as readinessYaml040 } from "../../sops/default-ai-coding-sop/0.4.0/readiness.js";
 import { sopYaml as sopYaml040 } from "../../sops/default-ai-coding-sop/0.4.0/sop.js";
+import { artifactsYaml as artifactsYaml050 } from "../../sops/default-ai-coding-sop/0.5.0/artifacts.js";
+import { defaultConfigYaml as defaultConfigYaml050 } from "../../sops/default-ai-coding-sop/0.5.0/config.js";
+import {
+  PROFILE_ID as PROFILE_ID_050,
+  PROFILE_VERSION as PROFILE_VERSION_050,
+  REQUIRED_SECTIONS_BY_STEP as REQUIRED_SECTIONS_BY_STEP_050,
+  STATE_ORDER as STATE_ORDER_050,
+  STEPS_BY_STATE as STEPS_BY_STATE_050,
+} from "../../sops/default-ai-coding-sop/0.5.0/data.js";
+import { gatesYaml as gatesYaml050 } from "../../sops/default-ai-coding-sop/0.5.0/gates.js";
+import { readinessYaml as readinessYaml050 } from "../../sops/default-ai-coding-sop/0.5.0/readiness.js";
+import { sopYaml as sopYaml050 } from "../../sops/default-ai-coding-sop/0.5.0/sop.js";
 
 // P1-003 — the runtime profile and the persisted .ocoding/sop.yaml share a
 // single source of truth (data.ts). The loader is a thin adapter that wires
@@ -57,20 +69,20 @@ import { sopYaml as sopYaml040 } from "../../sops/default-ai-coding-sop/0.4.0/so
 // `render.ts`. Adding a step requires editing data.ts only — both surfaces
 // pick it up automatically.
 //
-// SOP 0.4.0 (AM-004/AM-005, DEC-028/DEC-030) — runtime cutover:
-// `loadSopProfile()` now returns 0.4.0 by default. Fresh `ocn init` writes
-// `sopProfileVersion: "0.4.0"` and renders the 0.4.0 snapshot files
-// (incl. readiness-rules.yaml); gate / check / advance run the readiness
-// cross-cutting gate by default. Older pins are honored at runtime via
+// SOP 0.5.0 (AM-007, DEC-032) — runtime cutover: `loadSopProfile()` now
+// returns 0.5.0 by default (= 0.4.0 + task backbone). Fresh `ocn init` pins
+// 0.5.0; the build-plan gate requires section_task_specs and freezes the
+// task ledger on pass. Older pins are honored at runtime via
 // `resolveProfileForProject` and migrate forward with `ocn sop upgrade`
 // (DEC-029) — no silent fallback to the default profile anymore.
 
 // Re-export STATE_ORDER for backward compatibility with existing imports of
-// the runtime constant. Always reflects the default profile. (0.4.0 keeps the
-// same 8 states and 20 steps as 0.3.0; only the readiness rulebook is new.)
-export const STATE_ORDER: readonly StateId[] = STATE_ORDER_040;
+// the runtime constant. Always reflects the default profile. (0.5.0 keeps the
+// same 8 states and 20 steps as 0.3.0/0.4.0; only the build-plan section
+// gate + task ledger are new.)
+export const STATE_ORDER: readonly StateId[] = STATE_ORDER_050;
 
-export type SopProfileVersion = "0.1.0" | "0.2.0" | "0.3.0" | "0.4.0";
+export type SopProfileVersion = "0.1.0" | "0.2.0" | "0.3.0" | "0.4.0" | "0.5.0";
 
 interface ProfileSource {
   readonly id: string;
@@ -122,7 +134,7 @@ const PROFILE_SOURCES: Readonly<Record<SopProfileVersion, ProfileSource>> = {
     requiredSectionsByStep: REQUIRED_SECTIONS_BY_STEP_030,
   },
   // SOP 0.4.0 — 0.3.0 + readiness cross-cutting gate (AM-004 / DEC-028).
-  // Runtime default since DEC-030.
+  // Runtime default DEC-030 → DEC-032; now frozen + importable.
   "0.4.0": {
     id: PROFILE_ID_040,
     version: PROFILE_VERSION_040 as SopProfileVersion,
@@ -134,6 +146,19 @@ const PROFILE_SOURCES: Readonly<Record<SopProfileVersion, ProfileSource>> = {
     stateOrder: STATE_ORDER_040,
     stepsByState: STEPS_BY_STATE_040,
     requiredSectionsByStep: REQUIRED_SECTIONS_BY_STEP_040,
+  },
+  // SOP 0.5.0 — 0.4.0 + task backbone (AM-007 / DEC-032). The runtime default.
+  "0.5.0": {
+    id: PROFILE_ID_050,
+    version: PROFILE_VERSION_050 as SopProfileVersion,
+    sopYaml: sopYaml050,
+    gatesYaml: gatesYaml050,
+    artifactsYaml: artifactsYaml050,
+    defaultConfigYaml: defaultConfigYaml050,
+    readinessYaml: readinessYaml050,
+    stateOrder: STATE_ORDER_050,
+    stepsByState: STEPS_BY_STATE_050,
+    requiredSectionsByStep: REQUIRED_SECTIONS_BY_STEP_050,
   },
 };
 
@@ -210,13 +235,13 @@ export function isKnownSopProfileVersion(version: string): version is SopProfile
 }
 
 /**
- * Default runtime profile — flipped to 0.4.0 (DEC-030); prior defaults were
- * 0.3.0 (AM-003 / DEC-025) and 0.2.0 (DEC-023). Every runtime path (init,
- * status, brief, check, gate, advance, MCP) reads this loader by default and
- * therefore sees 0.4.0 (= 0.3.0 + readiness cross-cutting gate) from this
- * commit forward.
+ * Default runtime profile — flipped to 0.5.0 (DEC-032); prior defaults were
+ * 0.4.0 (DEC-030), 0.3.0 (AM-003 / DEC-025) and 0.2.0 (DEC-023). Every
+ * runtime path (init, status, brief, check, gate, advance, MCP) reads this
+ * loader by default and therefore sees 0.5.0 (= 0.4.0 + task backbone) from
+ * this commit forward.
  */
-export const DEFAULT_SOP_PROFILE_VERSION: SopProfileVersion = "0.4.0";
+export const DEFAULT_SOP_PROFILE_VERSION: SopProfileVersion = "0.5.0";
 
 export function loadSopProfile(): SopProfile {
   return getProfile(DEFAULT_SOP_PROFILE_VERSION);

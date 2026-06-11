@@ -12,6 +12,8 @@ import { msg } from "../i18n.js";
 import { writeLogicGraphProjection } from "../logic/logic-graph-store.js";
 import { blocked, ok } from "../result.js";
 import { resolveProfileForProject } from "../sop/loader.js";
+import { evaluateTaskSpecs } from "../task/task-gate.js";
+import { writeTaskLedger } from "../task/task-ledger-store.js";
 import { evaluateLogicBackbone } from "./logic-backbone-gate.js";
 import { readinessStepBlockOrNull } from "./readiness-step.js";
 import { StateInvalidError, StateNotFoundError, readState } from "../state/state-store.js";
@@ -289,6 +291,65 @@ export async function runGate(opts: RunGateOptions): Promise<CommandResult<GateR
             baseAudit("artifact_gate_blocked", "blocked", ioMessage, {
               status: "blocked",
               reason: "logic_graph_projection_write_failed",
+            }),
+          ),
+        );
+        return blocked("ERR_IO_OR_CONFIG", ioMessage);
+      }
+    }
+  }
+
+  // SOP 0.5.0 (AM-007 / DEC-032) — task backbone gate on the build plan. Runs
+  // only after the required-section gate passes AND only for profiles that
+  // require section_task_specs (0.5.0+); validates the Task Spec blocks (six
+  // hard defects) and, on pass, persists the ledger with verify commands
+  // hash-frozen (R4 — the referee is not on the player's write path).
+  if (
+    state.currentStepId === "step_build_plan" &&
+    required.some((r) => r.id === "section_task_specs")
+  ) {
+    const outcome = await evaluateTaskSpecs({
+      cwd: opts.cwd,
+      profile,
+      buildPlanContent: content,
+    });
+    if (!outcome.ok) {
+      const tbResult: GateResult = {
+        status: "blocked",
+        currentStateId: state.currentStateId,
+        currentStepId: state.currentStepId,
+        artifactPath: relativeArtifactPath,
+        missingRequiredSectionIds: [],
+        ...(outcome.blockingReasons !== undefined
+          ? { blockingReasons: outcome.blockingReasons }
+          : {}),
+      };
+      await safeAudit(
+        opts.cwd,
+        createAuditEvent(
+          baseAudit("artifact_gate_blocked", "blocked", outcome.message, {
+            status: "blocked",
+            reason: outcome.blockingReasons?.[0],
+            issues: outcome.issues,
+          }),
+        ),
+      );
+      return blocked("ERR_ARTIFACT_INVALID", outcome.message, tbResult);
+    }
+    if (outcome.ledger !== undefined) {
+      try {
+        await writeTaskLedger(opts.cwd, outcome.ledger);
+      } catch (err) {
+        const ioMessage = msg(
+          `Failed to persist task ledger: ${(err as Error).message}`,
+          `任务台账写入失败：${(err as Error).message}`,
+        );
+        await safeAudit(
+          opts.cwd,
+          createAuditEvent(
+            baseAudit("artifact_gate_blocked", "blocked", ioMessage, {
+              status: "blocked",
+              reason: "task_ledger_write_failed",
             }),
           ),
         );

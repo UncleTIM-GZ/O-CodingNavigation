@@ -145,21 +145,21 @@ describe("ocn — SOP 0.3.0 full 20-step flow (CLI)", () => {
     await project.cleanup();
   });
 
-  // SOP 0.4.0 (DEC-030) — fresh default init now pins 0.4.0 and snapshots
+  // SOP 0.5.0 (DEC-032) — fresh default init now pins 0.5.0 and snapshots
   // the readiness rulebook alongside the classic snapshot files.
-  it("fresh `ocn init` writes 0.4.0 state.json + snapshot files", async () => {
+  it("fresh `ocn init` writes 0.5.0 state.json + snapshot files", async () => {
     const initRes = await spawnOcn(["init", "--tier", "minimal"], { cwd: project.cwd });
     expect(initRes.exitCode).toBe(0);
 
     const state = JSON.parse(
       await fs.readFile(join(project.cwd, ".ocoding", "state.json"), "utf8"),
     );
-    expect(state.project.sopProfileVersion).toBe("0.4.0");
+    expect(state.project.sopProfileVersion).toBe("0.5.0");
     expect(state.currentStateId).toBe("state_discovery");
     expect(state.currentStepId).toBe("step_project_brief");
 
     const sopYaml = await fs.readFile(join(project.cwd, ".ocoding", "sop.yaml"), "utf8");
-    expect(sopYaml).toMatch(/version: 0\.4\.0/);
+    expect(sopYaml).toMatch(/version: 0\.5\.0/);
     expect(sopYaml).toContain("step_final_build_verdict");
     expect(sopYaml).toContain("step_logic_backbone");
 
@@ -171,7 +171,7 @@ describe("ocn — SOP 0.3.0 full 20-step flow (CLI)", () => {
     expect(artifactsYaml).toContain("docs/07-logic-backbone.md");
 
     const configYaml = await fs.readFile(join(project.cwd, ".ocoding", "config.yaml"), "utf8");
-    expect(configYaml).toContain("0.4.0");
+    expect(configYaml).toContain("0.5.0");
 
     await fs.access(join(project.cwd, ".ocoding", "readiness-rules.yaml"));
   }, 30_000);

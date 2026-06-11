@@ -8,6 +8,8 @@ import { readLogicGraphProjection } from "./logic/logic-graph-store.js";
 import { summarizeLogicGraph, type LogicBackboneSummary } from "./logic/logic-graph-summary.js";
 import { readReadinessLedger } from "./readiness/readiness-store.js";
 import type { ReadinessLedger } from "../types/readiness.js";
+import { readTaskLedger } from "./task/task-ledger-store.js";
+import type { TaskLedger } from "../types/task.js";
 import { blocked, ok } from "./result.js";
 import { msg } from "./i18n.js";
 import { loadSopProfile } from "./sop/loader.js";
@@ -35,6 +37,8 @@ export interface BriefData {
   readonly logicBackbone?: LogicBackboneSummary;
   /** Present once a readiness evaluation has been persisted (SOP 0.4.0). */
   readonly readiness?: ReadinessBriefSummary;
+  /** Present once a task ledger has been persisted (SOP 0.5.0 / AM-007). */
+  readonly tasks?: TaskBriefSummary;
 }
 
 const AI_GOVERNANCE_REMINDER =
@@ -144,6 +148,12 @@ export async function generateBrief(opts: BriefOptions): Promise<CommandResult<B
   const ledger = await readReadinessLedger(opts.cwd);
   const readiness = ledger === null ? undefined : summarizeReadiness(ledger);
 
+  // SOP 0.5.0 (AM-007 / DEC-032) — fold the task ledger into the brief so the
+  // BUILD loop (pending count + next dispatchable task) travels with every
+  // prompt. Absent until the build-plan gate passes under 0.5.0+.
+  const taskLedger = await readTaskLedger(opts.cwd);
+  const tasks = taskLedger === null ? undefined : summarizeTasks(taskLedger);
+
   return ok(
     msg(
       `Brief for ${state.project.name} — ${state.currentStateId} / ${state.currentStepId}`,
@@ -162,8 +172,30 @@ export async function generateBrief(opts: BriefOptions): Promise<CommandResult<B
       uncertaintyPolicy: UNCERTAINTY_POLICY,
       ...(logicBackbone !== undefined ? { logicBackbone } : {}),
       ...(readiness !== undefined ? { readiness } : {}),
+      ...(tasks !== undefined ? { tasks } : {}),
     },
   );
+}
+
+/** Compact task-ledger summary for the brief (SOP 0.5.0 / AM-007). */
+export interface TaskBriefSummary {
+  readonly total: number;
+  readonly done: number;
+  readonly pending: number;
+  /** First pending task whose depends are all done, or null. */
+  readonly nextTaskId: string | null;
+}
+
+function summarizeTasks(ledger: TaskLedger): TaskBriefSummary {
+  const doneIds = new Set(ledger.tasks.filter((t) => t.status === "done").map((t) => t.id));
+  const pending = ledger.tasks.filter((t) => t.status === "pending");
+  const next = pending.find((t) => t.depends.every((d) => doneIds.has(d)));
+  return {
+    total: ledger.tasks.length,
+    done: doneIds.size,
+    pending: pending.length,
+    nextTaskId: next?.id ?? null,
+  };
 }
 
 /** Compact readiness summary for the brief: counts + open items with hints. */

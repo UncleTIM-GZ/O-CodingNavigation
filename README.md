@@ -2,7 +2,7 @@
 
 > Local-first, MCP-first, state-machine-driven **AI coding workflow operating system**.
 > CLI: `ocn` · MCP: `ocn-mcp` · License: Apache-2.0
-> **Phase**: SOP 0.4.0 (Readiness Backbone) mainline · **Status**: pre-GA beta · **Public**: on npm as `latest` and `@beta` → [`0.4.0-beta.2`](https://www.npmjs.com/package/o-coding-navigation) · GitHub pre-release: [`v0.4.0-beta.2`](https://github.com/UncleTIM-GZ/O-CodingNavigation/releases/tag/v0.4.0-beta.2)
+> **Phase**: SOP 0.5.0 (Task Backbone) mainline · **Status**: pre-GA beta · **Public**: on npm as `latest` and `@beta` → [`0.5.0-beta.0`](https://www.npmjs.com/package/o-coding-navigation) · GitHub pre-release: [`v0.5.0-beta.0`](https://github.com/UncleTIM-GZ/O-CodingNavigation/releases/tag/v0.5.0-beta.0)
 
 > 📑 This README has two parts:
 > **Part 1 — English** (sections 1 – 11) · **Part 2 — 中文版** (§§ A – K)
@@ -19,7 +19,7 @@ OCN turns AI coding from continuous-chat improvisation into a navigable, gated, 
 **Understand OCN**
 1. [What OCN is](#1-what-ocn-is)
 2. [Why OCN exists](#2-why-ocn-exists)
-3. [Current status](#3-current-status-sop-040-readiness-backbone-mainline)
+3. [Current status](#3-current-status-sop-050-task-backbone-mainline)
    - 3.1 [Two-stage product model](#31-two-stage-product-model)
 
 **Use OCN**
@@ -53,7 +53,8 @@ OCN sells **discipline** — productized as:
 - a **Step Artifact Gate** that blocks advancement when the current step's required sections are missing,
 - a **dual-track audit trail** (`.ocoding/audit/audit-events.jsonl` + `docs/22-audit-trail.md`),
 - a **Logic Backbone (SOP 0.3.0)** — a DESIGN-phase artifact whose computation/decision graph is machine-validated; `ocn check` blocks on orphan scores, dangling references, cycles, and unbound triggers, so the system's logic is wired before BUILD,
-- a **Readiness Backbone (new in SOP 0.4.0)** — a role-based cross-cutting readiness gate: 55 falsifiable checks derived from 54 curated IT roles (developer, QA, DevOps, CISO, service desk, …) run inside `ocn check` / `ocn gate` / `ocn advance` on every step; open-world semantics mean both `FAIL` and `UNKNOWN` block (silence is not a pass), catching role-blind completion before SHIP,
+- a **Readiness Backbone (SOP 0.4.0)** — a role-based cross-cutting readiness gate: 55 falsifiable checks derived from 54 curated IT roles (developer, QA, DevOps, CISO, service desk, …) run inside `ocn check` / `ocn gate` / `ocn advance` on every step; open-world semantics mean both `FAIL` and `UNKNOWN` block (silence is not a pass), catching role-blind completion before SHIP,
+- a **Task Backbone (new in SOP 0.5.0)** — build plans carry machine-parseable Task Spec blocks (goal / traces / touches / verify / DoD); the build-plan gate validates six hard defects and freezes each task's verify-command hash into `.ocoding/task-ledger.json`; a task is *done* only when `ocn task check` reruns the frozen command and it exits 0, and `ocn advance` out of BUILD is blocked while tasks are pending — closing the fourth false-completion class, receipt-only completion,
 - a **safe MCP surface** that lets agents read, prepare, and create artifacts but never advance state, capture decisions, reset the project, or force-release the lock.
 
 OCN is **not** a code generator, an IDE, a SaaS, a project-management tool, a notes app, or a scaffold-only doc factory.
@@ -71,14 +72,14 @@ Working with an AI coding agent for any non-trivial task tends to fail in four w
 
 OCN treats these as the same problem: *the AI coding loop has no rigorous notion of "where we are" and "what counts as done"*. OCN supplies both as code, not as exhortation.
 
-### 3. Current status (SOP 0.4.0 (Readiness Backbone) mainline)
+### 3. Current status (SOP 0.5.0 (Task Backbone) mainline)
 
 | | |
 |---|---|
-| Phase | **SOP 0.4.0 (Readiness Backbone) mainline** — Plan → Build → Verify, with the machine-verified DESIGN logic-backbone gate plus a role-based cross-cutting readiness gate (55 checks) on every step; plan-to-verify smoke covers all 20 steps |
+| Phase | **SOP 0.5.0 (Task Backbone) mainline** — Plan → Build → Verify, with the machine-verified DESIGN logic-backbone gate, a role-based cross-cutting readiness gate (55 checks) on every step, and a frozen-verify task ledger that gates BUILD exit; plan-to-verify smoke covers all 20 steps |
 | Tests | full vitest suite green on Node 20 + Node 22 |
 | Coverage | meets the publish-time gate |
-| npm | `latest` → `0.4.0-beta.2`; `beta` → `0.4.0-beta.2`; `alpha` → `0.1.0-alpha.2` (historical; preserved) |
+| npm | `latest` → `0.5.0-beta.0`; `beta` → `0.5.0-beta.0`; `alpha` → `0.1.0-alpha.2` (historical; preserved) |
 | Maturity | **pre-GA beta** — not stable, not GA, beta only (for controlled testing / dogfood) |
 | External host validation | Validated with Claude Desktop on Windows with WSL2. Cursor and Cline are not yet verified. |
 | MCP transport | stdio only (HTTP/SSE not started) |
@@ -104,7 +105,7 @@ The two stages are connected: planning artifacts (00–10) must pass their gates
 - **MCP safe tools**: 7 read/prepare/create/log tools over stdio; 4 forbidden tools never registered (full list in §7); `projectRoot` validator + threat model ([`docs/security/mcp-threat-model.md`](./docs/security/mcp-threat-model.md)).
 - **Real MCP Host validation**: Claude Desktop on Windows with WSL2 validated end-to-end ([DEC-017](./docs/20-decision-log.md), [report](./docs/reports/2026-04-30-mcp-external-host-validation-report.md)). Cursor and Cline remain unverified.
 - **Executable example**: [`examples/discovery-to-plan/`](./examples/discovery-to-plan/) walks all 10 v1.0 SOP steps end-to-end via `scripts/smoke.sh`. Bundled fixtures derived verbatim from `src/core/templates/*.ts` so they cannot drift.
-- **npm publish discipline**: SOP 0.4.0 mainline published as `o-coding-navigation@0.4.0-beta.2` under strict pre-publish checklists, `prepublishOnly` gate, and `files` allowlist. `latest` and `beta` both point to `0.4.0-beta.2`; `alpha` is preserved at `0.1.0-alpha.2` for historical use. Annotated git tag `v0.4.0-beta.2` and matching GitHub pre-release published.
+- **npm publish discipline**: SOP 0.5.0 mainline published as `o-coding-navigation@0.5.0-beta.0` under strict pre-publish checklists, `prepublishOnly` gate, and `files` allowlist. `latest` and `beta` both point to `0.5.0-beta.0`; `alpha` is preserved at `0.1.0-alpha.2` for historical use. Annotated git tag `v0.5.0-beta.0` and matching GitHub pre-release published.
 
 **Not implemented (deliberately deferred — see §10)**
 
@@ -122,12 +123,12 @@ The two stages are connected: planning artifacts (00–10) must pass their gates
 npm install -g o-coding-navigation
 ```
 
-As of v0.4.0-beta.2, npm latest and beta both point to the SOP 0.4.0 (Readiness Backbone) release.
+As of v0.5.0-beta.0, npm latest and beta both point to the SOP 0.5.0 (Task Backbone) release.
 
 Verify:
 
 ```bash
-ocn --version       # 0.4.0-beta.2
+ocn --version       # 0.5.0-beta.0
 ocn --help
 ocn-mcp             # starts the MCP stdio server; press Ctrl+C to exit
 ```
@@ -144,8 +145,8 @@ To uninstall: `npm uninstall -g o-coding-navigation`.
 
 | Channel | Version | npm tag | Notes |
 |---|---|---|---|
-| `latest` (recommended) | `0.4.0-beta.2` | `latest` | SOP 0.4.0 (Readiness Backbone) mainline. |
-| Beta (explicit prerelease pin) | `0.4.0-beta.2` | `beta` | Same artifact as `latest`; use `@beta` when you want to pin the prerelease channel explicitly. |
+| `latest` (recommended) | `0.5.0-beta.0` | `latest` | SOP 0.5.0 (Task Backbone) mainline. |
+| Beta (explicit prerelease pin) | `0.5.0-beta.0` | `beta` | Same artifact as `latest`; use `@beta` when you want to pin the prerelease channel explicitly. |
 | Alpha (still available) | `0.1.0-alpha.2` | `alpha` | Prior pre-GA channel; preserved for historical use only. |
 
 Package home: https://www.npmjs.com/package/o-coding-navigation
@@ -376,7 +377,7 @@ So you can safely run them in an existing project root. Worst case: you already 
 
 Each step uses the §5.4 Steps 3–8 loop (pull brief → create template → AI fills using your material → `run_gate` → **you** type `ocn advance`). The difference from a greenfield project: because the content already exists, the AI mostly reorganises and aligns formats rather than inventing.
 
-SOP 0.4.0 ships `doc create` templates for all 20 steps. The table below maps every step to its artifact path and **where to mine the content from your existing project**:
+SOP 0.5.0 ships `doc create` templates for all 20 steps. The table below maps every step to its artifact path and **where to mine the content from your existing project**:
 
 **DISCOVERY phase**
 
@@ -535,10 +536,12 @@ All commands accept `--json` to emit a machine-readable `CommandResult` envelope
 | `ocn sop upgrade [--target <version>] [--plan] [--json]` | Move the project's pinned SOP profile forward to a newer bundled version (forward-only; `config.yaml` preserved). `--plan` is a read-only dry-run. | Apply rewrites `.ocoding/` snapshots + `state.json` (atomic, lock-protected); `--plan` writes nothing. | `sop_upgraded` (apply) / `sop_version_diff_detected` (plan) |
 | `ocn readiness list [--json]` | Evaluate all readiness checks for the current state/tier and print the verdict table (PASS/WAIVED/FAIL/UNKNOWN/NA counts + blocking items). | Read-only. | None (pull-mode — avoids audit spam) |
 | `ocn readiness waive <checkId> --reason <r> --probe <cmd> [--json]` | Grant a conditional waiver ("waive-with-probe"): the probe must pass at grant time, is re-verified on every gate run, and the waiver expires when the project leaves the current state. Human-only — never exposed over MCP. | Writes the waiver into `.ocoding/readiness.json`. | `readiness_waived` |
+| `ocn task list [--json]` | Show the build-plan task ledger: per-task status (pending/done), the frozen verify command, and dependency/phase info. | Read-only. | None (pull-mode) |
+| `ocn task check [<id>] [--json]` | Run the task's frozen verify command — exit 0 marks the task done; a verify command that drifted from its frozen hash is refused. Human/agent CLI only — never exposed over MCP. | Writes `.ocoding/task-ledger.json`. | `task_completed` |
 | `ocn agent setup [--force] [--json]` | One-command Claude Code wiring (AM-006): Stop/PostToolUse hooks in `.claude/settings.json` (merge-only, `command -v ocn` guarded), `.claude/ocn.md` governance contract, `CLAUDE.md` import (append-once), `/ocn-next` slash command. Idempotent; human-only. | Writes/merges the four `.claude` surfaces; never overwrites user entries. | `agent_setup_completed` |
 | `ocn hook stop` / `ocn hook post-edit` | Machine-facing Claude Code hook handlers (called by the agent host, not humans): `stop` re-runs the gate when the agent ends a turn and blocks with fix hints; `post-edit` runs `commands.lint`/`commands.typecheck` for fast feedback. Fail-open by design. | Raw hook-contract IO (stdin JSON in; block JSON / exit 2 + stderr out). | gate-run events via the reused check engine |
 
-`<type>` for `doc create` (SOP 0.4.0 ships templates for all 20 steps):
+`<type>` for `doc create` (SOP 0.5.0 ships templates for all 20 steps):
 `project-brief`, `scope`, `prd`, `acceptance-criteria`, `technical-architecture`,
 `information-architecture`, `data-model`, `api-contract`, `test-strategy`, `logic-backbone`,
 `mvp-plan`, `build-plan`, `implementation-log`, `change-evidence`, `integration-notes`,
@@ -665,7 +668,8 @@ The GA Prep phase was a documentation, packaging, and operational-readiness audi
 **Execution Navigator MVP series (post-DEC-024)**
 
 - **MVP 1–6 complete** — the six Execution Navigator commands (§6.2) shipped in PRs #63–#68 and merged to main. Cross-cutting review fixes landed in PR #69 ([report](./docs/reports/2026-05-04-execution-navigator-review-fixes-pr-a.md)). Series closure: [`docs/reports/2026-05-04-execution-navigator-verdict-draft.md`](./docs/reports/2026-05-04-execution-navigator-verdict-draft.md).
-- Current external package: `0.4.0-beta.2` — Planning Gatekeeper (§6.1) + Execution Evidence Navigator (§6.2) + the Logic Backbone DESIGN gate + the Readiness Backbone cross-cutting gate.
+- Current external package: `0.5.0-beta.0` — Planning Gatekeeper (§6.1) + Execution Evidence Navigator (§6.2) + the Logic Backbone DESIGN gate + the Readiness Backbone cross-cutting gate + the Task Backbone BUILD task ledger.
+- **Task Backbone shipped in `0.5.0-beta.0`** — SOP 0.5.0 ([AM-007](./docs/amendments/2026-06-12-task-backbone-amendment.md) / DEC-032): build plans carry machine-parseable Task Spec blocks (`## Task Specs｜任务规格`: goal/traces/touches/verify/dod + optional depends/phase/timeout). The build-plan gate validates six hard defects (duplicate/invalid id, missing field, dangling `traces` → AC ids, dangling `touches` → logic-graph nodes, dangling/cyclic `depends`, zero tasks) and freezes each task's verify-command hash into `.ocoding/task-ledger.json`. Completion is decided only by `ocn task check` rerunning the frozen command (exit 0 → done + `task_completed` audit; drift → refused); `/ocn-next` dispatches the first pending task in `state_build`; `ocn advance` out of BUILD is blocked while tasks are pending. Closes the fourth false-completion class — receipt-only completion (honest-but-empty BUILD receipts that pass every gate; discovered via the Lattice dogfood). Runtime default cut over to 0.5.0 per DEC-032; `ocn sop upgrade` migrates existing projects.
 - **Claude Code integration shipped in `0.4.0-beta.2`** — [AM-006](./docs/amendments/2026-06-12-claude-code-agent-integration-amendment.md) / DEC-031: `ocn agent setup` wires hooks + governance contract + `/ocn-next` in one idempotent command; `ocn hook stop|post-edit` carry the enforcement logic inside OCN (fail-open, loop-protected).
 - **Readiness Backbone shipped in `0.4.0-beta.1`** — SOP 0.4.0 ([AM-004](./docs/amendments/2026-06-11-readiness-backbone-amendment.md) / DEC-028) adds a role-based cross-cutting readiness gate: 55 falsifiable checks derived from 54 curated IT roles run inside `ocn check` / `ocn gate` / `ocn advance` after the section + logic gates. Open-world semantics (`FAIL` **and `UNKNOWN`** block); verdict ledger persisted to `.ocoding/readiness.json`; `ocn readiness list` / `ocn readiness waive` (waive-with-probe) commands; `ocn sop upgrade` migrates existing projects; runtime default cut over to 0.4.0 per DEC-030.
 - **Logic Backbone shipped in `0.3.0-beta.1`** — SOP 0.3.0 adds the DESIGN-phase `docs/07-logic-backbone.md` artifact; `ocn check` machine-validates its computation/decision graph (blocks on missing role, duplicate node id, dangling reference, dependency cycle, orphan node, unbound trigger) and on pass writes `.ocoding/logic-graph.json`, which `ocn brief` summarises as execution order + trigger bindings.
@@ -699,7 +703,7 @@ CLI：`ocn`；MCP server：`ocn-mcp`；许可：Apache-2.0。
 **理解 OCN**
 - §A. [OCN 是什么](#a-ocn-是什么)
 - §B. [OCN 解决什么问题](#b-ocn-解决什么问题)
-- §C. [当前状态](#c-当前状态sop-040就绪主干-主干)
+- §C. [当前状态](#c-当前状态sop-050任务主干-主干)
    - §C.1 [两阶段产品模型](#c1-两阶段产品模型)
 
 **使用 OCN**
@@ -733,7 +737,8 @@ OCN 把"纪律"产品化：
 - **步骤产物门禁（Step Artifact Gate）**：当前 step 的必填章节缺失时，状态推进被阻断；
 - **双轨审计链**：`.ocoding/audit/audit-events.jsonl`（机器源）+ `docs/22-audit-trail.md`（人类可读）；
 - **逻辑主干（Logic Backbone，SOP 0.3.0）**：一个 DESIGN 阶段产物，其计算/决策图由机器校验；`ocn check` 会在出现孤儿分值、悬空引用、循环依赖、未绑定触发器时阻断，让系统逻辑在 BUILD 之前就连通；
-- **就绪主干（Readiness Backbone，SOP 0.4.0 新增）**：基于角色的横切就绪门禁——从 54 个精选 IT 角色（开发、QA、DevOps、CISO、服务台……）提炼出 55 条可证伪检查，在每个 step 的 `ocn check` / `ocn gate` / `ocn advance` 中运行；采用开放世界语义，`FAIL` 和 `UNKNOWN` 都会阻断（沉默不算通过），在 SHIP 之前拦住"角色盲区式完成"；
+- **就绪主干（Readiness Backbone，SOP 0.4.0）**：基于角色的横切就绪门禁——从 54 个精选 IT 角色（开发、QA、DevOps、CISO、服务台……）提炼出 55 条可证伪检查，在每个 step 的 `ocn check` / `ocn gate` / `ocn advance` 中运行；采用开放世界语义，`FAIL` 和 `UNKNOWN` 都会阻断（沉默不算通过），在 SHIP 之前拦住"角色盲区式完成"；
+- **任务主干（Task Backbone，SOP 0.5.0 新增）**：build plan 携带机器可解析的任务规格块（goal / traces / touches / verify / DoD）；build-plan 门禁校验六类硬缺陷，并把每个任务的验收命令哈希冻结进 `.ocoding/task-ledger.json`；任务只有在 `ocn task check` 重跑冻结命令且退出码为 0 时才算完成，台账未清时 `ocn advance` 不准离开 BUILD——封堵第四类假完成："只有回执的完成"（receipt-only completion）；
 - **安全的 MCP 工具面**：agent 可读、可准备、可创建产物，但**不能**推进状态、记录决策、重置项目、强制释放锁。
 
 OCN **不是**：代码生成器、IDE、SaaS、项目管理工具、笔记应用，也不是只会铺脚手架的"文档工厂"。
@@ -751,14 +756,14 @@ OCN **不是**：代码生成器、IDE、SaaS、项目管理工具、笔记应�
 
 OCN 把这四个问题视为同一个问题：*AI 编程闭环缺乏严肃的"我们在哪"和"什么算完成"*。OCN 用代码而不是嘴上嘱咐去回答这两个问题。
 
-### C. 当前状态（SOP 0.4.0（就绪主干）主干）
+### C. 当前状态（SOP 0.5.0（任务主干）主干）
 
 | 项目 | 状态 |
 |---|---|
-| 阶段 | **SOP 0.4.0（就绪主干）主干**——Plan → Build → Verify，除机器校验的 DESIGN 逻辑主干门禁外，新增覆盖每个 step 的基于角色的横切就绪门禁（55 条检查）；plan-to-verify smoke 覆盖全部 20 步 |
+| 阶段 | **SOP 0.5.0（任务主干）主干**——Plan → Build → Verify，含机器校验的 DESIGN 逻辑主干门禁、覆盖每个 step 的基于角色的横切就绪门禁（55 条检查），以及把守 BUILD 出口的冻结验收任务台账；plan-to-verify smoke 覆盖全部 20 步 |
 | 测试 | 完整 vitest 套件在 Node 20 + Node 22 全部通过 |
 | 覆盖率 | 满足发布门 |
-| npm | `latest` → `0.4.0-beta.2`；`beta` → `0.4.0-beta.2`；`alpha` → `0.1.0-alpha.2`（历史保留） |
+| npm | `latest` → `0.5.0-beta.0`；`beta` → `0.5.0-beta.0`；`alpha` → `0.1.0-alpha.2`（历史保留） |
 | 成熟度 | **pre-GA beta**——非稳定、非 GA、仅 beta（用于受控测试 / dogfood） |
 | 已验证 Host | 已在 Claude Desktop on Windows + WSL2 验证。Cursor 与 Cline 暂未验证。 |
 | MCP 传输 | 仅 stdio（HTTP/SSE 尚未启动） |
@@ -784,7 +789,7 @@ OCN 现在分为两个衔接阶段：
 - **MCP 安全工具**：stdio 上 7 个只读/准备/创建/日志类工具，4 个禁用工具不会被注册（详见 §G）；`projectRoot` 校验器 + 威胁模型（[`docs/security/mcp-threat-model.md`](./docs/security/mcp-threat-model.md)）。
 - **真实 Host 验证**：Claude Desktop on Windows + WSL2 已完成端到端验证（[DEC-017](./docs/20-decision-log.md)、[报告](./docs/reports/2026-04-30-mcp-external-host-validation-report.md)）。
 - **可执行示例**：[`examples/discovery-to-plan/`](./examples/discovery-to-plan/)，`scripts/smoke.sh` 跑完 v1.0 SOP 全部 10 个 step；fixture 直接来源于 `src/core/templates/*.ts`，避免漂移。
-- **npm 发布纪律**：SOP 0.4.0 主干以 `o-coding-navigation@0.4.0-beta.2` 形式发布，遵循严格的预发布清单与 `prepublishOnly` 门，`files` allowlist 收敛到 `dist/` + LICENSE + README + `docs/quickstart.md` + `docs/mcp-usage.md`；`latest` 与 `beta` 都指向 `0.4.0-beta.2`，`alpha` 仍保留在 `0.1.0-alpha.2`；`v0.4.0-beta.2` 为带注释的 git tag + GitHub pre-release。
+- **npm 发布纪律**：SOP 0.5.0 主干以 `o-coding-navigation@0.5.0-beta.0` 形式发布，遵循严格的预发布清单与 `prepublishOnly` 门，`files` allowlist 收敛到 `dist/` + LICENSE + README + `docs/quickstart.md` + `docs/mcp-usage.md`；`latest` 与 `beta` 都指向 `0.5.0-beta.0`，`alpha` 仍保留在 `0.1.0-alpha.2`；`v0.5.0-beta.0` 为带注释的 git tag + GitHub pre-release。
 
 **尚未实现（刻意延后，详见 §J）**
 
@@ -802,12 +807,12 @@ OCN 现在分为两个衔接阶段：
 npm install -g o-coding-navigation
 ```
 
-从 v0.4.0-beta.2 开始，npm latest 与 beta 均指向 SOP 0.4.0（就绪主干）版本。
+从 v0.5.0-beta.0 开始，npm latest 与 beta 均指向 SOP 0.5.0（任务主干）版本。
 
 安装后验证：
 
 ```bash
-ocn --version       # 0.4.0-beta.2
+ocn --version       # 0.5.0-beta.0
 ocn --help
 ocn-mcp             # 启动 MCP stdio server；按 Ctrl+C 退出
 ```
@@ -824,8 +829,8 @@ npm install -g o-coding-navigation@beta
 
 | 渠道 | 版本 | npm tag | 说明 |
 |---|---|---|---|
-| `latest`（推荐） | `0.4.0-beta.2` | `latest` | SOP 0.4.0（就绪主干）主干。 |
-| Beta（显式预发布通道） | `0.4.0-beta.2` | `beta` | 与 `latest` 同一份产物；想明确固定在预发布通道时使用 `@beta`。 |
+| `latest`（推荐） | `0.5.0-beta.0` | `latest` | SOP 0.5.0（任务主干）主干。 |
+| Beta（显式预发布通道） | `0.5.0-beta.0` | `beta` | 与 `latest` 同一份产物；想明确固定在预发布通道时使用 `@beta`。 |
 | Alpha（仍可用） | `0.1.0-alpha.2` | `alpha` | 之前的 pre-GA 通道；仅作历史保留。 |
 
 包主页：https://www.npmjs.com/package/o-coding-navigation
@@ -1054,7 +1059,7 @@ OCN 的状态机起点**永远**是 `state_discovery / step_project_brief`。当
 
 每个 step 都走 §E.4 第 3–8 步循环（拿 brief → 建模板 → AI 据已有材料填 → `run_gate` → **你**敲 `ocn advance`）。区别是：因为内容已存在，AI 主要做"重组"和"格式对齐"，不是"创造"。
 
-SOP 0.4.0 的 20 个 step 全有 `doc create` 模板。下表把每个 step 对应的产物路径，以及**在你已有项目里去哪找这部分内容**列出来：
+SOP 0.5.0 的 20 个 step 全有 `doc create` 模板。下表把每个 step 对应的产物路径，以及**在你已有项目里去哪找这部分内容**列出来：
 
 **DISCOVERY 阶段**
 
@@ -1213,10 +1218,12 @@ planning 阶段的 artifact（00–10）跑过门禁、项目进入实现阶段�
 | `ocn sop upgrade [--target <version>] [--plan] [--json]` | 把项目锁定的 SOP profile 向前迁移到更新的内置版本（只能向前；保留 `config.yaml`）。`--plan` 为只读 dry-run。 | apply 重写 `.ocoding/` 快照 + `state.json`（原子、带锁保护）；`--plan` 不写任何文件。 | `sop_upgraded`（apply）/ `sop_version_diff_detected`（plan） |
 | `ocn readiness list [--json]` | 按当前 state/tier 评估全部就绪检查，输出判定表（PASS/WAIVED/FAIL/UNKNOWN/NA 计数 + 阻断项）。 | 只读。 | 无（pull 模式——避免刷审计日志） |
 | `ocn readiness waive <checkId> --reason <r> --probe <cmd> [--json]` | 授予条件豁免（"带探针豁免"）：探针在授予时必须通过，每次跑门禁都会重新验证，项目离开当前 state 时豁免失效。仅限人工操作——永不通过 MCP 暴露。 | 把豁免写入 `.ocoding/readiness.json`。 | `readiness_waived` |
+| `ocn task list [--json]` | 列出 build plan 任务台账：每个任务的状态（pending/done）、冻结的验收命令、依赖/阶段信息。 | 只读。 | 无（pull 模式） |
+| `ocn task check [<id>] [--json]` | 跑该任务冻结的验收命令——退出码 0 才标记完成；验收命令与冻结哈希不一致时拒绝执行。仅限人/agent 经 CLI 调用——永不通过 MCP 暴露。 | 写 `.ocoding/task-ledger.json`。 | `task_completed` |
 | `ocn agent setup [--force] [--json]` | 一条命令完成 Claude Code 接线（AM-006）：`.claude/settings.json` 写入 Stop/PostToolUse 钩子（仅合并、带 `command -v ocn` 守卫）、`.claude/ocn.md` 治理契约、`CLAUDE.md` 追加导入（仅一次）、`/ocn-next` 斜杠命令。幂等；仅限人工。 | 写入/合并四个 `.claude` 文件面；永不覆盖用户已有条目。 | `agent_setup_completed` |
 | `ocn hook stop` / `ocn hook post-edit` | 机器侧 Claude Code 钩子处理器（由 agent 宿主调用，非人工）：`stop` 在 agent 想结束回合时重跑门禁、不过则带 fix hints 顶回；`post-edit` 跑 `commands.lint`/`typecheck` 给即时反馈。设计为 fail-open。 | 原始钩子契约 IO（stdin JSON 入；block JSON / exit 2 + stderr 出）。 | 经复用的 check 引擎产生门禁审计事件 |
 
-`doc create` 的 `<type>`（SOP 0.4.0 为全部 20 个 step 都提供了模板）：
+`doc create` 的 `<type>`（SOP 0.5.0 为全部 20 个 step 都提供了模板）：
 `project-brief`、`scope`、`prd`、`acceptance-criteria`、`technical-architecture`、
 `information-architecture`、`data-model`、`api-contract`、`test-strategy`、`logic-backbone`、
 `mvp-plan`、`build-plan`、`implementation-log`、`change-evidence`、`integration-notes`、
@@ -1343,7 +1350,8 @@ GA Prep 阶段是从 Phase 2 收口走到 beta candidate 准备的一段文档/�
 **Execution Navigator MVP 系列（DEC-024 之后）**
 
 - **MVP 1–6 已完成**——§F.2 的 6 条 Execution Navigator 命令在 PR #63–#68 中陆续 ship 并合入 main；横切 review 修复在 PR #69 落地（[报告](./docs/reports/2026-05-04-execution-navigator-review-fixes-pr-a.md)）。系列收口：[`docs/reports/2026-05-04-execution-navigator-verdict-draft.md`](./docs/reports/2026-05-04-execution-navigator-verdict-draft.md)。
-- 当前外部包：`0.4.0-beta.2`——Planning Gatekeeper（§F.1）+ Execution Evidence Navigator（§F.2）+ Logic Backbone DESIGN 门禁 + Readiness Backbone 横切门禁。
+- 当前外部包：`0.5.0-beta.0`——Planning Gatekeeper（§F.1）+ Execution Evidence Navigator（§F.2）+ Logic Backbone DESIGN 门禁 + Readiness Backbone 横切门禁 + Task Backbone BUILD 任务台账。
+- **Task Backbone 在 `0.5.0-beta.0` ship**——SOP 0.5.0（[AM-007](./docs/amendments/2026-06-12-task-backbone-amendment.md) / DEC-032）：build plan 携带机器可解析的任务规格块（`## Task Specs｜任务规格`：goal/traces/touches/verify/dod + 可选 depends/phase/timeout）。build-plan 门禁校验六类硬缺陷（id 重复/非法、字段缺失、`traces` 悬空指向 AC、`touches` 悬空指向逻辑图节点、`depends` 悬空或成环、零任务），并把每个任务的验收命令哈希冻结进 `.ocoding/task-ledger.json`。完成与否只由 `ocn task check` 重跑冻结命令裁决（退出码 0 → done + `task_completed` 审计；命令漂移 → 拒绝执行）；`/ocn-next` 在 `state_build` 中派发第一个待办任务；台账未清时 `ocn advance` 不准离开 BUILD。封堵第四类假完成——"只有回执的完成"（receipt-only completion：BUILD 回执诚实但空洞，却能通过每道门禁；在 Lattice dogfood 中发现）。运行时默认 profile 按 DEC-032 切到 0.5.0；旧项目用 `ocn sop upgrade` 迁移。
 - **Claude Code 集成在 `0.4.0-beta.2` ship**——[AM-006](./docs/amendments/2026-06-12-claude-code-agent-integration-amendment.md) / DEC-031：`ocn agent setup` 一条幂等命令接线钩子 + 治理契约 + `/ocn-next`；执行逻辑以 `ocn hook stop|post-edit` 内置在 OCN 中（fail-open、防环）。
 - **Readiness Backbone 在 `0.4.0-beta.1` ship**——SOP 0.4.0（[AM-004](./docs/amendments/2026-06-11-readiness-backbone-amendment.md) / DEC-028）新增基于角色的横切就绪门禁：从 54 个精选 IT 角色提炼出 55 条可证伪检查，在 section + logic 门禁之后于 `ocn check` / `ocn gate` / `ocn advance` 中运行。开放世界语义（`FAIL` **和 `UNKNOWN`** 都阻断）；判定账本持久化到 `.ocoding/readiness.json`；新增 `ocn readiness list` / `ocn readiness waive`（带探针豁免）命令；旧项目用 `ocn sop upgrade` 迁移；运行时默认 profile 按 DEC-030 切到 0.4.0。
 - **Logic Backbone 在 `0.3.0-beta.1` ship**——SOP 0.3.0 新增 DESIGN 阶段产物 `docs/07-logic-backbone.md`；`ocn check` 机器校验其计算/决策图（在缺角色、节点 id 重复、悬空引用、依赖循环、孤儿节点、未绑定触发器时阻断），通过则写出 `.ocoding/logic-graph.json`，`ocn brief` 把它汇总成执行顺序 + 触发器绑定。
