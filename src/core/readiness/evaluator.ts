@@ -10,6 +10,7 @@ import {
 } from "../../types/readiness.js";
 import { parseReadinessBlock } from "../artifact/readiness-block-parser.js";
 import { resolveArtifactPaths } from "./artifact-resolver.js";
+import { evalReadmeContentField } from "./content-extractors.js";
 import { evalPredicate, isDerivedField } from "./predicate-eval.js";
 import { runRepoProbe, type ProbeResult } from "./repo-prober.js";
 import type { ProjectCommands } from "./project-config.js";
@@ -159,7 +160,7 @@ async function evaluateRule(
     rule.requires.filter((r) => r.startsWith("repo.")).map((r) => r.slice("repo.".length)),
   );
   const verdicts: FieldVerdict[] = [];
-  for (const [field, predicate] of Object.entries(rule.check)) {
+  for (const field of Object.keys(rule.check)) {
     if (AC_TRACE_FIELDS.has(field)) {
       verdicts.push(await evalAcTraceField(opts, field, artifactPaths, blockCache, getCollection));
     } else if (isDerivedField(field)) {
@@ -180,12 +181,13 @@ async function evaluateRule(
       }
       verdicts.push(describeProbe(field, result));
     } else if (rule.requires.every((r) => r.startsWith("repo."))) {
-      // Content check on a repo-probed file (e.g. README support channel):
-      // honest UNKNOWN until a dedicated extractor ships — never PASS.
-      verdicts.push({
-        status: "unknown",
-        note: `${field} (${String(predicate)}): content extractor not yet shipped`,
-      });
+      // Content check on a repo-probed file (README fields). P3: dedicated
+      // deterministic extractors; fields without one stay UNKNOWN.
+      const readmeProbe = opts.rulebook.repo_probes["readme"];
+      const patterns =
+        readmeProbe !== undefined && readmeProbe.type === "path" ? readmeProbe.any : ["README*"];
+      const content = await evalReadmeContentField(opts.root, field, patterns);
+      verdicts.push({ status: content.status, note: content.note });
     } else {
       verdicts.push(await evalArtifactField(opts, rule, field, artifactPaths, blockCache));
     }
