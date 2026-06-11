@@ -66,6 +66,7 @@ Active divergences from `docs/00-08`. Listed newest-first by amendment ID.
 
 | ID | Date | Title | Status | Supersedes | Applies to |
 |---|---|---|---|---|---|
+| [AM-007](./2026-06-12-task-backbone-amendment.md) | 2026-06-12 | Task Backbone (BUILD-state implementation task loop, SOP 0.5.0) | Accepted | None (additive) | `docs/06` (task commands + transition rule), `docs/05` (`task-ledger.json`, `task_completed`), SOP 0.5.0 profile, `src/core/task/*` |
 | [AM-006](./2026-06-12-claude-code-agent-integration-amendment.md) | 2026-06-12 | Claude Code agent integration (`ocn agent setup` + `ocn hook *`) | Accepted | None (additive surface + new machine-facing IO convention) | `docs/06-api-contract.md` (new commands, hook IO bypasses CommandResult), `docs/05` §12.15 (`agent_setup_completed`), `.ocoding/config.yaml` (`commands.lint/typecheck`), `.claude/*` + `CLAUDE.md` writes |
 | [AM-005](./2026-06-11-sop-upgrade-apply-amendment.md) | 2026-06-11 | `ocn sop upgrade` apply mode (forward-only SOP re-pin) | Accepted | None (extends frozen §23 `--plan`-only contract) | `docs/06-api-contract.md` §10/§23, `docs/05-data-model.md` §12.15, `src/core/sop/upgrade.ts`, `src/cli/commands/sop.ts` |
 | [AM-004](./2026-06-11-readiness-backbone-amendment.md) | 2026-06-11 | Readiness Backbone (role-based cross-cutting readiness gate, SOP 0.4.0) | Accepted | None (additive) | `sops/default-ai-coding-sop/0.4.0/*`, `src/core/readiness/*`, `src/core/gate/readiness-gate.ts`, `docs/05`/`06` (gate + audit additions) |
