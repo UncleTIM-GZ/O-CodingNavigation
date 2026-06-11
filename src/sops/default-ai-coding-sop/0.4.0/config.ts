@@ -14,4 +14,5 @@ sopProfile:
 commands:
   build: ""
   test: ""
+  test_list: ""
 `;

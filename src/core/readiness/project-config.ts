@@ -11,6 +11,9 @@ import { Paths } from "../paths.js";
 export interface ProjectCommands {
   readonly build?: string;
   readonly test?: string;
+  /** P3 — test LISTING command for AC→test trace
+   *  (e.g. `pytest --collect-only -q`, `npx vitest list`). */
+  readonly test_list?: string;
 }
 
 function nonEmptyString(value: unknown): string | undefined {
@@ -36,8 +39,10 @@ export async function readProjectCommands(root: string): Promise<ProjectCommands
   const record = commands as Record<string, unknown>;
   const build = nonEmptyString(record["build"]);
   const test = nonEmptyString(record["test"]);
+  const testList = nonEmptyString(record["test_list"]);
   return {
     ...(build !== undefined ? { build } : {}),
     ...(test !== undefined ? { test } : {}),
+    ...(testList !== undefined ? { test_list: testList } : {}),
   };
 }

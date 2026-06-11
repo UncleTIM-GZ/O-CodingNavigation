@@ -13,6 +13,7 @@ import { resolveArtifactPaths } from "./artifact-resolver.js";
 import { evalPredicate, isDerivedField } from "./predicate-eval.js";
 import { runRepoProbe, type ProbeResult } from "./repo-prober.js";
 import type { ProjectCommands } from "./project-config.js";
+import { collectTestNodes, traceScenarios, type TestCollection } from "./test-collector.js";
 
 // SOP 0.4.0 — the readiness evaluator. Open world (Reiter 1978): a check the
 // engine cannot resolve is UNKNOWN and UNKNOWN blocks; silence is never pass.
@@ -31,6 +32,41 @@ export interface EvaluateReadinessOptions {
 interface FieldVerdict {
   readonly status: "pass" | "fail" | "unknown";
   readonly note: string;
+}
+
+/** P3 — derived fields the engine now evaluates for real: declared scenario
+ *  IDs (pointers, from the acceptance block) traced against engine-collected
+ *  test node names. `impl_or_test`: a test ref satisfies; impl-ref detection
+ *  is a future refinement. */
+const AC_TRACE_FIELDS: ReadonlySet<string> = new Set([
+  "each_acceptance_scenario_has_test_ref",
+  "each_scenario_has_impl_or_test_ref",
+]);
+
+async function evalAcTraceField(
+  opts: EvaluateReadinessOptions,
+  field: string,
+  artifactPaths: ReadonlyMap<string, string | null>,
+  blockCache: Map<string, Readonly<Record<string, unknown>> | null>,
+  getCollection: () => Promise<TestCollection>,
+): Promise<FieldVerdict> {
+  const docPath = artifactPaths.get("artifact_acceptance") ?? null;
+  if (docPath === null) {
+    return { status: "unknown", note: `${field}: acceptance doc not found in docs/` };
+  }
+  const fields = await loadBlockFields(opts.root, docPath, blockCache);
+  if (fields === null) {
+    return { status: "unknown", note: `${field}: ${docPath} has no ocn-readiness block` };
+  }
+  const scenarios = fields["scenarios"];
+  if (!Array.isArray(scenarios) || !scenarios.every((s) => typeof s === "string")) {
+    return {
+      status: "unknown",
+      note: `${field}: declare scenario IDs in the acceptance block (scenarios: ["AC-F01", …])`,
+    };
+  }
+  const result = traceScenarios(scenarios as string[], await getCollection());
+  return { status: result.status, note: `${field}: ${result.note}` };
 }
 
 /** Per-document readiness block fields, loaded lazily and cached per run. */
@@ -106,6 +142,7 @@ async function evaluateRule(
   artifactPaths: ReadonlyMap<string, string | null>,
   probeCache: Map<string, ProbeResult>,
   blockCache: Map<string, Readonly<Record<string, unknown>> | null>,
+  getCollection: () => Promise<TestCollection>,
 ): Promise<ReadinessCheckOutcome> {
   const base = {
     id: rule.id,
@@ -123,7 +160,9 @@ async function evaluateRule(
   );
   const verdicts: FieldVerdict[] = [];
   for (const [field, predicate] of Object.entries(rule.check)) {
-    if (isDerivedField(field)) {
+    if (AC_TRACE_FIELDS.has(field)) {
+      verdicts.push(await evalAcTraceField(opts, field, artifactPaths, blockCache, getCollection));
+    } else if (isDerivedField(field)) {
       verdicts.push({
         status: "unknown",
         note: `${field}: engine capability not yet shipped (P3+)`,
@@ -164,11 +203,16 @@ export async function evaluateReadiness(opts: EvaluateReadinessOptions): Promise
   const artifactPaths = await resolveArtifactPaths(opts.root, opts.rulebook.artifact_aliases);
   const probeCache = new Map<string, ProbeResult>();
   const blockCache = new Map<string, Readonly<Record<string, unknown>> | null>();
+  // Lazy, once-per-run test collection (only runs when an AC-trace field is
+  // actually evaluated at this tier).
+  let collection: Promise<TestCollection> | null = null;
+  const getCollection = (): Promise<TestCollection> =>
+    (collection ??= collectTestNodes(opts.root, opts.commands.test_list));
 
   const checks: ReadinessCheckOutcome[] = [];
   for (const rule of opts.rulebook.checks) {
     checks.push(
-      await evaluateRule(opts, rule, tier, artifactPaths, probeCache, blockCache),
+      await evaluateRule(opts, rule, tier, artifactPaths, probeCache, blockCache, getCollection),
     );
   }
   const now = opts.now ?? ((): Date => new Date());
