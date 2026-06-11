@@ -12,8 +12,12 @@ describe("ocn sop upgrade (DEC-029)", () => {
   let project: TempProject;
 
   beforeEach(async () => {
+    // Explicit 0.3.0 pin preserves the upgrade-from-0.3.0 scenario now that
+    // default init pins 0.4.0 (DEC-030).
     project = await createTempProject();
-    await spawnOcn(["init", "--tier", "minimal"], { cwd: project.cwd });
+    await spawnOcn(["init", "--tier", "minimal", "--sop-version", "0.3.0"], {
+      cwd: project.cwd,
+    });
   });
 
   afterEach(async () => {

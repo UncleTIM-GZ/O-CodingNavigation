@@ -27,14 +27,16 @@ describe("ocn init", () => {
     expect(state.currentStepId).toBe("step_project_brief");
     expect(state.project.tier).toBe("minimal");
     expect(state.project.sopProfileId).toBe("default-ai-coding-sop");
-    // SOP 0.3.0 (AM-003 / DEC-025) — fresh init pins to 0.3.0.
-    expect(state.project.sopProfileVersion).toBe("0.3.0");
+    // SOP 0.4.0 (DEC-030) — fresh init pins to 0.4.0.
+    expect(state.project.sopProfileVersion).toBe("0.4.0");
 
     await fs.access(join(project.cwd, ".ocoding", "sop.yaml"));
     await fs.access(join(project.cwd, ".ocoding", "gates.yaml"));
     await fs.access(join(project.cwd, ".ocoding", "config.yaml"));
     // P1-003 — artifacts.yaml is now persisted as part of the SOP snapshot.
     await fs.access(join(project.cwd, ".ocoding", "artifacts.yaml"));
+    // SOP 0.4.0 (AM-004 / DEC-030) — fresh init snapshots the readiness rulebook.
+    await fs.access(join(project.cwd, ".ocoding", "readiness-rules.yaml"));
     await fs.access(join(project.cwd, "docs"));
   }, 30_000);
 

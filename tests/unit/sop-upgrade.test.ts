@@ -31,7 +31,8 @@ describe("upgradeSopProfile (DEC-029)", () => {
   });
 
   it("upgrades 0.3.0 → 0.4.0: pin moved, rulebook snapshotted, backup written", async () => {
-    await initProject({ cwd: project.cwd }); // pins the runtime default (0.3.0)
+    // DEC-030 — default init now pins 0.4.0; start explicitly at 0.3.0.
+    await initProject({ cwd: project.cwd, sopVersion: "0.3.0" });
     const result = await upgradeSopProfile({ cwd: project.cwd, targetVersion: "0.4.0" });
     expect(result.ok).toBe(true);
     if (!result.ok || result.data === undefined) throw new Error("expected ok with data");
@@ -43,13 +44,12 @@ describe("upgradeSopProfile (DEC-029)", () => {
     expect(projectOf(state)["sopProfileVersion"]).toBe("0.4.0");
     const rules = await fs.readFile(join(project.cwd, ".ocoding", "readiness-rules.yaml"), "utf8");
     expect(rules).toContain("version: 0.4.0");
-    await expect(
-      fs.stat(join(project.cwd, ".ocoding", "state.json.bak")),
-    ).resolves.toBeDefined();
+    await expect(fs.stat(join(project.cwd, ".ocoding", "state.json.bak"))).resolves.toBeDefined();
   });
 
   it("preserves cursor and artifacts mid-pipeline; preserves user-edited config.yaml", async () => {
-    await initProject({ cwd: project.cwd });
+    // Start at 0.3.0 so the 0.4.0 upgrade is a real re-pin, not a no-op.
+    await initProject({ cwd: project.cwd, sopVersion: "0.3.0" });
     await seedState(project.cwd, {
       currentStateId: "state_build",
       currentStepId: "step_implementation_log",
@@ -69,7 +69,9 @@ describe("upgradeSopProfile (DEC-029)", () => {
   });
 
   it("--plan validates and reports without writing", async () => {
-    await initProject({ cwd: project.cwd });
+    // Pinned 0.3.0 start — plan must NOT write readiness-rules.yaml, which a
+    // default (0.4.0) init would already have created.
+    await initProject({ cwd: project.cwd, sopVersion: "0.3.0" });
     const result = await upgradeSopProfile({
       cwd: project.cwd,
       targetVersion: "0.4.0",
@@ -83,9 +85,7 @@ describe("upgradeSopProfile (DEC-029)", () => {
 
     const state = await readStateJson(project.cwd);
     expect(projectOf(state)["sopProfileVersion"]).toBe("0.3.0");
-    await expect(
-      fs.stat(join(project.cwd, ".ocoding", "readiness-rules.yaml")),
-    ).rejects.toThrow();
+    await expect(fs.stat(join(project.cwd, ".ocoding", "readiness-rules.yaml"))).rejects.toThrow();
   });
 
   it("is an ok no-op when already pinned to the target", async () => {
@@ -117,7 +117,7 @@ describe("upgradeSopProfile (DEC-029)", () => {
   });
 
   it("appends a sop_upgraded audit event with from/to versions", async () => {
-    await initProject({ cwd: project.cwd });
+    await initProject({ cwd: project.cwd, sopVersion: "0.3.0" });
     await upgradeSopProfile({ cwd: project.cwd, targetVersion: "0.4.0" });
     const jsonl = await fs.readFile(AuditPaths.jsonlFile(project.cwd), "utf8");
     const events = jsonl
@@ -132,7 +132,9 @@ describe("upgradeSopProfile (DEC-029)", () => {
   });
 
   it("heals snapshot drift: a tampered sop.yaml is restored to canonical content", async () => {
-    await initProject({ cwd: project.cwd });
+    // Start at 0.3.0 — upgrading an already-0.4.0 pin would be a no-op and
+    // never rewrite the tampered snapshot.
+    await initProject({ cwd: project.cwd, sopVersion: "0.3.0" });
     const sopFile = join(project.cwd, ".ocoding", "sop.yaml");
     await fs.writeFile(sopFile, "# tampered\n", "utf8");
     await upgradeSopProfile({ cwd: project.cwd, targetVersion: "0.4.0" });

@@ -17,12 +17,15 @@ async function readEvents(cwd: string) {
     .map((line) => JSON.parse(line));
 }
 
-describe("ocn advance", () => {
+describe("ocn advance (pinned 0.3.0)", () => {
   let project: TempProject;
 
   beforeEach(async () => {
+    // Pinned 0.3.0 — advance/audit mechanics, no readiness cross-cutting gate.
     project = await createTempProject();
-    await spawnOcn(["init", "--tier", "minimal"], { cwd: project.cwd });
+    await spawnOcn(["init", "--tier", "minimal", "--sop-version", "0.3.0"], {
+      cwd: project.cwd,
+    });
   });
 
   afterEach(async () => {

@@ -139,8 +139,11 @@ describe("examples/plan-to-verify — fixture smoke (SOP 0.3.0)", () => {
   it("walks all 20 wired SOP 0.3.0 steps using the example docs and terminates cleanly", async () => {
     const cwd = project.cwd;
 
-    // 1. ocn init — fresh DISCOVERY state under SOP 0.3.0.
-    const initRes = await spawnOcn(["init", "--tier", "minimal"], { cwd });
+    // 1. ocn init — fresh DISCOVERY state pinned to SOP 0.3.0 (the example
+    //    fixtures exercise the frozen 0.3.0 profile; default is now 0.4.0).
+    const initRes = await spawnOcn(["init", "--tier", "minimal", "--sop-version", "0.3.0"], {
+      cwd,
+    });
     expect(initRes.exitCode, `init failed: ${initRes.stderr}`).toBe(0);
 
     const initState = JSON.parse(await fs.readFile(join(cwd, ".ocoding", "state.json"), "utf8"));

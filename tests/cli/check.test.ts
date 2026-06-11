@@ -10,12 +10,16 @@ import { createTempProject, type TempProject } from "../helpers/temp-project.js"
 // state. SOP 0.2.0 PR 4 (DEC-023) — runtime cutover. PRD now requires the
 // 0.2.0 section set (Product Form / User Roles / etc), not Scenarios.
 
-describe("ocn check (step_prd under SOP 0.2.0)", () => {
+describe("ocn check (step_prd, pinned 0.3.0)", () => {
   let project: TempProject;
 
   beforeEach(async () => {
+    // Pinned to the frozen 0.3.0 profile — these tests exercise the section
+    // gate mechanics without the 0.4.0 readiness cross-cutting gate.
     project = await createTempProject();
-    await spawnOcn(["init", "--tier", "minimal"], { cwd: project.cwd });
+    await spawnOcn(["init", "--tier", "minimal", "--sop-version", "0.3.0"], {
+      cwd: project.cwd,
+    });
     await seedToStepPrd(project.cwd);
   });
 
@@ -78,12 +82,14 @@ describe("ocn check (step_prd under SOP 0.2.0)", () => {
 // state.json + the SOP profile) instead of always assuming step_prd. These
 // tests fire on the very first step (`step_project_brief`) — without seeding
 // to step_prd — so any regression to a PRD-only check would surface here.
-describe("ocn check — current-step generic (P1-002)", () => {
+describe("ocn check — current-step generic (P1-002, pinned 0.3.0)", () => {
   let project: TempProject;
 
   beforeEach(async () => {
     project = await createTempProject();
-    await spawnOcn(["init", "--tier", "minimal"], { cwd: project.cwd });
+    await spawnOcn(["init", "--tier", "minimal", "--sop-version", "0.3.0"], {
+      cwd: project.cwd,
+    });
     // No seed: init lands at state_discovery / step_project_brief.
   });
 

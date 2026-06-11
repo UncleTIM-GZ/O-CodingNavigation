@@ -51,7 +51,9 @@ describe("advanceState — concurrent advance race", () => {
 
   beforeEach(async () => {
     project = await createTempProject("ocn-advance-race-");
-    await initProject({ cwd: project.cwd, tier: "minimal" });
+    // Pinned to 0.3.0 — these tests exercise advance/gate mechanics on the
+    // frozen 0.3.0 profile (the 0.4.0 readiness gate would block pass paths).
+    await initProject({ cwd: project.cwd, tier: "minimal", sopVersion: "0.3.0" });
     // Make the gate pass so both concurrent calls reach the lock-protected
     // mutation path. Otherwise a blocked call never tests the race.
     await createArtifact({ cwd: project.cwd, type: "project-brief" });
@@ -122,7 +124,7 @@ describe("advanceState — concurrent advance race", () => {
     for (let i = 0; i < 100; i++) {
       const p = await createTempProject(`ocn-advance-race-loop-${i}-`);
       try {
-        await initProject({ cwd: p.cwd, tier: "minimal" });
+        await initProject({ cwd: p.cwd, tier: "minimal", sopVersion: "0.3.0" });
         await createArtifact({ cwd: p.cwd, type: "project-brief" });
 
         const [a, b] = await Promise.all([

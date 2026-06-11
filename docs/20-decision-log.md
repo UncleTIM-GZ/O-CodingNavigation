@@ -3087,3 +3087,43 @@ per §23.5.
   back to the default profile below 0.4.0); upgrading to 0.4.0 makes the pin honored.
 - Migration framework / content transforms — the positional model makes them unnecessary
   for shipped profiles.
+
+## DEC-030｜SOP 0.4.0 runtime cutover — readiness backbone becomes the default
+
+Date: 2026-06-11
+Executes: DEC-028 sub-decision 4 ("New SOP 0.4.0 = runtime default") / AM-004; relies on DEC-029 (`ocn sop upgrade`) as the migration path.
+
+### Status
+
+Accepted — implemented and tested.
+
+### Context
+
+The readiness engine (P0–P5) shipped and was validated by dogfooding (Lattice run);
+`ocn sop upgrade` (DEC-029) gives existing projects a forward path. The remaining gap
+was the cutover itself: `DEFAULT_SOP_PROFILE_VERSION` was still 0.3.0, so fresh
+projects did not get the readiness gate and docs describing 0.4.0 as current would
+have lied about runtime behavior.
+
+### Decision
+
+1. **`DEFAULT_SOP_PROFILE_VERSION` → `"0.4.0"`.** Fresh `ocn init` pins 0.4.0, writes
+   `readiness-rules.yaml`, and `check`/`gate`/`advance` run the readiness
+   cross-cutting gate by default.
+2. **`resolveProfileForProject` honors every known pin** (previously only
+   readiness-carrying pins, AM-004 minimal form). Required by the cutover: otherwise
+   0.1.0–0.3.0 pins would silently fall back to the 0.4.0 default and hit the
+   readiness gate without opting in. A 0.3.0-pinned repo keeps exact 0.3.0 behavior
+   until the human runs `ocn sop upgrade --target 0.4.0`. This retires the AM-003
+   "old pins get the default profile" migration note.
+3. **Test policy.** Default-version assertions updated to 0.4.0; flow-mechanics tests
+   (advance/check/gate/audit/e2e walks) pin `--sop-version 0.3.0` explicitly — they
+   test the frozen profile's mechanics, not the default. 0.4.0 gate behavior is
+   covered by the readiness suites.
+4. Package version moves to `0.4.0-beta.0` (npm `latest` + `beta`); 0.3.0 profile
+   stays frozen + importable (`ocn init --sop-version 0.3.0`).
+
+### Out of scope
+
+- SHIP/REFLECT steps (still stubs), `sop version`/`sop diff` (OCN-2-SOP-VERSION).
+- Readiness rulebook content changes — rulebook ships as validated in the Lattice run.

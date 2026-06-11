@@ -1,9 +1,9 @@
 # O'CodingNavigator (OCN) — Claude Code Working Contract
 
-> Generated: 2026-04-28 · Updated: 2026-06-04
-> SOP Profile: `default-ai-coding-sop@0.3.0` (runtime default; 0.1.0 / 0.2.0 frozen + importable)
-> Current State: shipped — Planning Gatekeeper + Execution Navigator + **Logic Backbone** are implemented and on `main`.
-> Published: `o-coding-navigation@0.3.0-beta.0` (pre-GA beta).
+> Generated: 2026-04-28 · Updated: 2026-06-11
+> SOP Profile: `default-ai-coding-sop@0.4.0` (runtime default since DEC-030; 0.1.0 / 0.2.0 / 0.3.0 frozen + importable)
+> Current State: shipped — Planning Gatekeeper + Execution Navigator + Logic Backbone + **Readiness Backbone** (incl. `ocn sop upgrade`).
+> Published: `o-coding-navigation@0.4.0-beta.0` (pre-GA beta).
 > Skeleton Spike (Phase 0) is **complete**; the sections below that describe it are kept as historical context.
 
 ---
@@ -43,7 +43,7 @@ All design decisions live in `docs/`. **Read them before answering design questi
 | `docs/07-logic-backbone.md` | DESIGN | **Logic Backbone** — machine-verifiable computation/decision graph (SOP 0.3.0, AM-003); also OCN's own dogfood backbone |
 | `docs/20-decision-log.md` | — | Decision log (DEC-001 … DEC-025) |
 | `docs/amendments/` | — | Amendments (AM-001 … AM-003) — canonical record of divergences from the frozen `docs/0X` contracts |
-| `docs/AI Coding SOP v1.md` | — | Source SOP profile (rendered into `sops/default-ai-coding-sop/{0.1.0,0.2.0,0.3.0}/`; 0.3.0 is the runtime default) |
+| `docs/AI Coding SOP v1.md` | — | Source SOP profile (rendered into `src/sops/default-ai-coding-sop/{0.1.0,0.2.0,0.3.0,0.4.0}/`; 0.4.0 is the runtime default) |
 
 > **Rule**: When answering "what should X do?" — quote the doc + section. If the doc disagrees with what you remember, **the doc wins**. The `docs/0X` design contracts are **frozen**; divergences live in `docs/amendments/` (an amendment is canonical for its divergence — do not rewrite the frozen doc).
 
@@ -219,11 +219,11 @@ DISCOVERY → SPEC → DESIGN → PLAN → BUILD → VERIFY → SHIP → REFLECT
 ## 6. Current Project Position｜本项目当前位置
 
 ```
-SOP Profile  : default-ai-coding-sop@0.3.0 (runtime default)
-Published    : o-coding-navigation@0.3.0-beta.0 (npm latest + beta; alpha preserved at 0.1.0-alpha.2)
-Surface      : Planning Gatekeeper (00–19) + Execution Navigator (exec/github/evidence/verify/verdict) + MCP (7 tools)
+SOP Profile  : default-ai-coding-sop@0.4.0 (runtime default — DEC-030)
+Published    : o-coding-navigation@0.4.0-beta.0 (npm latest + beta; alpha preserved at 0.1.0-alpha.2)
+Surface      : Planning Gatekeeper (00–19) + Execution Navigator + readiness (list/waive) + sop upgrade + MCP (7 tools)
 State machine: 20 wired steps across DISCOVERY → SPEC → DESIGN → PLAN → BUILD → VERIFY (SHIP/REFLECT stubs)
-Status       : pre-GA beta, dogfooded; Skeleton Spike + SOP 0.2.0 cutover + SOP 0.3.0 logic backbone all shipped
+Status       : pre-GA beta, dogfooded; Skeleton Spike + 0.2.0/0.3.0/0.4.0 cutovers + logic & readiness backbones shipped
 ```
 
 ### What shipped (high level)
@@ -231,6 +231,7 @@ Status       : pre-GA beta, dogfooded; Skeleton Spike + SOP 0.2.0 cutover + SOP 
 - **Skeleton Spike (Phase 0) — done.** `init / status / brief / doc create / check` + the core engine (SOP loader, state store with lock+backup+atomic rename, markdown parser, required-section matcher, gate-status calculator, bilingual CommandResult renderer).
 - **SOP 0.2.0 — done.** `runGate`, `advanceState`, audit trail, full 19-step Plan→Build→Verify pipeline, MCP server (7 tools), Execution Navigator commands.
 - **SOP 0.3.0 — done (AM-003 / DEC-025).** The **Logic Backbone**: a DESIGN-phase artifact `docs/07-logic-backbone.md` whose computation/decision graph is machine-validated. `ocn check` blocks (`ERR_ARTIFACT_INVALID`, exit 2) on missing role / duplicate node id / dangling reference / dependency cycle / orphan node / unbound trigger; on pass it writes `.ocoding/logic-graph.json` and `ocn brief` surfaces execution order + trigger bindings. See `src/core/gate/logic-backbone-validator.ts` + `docs/amendments/2026-06-03-logic-backbone-amendment.md`.
+- **SOP 0.4.0 — done (AM-004/AM-005, DEC-028/029/030).** The **Readiness Backbone**: a role-based cross-cutting readiness gate (55 falsifiable checks from 54 IT roles) that runs in `check`/`gate`/`advance` after the section + logic gates. Open-world: `block`-severity tier-required checks must be `PASS` or `WAIVED` — `FAIL` and `UNKNOWN` both block (`ERR_GATE_FAILED`, exit 1) with per-check `fix_hint`s; ledger at `.ocoding/readiness.json`. `ocn readiness list` / `ocn readiness waive … --reason --probe` (waive-with-probe: grant-time probe, re-verified every gate, expires on state change; human-only). `ocn sop upgrade [--target] [--plan]` (DEC-029) re-pins existing projects forward (preserves `config.yaml` + cursor + artifacts). Runtime default flipped to 0.4.0 (DEC-030); pins are honored at runtime — a 0.3.0-pinned repo keeps 0.3.0 behavior until upgraded.
 
 ### Original Skeleton Spike acceptance (historical)
 

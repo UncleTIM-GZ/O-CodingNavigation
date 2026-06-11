@@ -81,7 +81,10 @@ describe("ocn readiness (SOP 0.4.0)", () => {
   it("readiness list on a 0.3.0 project is ERR_SOP_VERSION; check is unaffected", async () => {
     const legacy = await createTempProject();
     try {
-      await spawnOcn(["init", "--tier", "minimal"], { cwd: legacy.cwd });
+      // Explicit 0.3.0 pin — default init now pins 0.4.0 (DEC-030).
+      await spawnOcn(["init", "--tier", "minimal", "--sop-version", "0.3.0"], {
+        cwd: legacy.cwd,
+      });
       const list = await spawnOcn(["readiness", "list", "--json"], { cwd: legacy.cwd });
       expect(list.exitCode).toBe(5);
       const parsed = JSON.parse(list.stdout);

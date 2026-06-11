@@ -18,7 +18,7 @@ import { createTempProject, type TempProject } from "../helpers/temp-project.js"
 //   then: write empty PRD body  → check blocked (exit 2) with 0.2.0 blockers
 //         doc create prd         → check pass    (exit 0)
 //         brief (final, governance + uncertainty + step_prd)
-describe("0.2.0 demo path (full e2e, walks DISCOVERY→SPEC via advance)", () => {
+describe("0.2.0 demo path (full e2e, pinned 0.3.0, walks DISCOVERY→SPEC via advance)", () => {
   let project: TempProject;
 
   beforeEach(async () => {
@@ -32,11 +32,15 @@ describe("0.2.0 demo path (full e2e, walks DISCOVERY→SPEC via advance)", () =>
   it("walks the demo and preserves the 0.2.0 PRD blocked/pass invariants", async () => {
     const cwd = project.cwd;
 
-    // 1. ocn init --tier minimal — lands at state_discovery / step_project_brief
-    const initResult = await spawnOcn(["init", "--tier", "minimal"], { cwd });
+    // 1. ocn init --tier minimal --sop-version 0.3.0 — lands at
+    //    state_discovery / step_project_brief on the frozen 0.3.0 profile
+    //    (default init now pins 0.4.0, DEC-030).
+    const initResult = await spawnOcn(["init", "--tier", "minimal", "--sop-version", "0.3.0"], {
+      cwd,
+    });
     expect(initResult.exitCode).toBe(0);
 
-    // 2. ocn status — confirms new starting position + 0.2.0 profile.
+    // 2. ocn status — confirms new starting position + pinned 0.3.0 profile.
     const statusResult = await spawnOcn(["status", "--json"], { cwd });
     expect(statusResult.exitCode).toBe(0);
     const status = JSON.parse(statusResult.stdout);

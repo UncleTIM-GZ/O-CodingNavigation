@@ -57,19 +57,18 @@ import { sopYaml as sopYaml040 } from "../../sops/default-ai-coding-sop/0.4.0/so
 // `render.ts`. Adding a step requires editing data.ts only — both surfaces
 // pick it up automatically.
 //
-// SOP 0.3.0 (AM-003 / DEC-025) — runtime cutover: `loadSopProfile()` now
-// returns 0.3.0 by default. Fresh `ocn init` writes
-// `sopProfileVersion: "0.3.0"` and renders the 0.3.0 snapshot files; gate /
-// check / status / brief / advance / MCP all see the 0.3.0 profile (= 0.2.0 +
-// step_logic_backbone) by default. `loadSopProfileByVersion("0.1.0")`,
-// `("0.2.0")`, and `("0.3.0")` remain available for tests / callers that need
-// an explicit version (no old projects exist per user — no migration layer is
-// shipped).
+// SOP 0.4.0 (AM-004/AM-005, DEC-028/DEC-030) — runtime cutover:
+// `loadSopProfile()` now returns 0.4.0 by default. Fresh `ocn init` writes
+// `sopProfileVersion: "0.4.0"` and renders the 0.4.0 snapshot files
+// (incl. readiness-rules.yaml); gate / check / advance run the readiness
+// cross-cutting gate by default. Older pins are honored at runtime via
+// `resolveProfileForProject` and migrate forward with `ocn sop upgrade`
+// (DEC-029) — no silent fallback to the default profile anymore.
 
 // Re-export STATE_ORDER for backward compatibility with existing imports of
-// the runtime constant. Always reflects the default profile. (0.3.0 keeps the
-// same 8 states as 0.2.0; only the DESIGN step list grew.)
-export const STATE_ORDER: readonly StateId[] = STATE_ORDER_030;
+// the runtime constant. Always reflects the default profile. (0.4.0 keeps the
+// same 8 states and 20 steps as 0.3.0; only the readiness rulebook is new.)
+export const STATE_ORDER: readonly StateId[] = STATE_ORDER_040;
 
 export type SopProfileVersion = "0.1.0" | "0.2.0" | "0.3.0" | "0.4.0";
 
@@ -123,7 +122,7 @@ const PROFILE_SOURCES: Readonly<Record<SopProfileVersion, ProfileSource>> = {
     requiredSectionsByStep: REQUIRED_SECTIONS_BY_STEP_030,
   },
   // SOP 0.4.0 — 0.3.0 + readiness cross-cutting gate (AM-004 / DEC-028).
-  // Loadable/importable; NOT the runtime default (cutover is a separate DEC).
+  // Runtime default since DEC-030.
   "0.4.0": {
     id: PROFILE_ID_040,
     version: PROFILE_VERSION_040 as SopProfileVersion,
@@ -211,12 +210,13 @@ export function isKnownSopProfileVersion(version: string): version is SopProfile
 }
 
 /**
- * Default runtime profile — flipped to 0.3.0 (AM-003 / DEC-025); the prior
- * default was 0.2.0 (DEC-023). Every runtime path (init, status, brief, check,
- * gate, advance, MCP) reads this loader by default and therefore sees 0.3.0
- * (= 0.2.0 + step_logic_backbone) from this commit forward.
+ * Default runtime profile — flipped to 0.4.0 (DEC-030); prior defaults were
+ * 0.3.0 (AM-003 / DEC-025) and 0.2.0 (DEC-023). Every runtime path (init,
+ * status, brief, check, gate, advance, MCP) reads this loader by default and
+ * therefore sees 0.4.0 (= 0.3.0 + readiness cross-cutting gate) from this
+ * commit forward.
  */
-export const DEFAULT_SOP_PROFILE_VERSION: SopProfileVersion = "0.3.0";
+export const DEFAULT_SOP_PROFILE_VERSION: SopProfileVersion = "0.4.0";
 
 export function loadSopProfile(): SopProfile {
   return getProfile(DEFAULT_SOP_PROFILE_VERSION);
@@ -236,18 +236,18 @@ export function loadSopProfileByVersion(version: SopProfileVersion): SopProfile 
 }
 
 /**
- * AM-004 minimal pin resolution. `loadSopProfile()` historically ignores the
- * project's pinned version (AM-003 migration note); that is acceptable for
- * 0.1.0–0.3.0 pins but would make the readiness gate structurally unreachable
- * for a project initialized with `--sop-version 0.4.0`. So: honor the pin
- * ONLY when the pinned profile carries a readiness rulebook (0.4.0+); every
- * older pin keeps today's behavior (default profile) — zero regression for
- * existing projects and fixtures.
+ * Pin resolution (DEC-030). A project's pinned version is honored whenever it
+ * is a known bundled profile — a 0.3.0-pinned repo keeps 0.3.0 behavior (no
+ * readiness gate) until the human runs `ocn sop upgrade` (DEC-029). Before
+ * the 0.4.0 cutover this honored only readiness-carrying pins (AM-004
+ * minimal form); honoring every known pin is required now, otherwise older
+ * pins would silently fall back to the 0.4.0 default and hit the readiness
+ * gate without ever opting in. Unknown pins (corrupt / future) fall back to
+ * the default profile.
  */
 export function resolveProfileForProject(pinnedVersion: string): SopProfile {
-  if (pinnedVersion in PROFILE_SOURCES) {
-    const pinned = getProfile(pinnedVersion as SopProfileVersion);
-    if (pinned.readinessYaml !== undefined) return pinned;
+  if (isKnownSopProfileVersion(pinnedVersion)) {
+    return getProfile(pinnedVersion);
   }
   return loadSopProfile();
 }

@@ -32,8 +32,10 @@ describe("shipped readiness rulebook (SOP 0.4.0)", () => {
     expect(loadSopProfileByVersion("0.2.0").readinessYaml).toBeUndefined();
   });
 
-  it("keeps the runtime default at 0.3.0 (cutover is a separate DEC)", async () => {
-    const { DEFAULT_SOP_PROFILE_VERSION } = await import("../../src/core/sop/loader.js");
-    expect(DEFAULT_SOP_PROFILE_VERSION).toBe("0.3.0");
+  it("runtime default IS 0.4.0 and carries the readiness rulebook (DEC-030 cutover)", async () => {
+    const { DEFAULT_SOP_PROFILE_VERSION, loadSopProfile } =
+      await import("../../src/core/sop/loader.js");
+    expect(DEFAULT_SOP_PROFILE_VERSION).toBe("0.4.0");
+    expect(loadSopProfile().readinessYaml).toBe(readinessYaml);
   });
 });

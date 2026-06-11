@@ -148,12 +148,14 @@ const FULL_PATH: readonly ExpectedLocation[] = [
   },
 ];
 
-describe("SOP 0.3.0 advance — full 20-step flow (default cutover)", () => {
+describe("SOP 0.3.0 advance — full 20-step flow (pinned 0.3.0)", () => {
   let project: TempProject;
 
   beforeEach(async () => {
     project = await createTempProject("ocn-sop020-fullflow-");
-    await initProject({ cwd: project.cwd, tier: "minimal" });
+    // Pinned to 0.3.0 — this flow exercises the frozen 0.3.0 20-step profile
+    // (the 0.4.0 readiness gate would block the advance pass paths).
+    await initProject({ cwd: project.cwd, tier: "minimal", sopVersion: "0.3.0" });
   });
 
   afterEach(async () => {
@@ -164,7 +166,7 @@ describe("SOP 0.3.0 advance — full 20-step flow (default cutover)", () => {
     expect(FULL_PATH).toHaveLength(20);
   });
 
-  it("fresh init lands at state_discovery / step_project_brief under 0.3.0", async () => {
+  it("pinned 0.3.0 init lands at state_discovery / step_project_brief", async () => {
     const state = await readState(project.cwd);
     expect(state.project.sopProfileId).toBe("default-ai-coding-sop");
     expect(state.project.sopProfileVersion).toBe("0.3.0");

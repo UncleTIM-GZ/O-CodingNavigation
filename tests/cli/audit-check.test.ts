@@ -23,7 +23,10 @@ describe("ocn check — audit trail", () => {
 
   beforeEach(async () => {
     project = await createTempProject("ocn-audit-check-test-");
-    await spawnOcn(["init", "--tier", "minimal"], { cwd: project.cwd });
+    // Pinned 0.3.0 — section-gate audit mechanics, no readiness gate.
+    await spawnOcn(["init", "--tier", "minimal", "--sop-version", "0.3.0"], {
+      cwd: project.cwd,
+    });
     // PR #4: PRD-specific assertions require the project to be at step_prd.
     await seedToStepPrd(project.cwd);
   });
