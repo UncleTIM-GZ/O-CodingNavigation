@@ -3,7 +3,9 @@ import type { SopProfile } from "../../types/sop.js";
 import type { ProjectState } from "../../types/state.js";
 import type { ReadinessCheckOutcome, ReadinessLedger } from "../../types/readiness.js";
 import { msg } from "../i18n.js";
+import { createAuditEvent, safeAudit } from "../audit/index.js";
 import { evaluateReadiness } from "../readiness/evaluator.js";
+import { checkConfigDrift, commitConfigSnapshot } from "../readiness/freeze-check.js";
 import { readProjectCommands } from "../readiness/project-config.js";
 import { parseReadinessRulebook } from "../readiness/rulebook-loader.js";
 import { writeReadinessLedger } from "../readiness/readiness-store.js";
@@ -70,6 +72,33 @@ export async function runReadinessGate(opts: {
     };
   }
   const commands = await readProjectCommands(opts.cwd);
+
+  // P5 (R4) — referee-input drift detection. Compare → audit → commit the
+  // new baseline (a crash between audit and commit re-reports next run —
+  // repeating a report beats losing one). safeAudit never throws.
+  const drift = await checkConfigDrift(opts.cwd, opts.state.project.tier, commands);
+  if (drift.drifts.length > 0) {
+    await safeAudit(
+      opts.cwd,
+      createAuditEvent({
+        eventType: "readiness_config_changed",
+        result: "detected",
+        actor: "system",
+        source: "core",
+        projectRoot: opts.cwd,
+        currentStateId: opts.state.currentStateId,
+        currentStepId: opts.state.currentStepId,
+        command: "readiness.gate",
+        message: msg(
+          `Readiness probe config changed: ${drift.drifts.map((d) => d.key).join(", ")}`,
+          `就绪探针配置发生变更：${drift.drifts.map((d) => d.key).join("、")}`,
+        ),
+        data: { changes: drift.drifts },
+      }),
+    );
+    await commitConfigSnapshot(opts.cwd, opts.state.project.tier, commands).catch(() => undefined);
+  }
+
   const waivers = await readWaivers(opts.cwd);
   const ledger = await evaluateReadiness({
     root: opts.cwd,
