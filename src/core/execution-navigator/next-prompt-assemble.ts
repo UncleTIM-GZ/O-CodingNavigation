@@ -20,11 +20,9 @@ import {
   buildSection,
   buildVerificationBlock,
 } from "./next-prompt-sections.js";
-import type {
-  NextPromptRiskFlag,
-  NextPromptSummary,
-} from "./types.js";
+import type { NextPromptRiskFlag, NextPromptSummary } from "./types.js";
 import type { PromptInputs } from "./next-prompt-shapes.js";
+import { resolveTaskDispatch, taskStopCondition } from "./next-prompt-task-dispatch.js";
 
 // Re-export the shared shapes so existing imports from
 // `next-prompt-assemble` continue to resolve.
@@ -86,7 +84,14 @@ export function assemblePrompt(input: PromptInputs): AssembledPrompt {
   const allowed = buildAllowedWork(input, flags);
   const forbidden = buildForbiddenLines(input.opts.mode);
   const verification = buildVerificationBlock(input, flags);
-  const stop = STOP_CONDITIONS.map((s) => `- ${s}`);
+  // SOP 0.5.0 (AM-007 / DEC-032) — a dispatched task adds its DoD/check-off
+  // stop condition ahead of the standard list; no ledger → unchanged.
+  const dispatch = resolveTaskDispatch(input);
+  const stopConditions =
+    dispatch !== null && dispatch.kind === "task"
+      ? [taskStopCondition(dispatch.task), ...STOP_CONDITIONS]
+      : STOP_CONDITIONS;
+  const stop = stopConditions.map((s) => `- ${s}`);
   const expected = EXPECTED_COMPLETION_OUTPUT.map((s) => `- ${s}`);
 
   const sections: string[] = [];

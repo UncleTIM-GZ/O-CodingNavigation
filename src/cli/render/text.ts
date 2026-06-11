@@ -76,6 +76,31 @@ function appendReadinessSummaryBlock(out: string[], value: unknown): void {
   }
 }
 
+// SOP 0.5.0 (AM-007) — renders the brief's task-ledger summary when present.
+function appendTaskSummaryBlock(out: string[], value: unknown): void {
+  if (!isRecord(value)) return;
+  out.push("");
+  out.push("Tasks｜任务台账:");
+  out.push(
+    `  done ${String(value["done"])} / pending ${String(value["pending"])} (total ${String(value["total"])})`,
+  );
+  if (typeof value["nextTaskId"] === "string") {
+    out.push(`  Next task: ${value["nextTaskId"]} (run \`ocn task check ${value["nextTaskId"]}\`)`);
+  }
+}
+
+// SOP 0.5.0 (AM-007) — `ocn task list` table.
+function appendTaskListBlock(out: string[], data: Record<string, unknown>): void {
+  const tasks = Array.isArray(data["tasks"]) ? data["tasks"] : [];
+  for (const raw of tasks) {
+    if (!isRecord(raw)) continue;
+    const phase = typeof raw["phase"] === "string" ? ` (${raw["phase"]})` : "";
+    out.push(
+      `  [${String(raw["status"])}] ${String(raw["id"])}${phase} — ${String(raw["verifyCommand"])}`,
+    );
+  }
+}
+
 function appendReadinessListBlock(out: string[], data: Record<string, unknown>): void {
   const ledger = isRecord(data["ledger"]) ? data["ledger"] : null;
   if (ledger === null) return;
@@ -121,6 +146,7 @@ function appendBriefBlock(out: string[], data: Record<string, unknown>): void {
   }
   appendLogicBackboneBlock(out, data["logicBackbone"]);
   appendReadinessSummaryBlock(out, data["readiness"]);
+  appendTaskSummaryBlock(out, data["tasks"]);
   if (typeof data["aiGovernanceReminder"] === "string") {
     out.push("");
     out.push("AI Governance Reminder:");
@@ -464,6 +490,8 @@ export function renderText<T>(result: CommandResult<T>, locale: "zh" | "en"): st
     lines.push("");
     if (data["command"] === "readiness.list") {
       appendReadinessListBlock(lines, data);
+    } else if (data["command"] === "task.list") {
+      appendTaskListBlock(lines, data);
     } else if (data["command"] === "exec.status" && data["implemented"] === true) {
       appendExecStatusBlock(lines, data);
     } else if (data["command"] === "github.analyze_pr" && data["implemented"] === true) {

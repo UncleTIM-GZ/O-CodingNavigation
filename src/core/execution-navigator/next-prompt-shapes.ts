@@ -1,6 +1,7 @@
 // PR-B / M5 — shared types between next-prompt orchestrator and section
 // builders. Avoids a circular import.
 
+import type { TaskLedger } from "../../types/task.js";
 import type {
   AcceptanceParseResult,
   EvidenceMapMappingData,
@@ -31,4 +32,7 @@ export interface PromptInputs {
   readonly issueTruncated: boolean;
   readonly smokeAvailable: boolean;
   readonly warnings: readonly string[];
+  /** SOP 0.5.0 (AM-007 / DEC-032) — task ledger for BUILD-state dispatch.
+   *  Absent/null → legacy prompt behavior, byte-for-byte. */
+  readonly taskLedger?: TaskLedger | null;
 }

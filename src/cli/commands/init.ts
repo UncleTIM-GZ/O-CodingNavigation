@@ -6,7 +6,13 @@ import type { SopProfileVersion } from "../../core/sop/loader.js";
 import { outputResult } from "../output.js";
 import type { Tier } from "../../types/state.js";
 
-const KNOWN_SOP_VERSIONS: readonly SopProfileVersion[] = ["0.1.0", "0.2.0", "0.3.0", "0.4.0"];
+const KNOWN_SOP_VERSIONS: readonly SopProfileVersion[] = [
+  "0.1.0",
+  "0.2.0",
+  "0.3.0",
+  "0.4.0",
+  "0.5.0",
+];
 
 function isKnownSopVersion(v: string): v is SopProfileVersion {
   return (KNOWN_SOP_VERSIONS as readonly string[]).includes(v);

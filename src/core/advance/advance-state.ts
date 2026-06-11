@@ -7,6 +7,7 @@ import { newCorrelationId } from "../audit/correlation.js";
 import { createAuditEvent, makeLockAuditHook, safeAudit } from "../audit/index.js";
 import { runGate } from "../gate/gate-runner.js";
 import { msg } from "../i18n.js";
+import { taskLedgerGuardOrNull } from "./task-ledger-guard.js";
 import { Paths } from "../paths.js";
 import { blocked, ok } from "../result.js";
 import { loadSopProfile } from "../sop/loader.js";
@@ -153,6 +154,24 @@ export async function advanceState(opts: AdvanceOptions): Promise<CommandResult<
     );
     const advanceData: AdvanceResult = { from, correlationId };
     return blocked("ERR_STATE_MACHINE", failMessage, advanceData);
+  }
+
+  // 3c. SOP 0.5.0 (AM-007 / DEC-032) — task backbone transition gate:
+  // 任务台账不清，不准进 VERIFY。No ledger → legacy pass-through.
+  const ledgerBlock = await taskLedgerGuardOrNull(opts.cwd, from, next);
+  if (ledgerBlock !== null) {
+    await safeAudit(
+      opts.cwd,
+      createAuditEvent(
+        buildAdvanceEvent("advance_failed", "failed", ledgerBlock.message, {
+          from,
+          reason: "task_ledger_pending",
+          pendingTaskIds: ledgerBlock.pendingTaskIds,
+        }),
+      ),
+    );
+    const advanceData: AdvanceResult = { from, correlationId };
+    return blocked("ERR_GATE_FAILED", ledgerBlock.message, advanceData);
   }
 
   // 4. Lock-protected state mutation. PR #5 §4: thread correlationId so

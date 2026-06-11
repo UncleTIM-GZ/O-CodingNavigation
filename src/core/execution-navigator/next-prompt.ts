@@ -14,10 +14,8 @@ import { join } from "node:path";
 import type { CommandResult } from "../../types/result.js";
 import { ok } from "../result.js";
 import { msg } from "../i18n.js";
-import {
-  buildEvidenceContext,
-  type EvidenceContext,
-} from "./evidence-context.js";
+import { readTaskLedger } from "../task/task-ledger-store.js";
+import { buildEvidenceContext, type EvidenceContext } from "./evidence-context.js";
 import { mapEvidence } from "./evidence-map.js";
 import { defaultGhRunner, type GhRunner } from "./github-pr-runner.js";
 import {
@@ -25,11 +23,7 @@ import {
   NEXT_PROMPT_HEADLINE_EN,
   NEXT_PROMPT_HEADLINE_ZH,
 } from "./next-prompt-templates.js";
-import {
-  assemblePrompt,
-  buildSummary,
-  type PromptInputs,
-} from "./next-prompt-assemble.js";
+import { assemblePrompt, buildSummary, type PromptInputs } from "./next-prompt-assemble.js";
 import type {
   EvidenceSourceUsed,
   NextPromptAgent,
@@ -117,6 +111,10 @@ export async function generateNextPrompt(
 
   const smokeAvailable = await smokeScriptExists(opts.cwd);
 
+  // SOP 0.5.0 (AM-007 / DEC-032) — BUILD-state task dispatch reads the task
+  // ledger; absent (older pins / gate not yet passed) → legacy prompt shape.
+  const taskLedger = ctx.ocn.isOcnProject === true ? await readTaskLedger(opts.cwd) : null;
+
   const input: PromptInputs = {
     opts: {
       agent: opts.agent,
@@ -134,14 +132,12 @@ export async function generateNextPrompt(
     issueTruncated: issue.truncated,
     smokeAvailable,
     warnings,
+    ...(taskLedger !== null ? { taskLedger } : {}),
   };
 
   const { prompt, riskFlags } = assemblePrompt(input);
   const summary = buildSummary(input, riskFlags);
-  const evidenceSourcesUsed = buildEvidenceSourcesUsed(
-    ctx.github !== null,
-    ctx.acceptance.found,
-  );
+  const evidenceSourcesUsed = buildEvidenceSourcesUsed(ctx.github !== null, ctx.acceptance.found);
 
   const data: NextPromptData = {
     command: "next_prompt",

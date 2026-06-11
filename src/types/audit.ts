@@ -33,6 +33,9 @@ export const AuditEventType = z.enum([
   "sop_upgraded",
   // AM-006 / DEC-031 — Claude Code agent integration
   "agent_setup_completed",
+  // AM-007 / DEC-032 — task backbone: a task's frozen verify command exited 0
+  // and the ledger entry flipped to done (push event, `ocn task check`).
+  "task_completed",
 ]);
 export type AuditEventType = z.infer<typeof AuditEventType>;
 

@@ -15,6 +15,7 @@ import { registerNextPromptCommand } from "./commands/next-prompt.js";
 import { registerReadinessCommand } from "./commands/readiness.js";
 import { registerSopCommand } from "./commands/sop.js";
 import { registerStatusCommand } from "./commands/status.js";
+import { registerTaskCommand } from "./commands/task.js";
 import { registerVerdictCommand } from "./commands/verdict.js";
 import { registerVerifyCommand } from "./commands/verify.js";
 import { PACKAGE_VERSION } from "../version.js";
@@ -40,6 +41,9 @@ registerSopCommand(program);
 // AM-006 / DEC-031 — Claude Code agent integration (setup + hook handlers).
 registerAgentCommand(program);
 registerHookCommand(program);
+// AM-007 / DEC-032 — task backbone (SOP 0.5.0+): ledger overview + frozen
+// verify-command check-off. Human-only; never exposed over MCP.
+registerTaskCommand(program);
 // Execution Navigator skeleton (DEC-024 PR 1) — read-only, no evidence ingestion yet.
 registerExecCommand(program);
 registerGithubCommand(program);

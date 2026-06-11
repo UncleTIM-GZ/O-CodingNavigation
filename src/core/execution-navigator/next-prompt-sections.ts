@@ -16,18 +16,26 @@ import {
   TOP_MISSING_PREVIEW,
   TOP_MISSING_TRUNCATE,
 } from "./next-prompt-templates.js";
-import type {
-  EvidenceMapItem,
-  NextPromptMode,
-  NextPromptRiskFlag,
-} from "./types.js";
+import type { EvidenceMapItem, NextPromptMode, NextPromptRiskFlag } from "./types.js";
 import type { PromptInputs } from "./next-prompt-shapes.js";
+import {
+  buildTaskAllowedWork,
+  buildTaskObjective,
+  resolveTaskDispatch,
+  taskVerificationCommands,
+} from "./next-prompt-task-dispatch.js";
 
 const ACCEPTANCE_RELATIVE_PATH = "docs/03-acceptance-criteria.md";
 
 export function buildObjective(input: PromptInputs): string {
   if (input.issueText !== null) {
     return `Resolve the following issue: ${input.issueText}.`;
+  }
+  // SOP 0.5.0 (AM-007 / DEC-032) — BUILD-state ledger dispatch overrides the
+  // generic step objective; null (no ledger / no pending) → legacy behavior.
+  const dispatch = resolveTaskDispatch(input);
+  if (dispatch !== null) {
+    return buildTaskObjective(dispatch);
   }
   if (
     input.ocn.isOcnProject === true &&
@@ -125,9 +133,7 @@ export function buildAcceptanceLines(input: PromptInputs): readonly string[] {
   return lines;
 }
 
-export function buildBlockingLines(
-  flags: readonly NextPromptRiskFlag[],
-): readonly string[] {
+export function buildBlockingLines(flags: readonly NextPromptRiskFlag[]): readonly string[] {
   if (flags.length === 0) return ["none observed."];
   return flags.map((f) => `- ${f}`);
 }
@@ -152,6 +158,14 @@ export function buildAllowedWork(
 
   if (input.opts.mode === "review") {
     lines.push("- read and analyse only; do not modify any file");
+    return lines;
+  }
+
+  // SOP 0.5.0 (AM-007 / DEC-032) — a dispatched task scopes the allowed work
+  // to its touches + the build receipts (real evidence only).
+  const dispatch = resolveTaskDispatch(input);
+  if (dispatch !== null && dispatch.kind === "task") {
+    lines.push(...buildTaskAllowedWork(dispatch.task));
     return lines;
   }
 
@@ -218,6 +232,12 @@ export function buildVerificationBlock(
     cmds.push(
       `# CI is currently failing on PR #${input.github.pr?.number ?? input.opts.prNumber ?? 0} — reproduce locally before changes`,
     );
+  }
+  // SOP 0.5.0 (AM-007 / DEC-032) — the dispatched task's frozen verify
+  // command + its check-off command lead the verification block.
+  const dispatch = resolveTaskDispatch(input);
+  if (dispatch !== null && dispatch.kind === "task") {
+    cmds.push(...taskVerificationCommands(dispatch.task));
   }
   for (const c of BASE_VERIFICATION_COMMANDS) cmds.push(c);
   if (input.smokeAvailable) cmds.push(SMOKE_VERIFICATION_COMMAND);

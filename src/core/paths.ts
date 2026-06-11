@@ -20,6 +20,9 @@ export const Paths = {
   // P4/P5 — conditional waivers + frozen probe-command/tier snapshot (R4).
   readinessWaiversFile: (root: string): string => join(root, ".ocoding", "readiness-waivers.yaml"),
   readinessFrozenFile: (root: string): string => join(root, ".ocoding", "readiness-frozen.json"),
+  // SOP 0.5.0 (AM-007) — task backbone ledger (frozen verify commands +
+  // per-task done/pending status; regenerated on every passing build-plan gate).
+  taskLedgerFile: (root: string): string => join(root, ".ocoding", "task-ledger.json"),
   docsDir: (root: string): string => join(root, "docs"),
   prdFile: (root: string): string => join(root, "docs", "02-prd.md"),
   // AM-006 — Claude Code agent integration surface (written by `ocn agent setup`).
