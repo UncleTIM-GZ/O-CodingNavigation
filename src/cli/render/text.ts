@@ -70,6 +70,10 @@ function appendReadinessSummaryBlock(out: string[], value: unknown): void {
     out.push("  Warnings (non-blocking):");
     for (const item of summary["warnings"]) out.push(`    - ${item}`);
   }
+  if (isStringArray(summary["waivedItems"]) && summary["waivedItems"].length > 0) {
+    out.push(`  Waived (ratio ${String(summary["waivedRatio"] ?? "")}):`);
+    for (const item of summary["waivedItems"]) out.push(`    - ${item}`);
+  }
 }
 
 function appendReadinessListBlock(out: string[], data: Record<string, unknown>): void {

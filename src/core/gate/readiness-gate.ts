@@ -7,13 +7,16 @@ import { evaluateReadiness } from "../readiness/evaluator.js";
 import { readProjectCommands } from "../readiness/project-config.js";
 import { parseReadinessRulebook } from "../readiness/rulebook-loader.js";
 import { writeReadinessLedger } from "../readiness/readiness-store.js";
+import { readWaivers } from "../readiness/waiver-store.js";
 
 // SOP 0.4.0 (AM-004) — the readiness cross-cutting gate. Activates only when
 // the resolved profile bundles a rulebook (0.4.0+); 0.1.0–0.3.0 projects are
 // untouched. Blocking semantics are open-world: a block-severity,
-// tier-required check passes the gate only on PASS (WAIVED ships in P4) —
-// FAIL and UNKNOWN both block, and each blocking check surfaces its
-// fix_hint. Warn-severity checks never block (they surface in brief).
+// tier-required check passes the gate only on PASS or WAIVED (P4:
+// conditional waivers — precondition probe re-verified here on every run,
+// stale outside the granting state) — FAIL and UNKNOWN both block, and each
+// blocking check surfaces its fix_hint. Warn-severity checks never block
+// (they surface in brief).
 
 export interface ReadinessGateOutcome {
   readonly ok: boolean;
@@ -67,11 +70,14 @@ export async function runReadinessGate(opts: {
     };
   }
   const commands = await readProjectCommands(opts.cwd);
+  const waivers = await readWaivers(opts.cwd);
   const ledger = await evaluateReadiness({
     root: opts.cwd,
     rulebook: parsed.rulebook,
     projectTier: opts.state.project.tier,
     commands,
+    waivers,
+    currentStateId: opts.state.currentStateId,
   });
   try {
     await writeReadinessLedger(opts.cwd, ledger);

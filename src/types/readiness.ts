@@ -101,6 +101,27 @@ export const CommandProbe = z
 export const RepoProbe = z.discriminatedUnion("type", [PathProbe, CommandProbe]);
 export type RepoProbe = z.infer<typeof RepoProbe>;
 
+/**
+ * P4 — a conditional waiver (waive-with-probe). Granted human-only via
+ * `ocn readiness waive`; the precondition probe (shell command, exit 0 =
+ * precondition holds) is re-verified at EVERY gate run, and the waiver
+ * expires when the project leaves the state it was granted in.
+ */
+export const ReadinessWaiver = z
+  .object({
+    checkId: z.string().regex(/^rdy_[a-z0-9_]+$/),
+    reason: z.string().min(1).max(500),
+    probe: z.string().min(1).max(500),
+    /** State the waiver was granted in; stale outside it (re-affirm). */
+    stateId: z.string().regex(/^state_[a-z0-9_]+$/),
+    grantedAt: z.string(),
+  })
+  .strict();
+export type ReadinessWaiver = z.infer<typeof ReadinessWaiver>;
+
+export const ReadinessWaiverFile = z.object({ waivers: z.array(ReadinessWaiver) }).strict();
+export type ReadinessWaiverFile = z.infer<typeof ReadinessWaiverFile>;
+
 /** Per-check evaluated outcome persisted in the ledger. */
 export const ReadinessCheckOutcome = z
   .object({
@@ -112,6 +133,8 @@ export const ReadinessCheckOutcome = z
     /** Field-level notes (which predicate failed / which input is missing). */
     detail: z.string(),
     fixHint: ReadinessFixHint,
+    /** P4 — present when this verdict is WAIVED. */
+    waived: z.object({ reason: z.string(), grantedAt: z.string() }).strict().optional(),
   })
   .strict();
 export type ReadinessCheckOutcome = z.infer<typeof ReadinessCheckOutcome>;

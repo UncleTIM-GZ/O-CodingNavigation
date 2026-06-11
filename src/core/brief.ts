@@ -174,6 +174,11 @@ export interface ReadinessBriefSummary {
   readonly openItems: readonly string[];
   /** warn-severity FAIL/UNKNOWN items (never block; surfaced here only). */
   readonly warnings: readonly string[];
+  /** P4 — waived items ("id: reason"). Always surfaced: waivers must never
+   *  be invisible. */
+  readonly waivedItems: readonly string[];
+  /** P4 — WAIVED/(PASS+WAIVED). A high ratio is itself a verdict. */
+  readonly waivedRatio: string;
 }
 
 function summarizeReadiness(ledger: ReadinessLedger): ReadinessBriefSummary {
@@ -184,10 +189,14 @@ function summarizeReadiness(ledger: ReadinessLedger): ReadinessBriefSummary {
   const warnings = ledger.checks.filter(
     (c) => c.severity === "warn" && (c.verdict === "FAIL" || c.verdict === "UNKNOWN"),
   );
+  const waived = ledger.checks.filter((c) => c.verdict === "WAIVED");
+  const pass = count("PASS");
   return {
     tier: ledger.tier,
-    counts: `PASS ${count("PASS")} / FAIL ${count("FAIL")} / UNKNOWN ${count("UNKNOWN")} / NA ${count("NA")}`,
+    counts: `PASS ${pass} / WAIVED ${waived.length} / FAIL ${count("FAIL")} / UNKNOWN ${count("UNKNOWN")} / NA ${count("NA")}`,
     openItems: open.map((c) => `${c.id} [${c.verdict}]: ${c.fixHint.zh}`),
     warnings: warnings.map((c) => `${c.id}: ${c.fixHint.zh}`),
+    waivedItems: waived.map((c) => `${c.id}: ${c.waived?.reason ?? ""}`),
+    waivedRatio: `${waived.length}/${pass + waived.length}`,
   };
 }

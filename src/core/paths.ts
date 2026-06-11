@@ -17,6 +17,9 @@ export const Paths = {
   // SOP 0.4.0 (AM-004) — readiness rulebook snapshot + verdict ledger.
   readinessRulesFile: (root: string): string => join(root, ".ocoding", "readiness-rules.yaml"),
   readinessFile: (root: string): string => join(root, ".ocoding", "readiness.json"),
+  // P4/P5 — conditional waivers + frozen probe-command/tier snapshot (R4).
+  readinessWaiversFile: (root: string): string => join(root, ".ocoding", "readiness-waivers.yaml"),
+  readinessFrozenFile: (root: string): string => join(root, ".ocoding", "readiness-frozen.json"),
   docsDir: (root: string): string => join(root, "docs"),
   prdFile: (root: string): string => join(root, "docs", "02-prd.md"),
 } as const;

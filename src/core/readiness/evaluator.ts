@@ -7,6 +7,7 @@ import {
   type ReadinessRule,
   type ReadinessRulebook,
   type ReadinessTier,
+  type ReadinessWaiver,
 } from "../../types/readiness.js";
 import { parseReadinessBlock } from "../artifact/readiness-block-parser.js";
 import { resolveArtifactPaths } from "./artifact-resolver.js";
@@ -15,6 +16,7 @@ import { evalPredicate, isDerivedField } from "./predicate-eval.js";
 import { runRepoProbe, type ProbeResult } from "./repo-prober.js";
 import type { ProjectCommands } from "./project-config.js";
 import { collectTestNodes, traceScenarios, type TestCollection } from "./test-collector.js";
+import { runWaiverProbe } from "./waiver-probe.js";
 
 // SOP 0.4.0 — the readiness evaluator. Open world (Reiter 1978): a check the
 // engine cannot resolve is UNKNOWN and UNKNOWN blocks; silence is never pass.
@@ -27,6 +29,11 @@ export interface EvaluateReadinessOptions {
   /** Project tier from state.json (minimal|production|full). */
   readonly projectTier: string;
   readonly commands: ProjectCommands;
+  /** P4 — granted waivers (from .ocoding/readiness-waivers.yaml). */
+  readonly waivers?: readonly ReadinessWaiver[];
+  /** P4 — current state id; a waiver only applies in the state it was
+   *  granted in (stale otherwise → re-affirm). */
+  readonly currentStateId?: string;
   readonly now?: () => Date;
 }
 
@@ -144,6 +151,7 @@ async function evaluateRule(
   probeCache: Map<string, ProbeResult>,
   blockCache: Map<string, Readonly<Record<string, unknown>> | null>,
   getCollection: () => Promise<TestCollection>,
+  probeWaiver: (probe: string) => Promise<{ ok: boolean; detail: string }>,
 ): Promise<ReadinessCheckOutcome> {
   const base = {
     id: rule.id,
@@ -197,7 +205,47 @@ async function evaluateRule(
   const unknown = verdicts.filter((v) => v.status === "unknown");
   const verdict = failed.length > 0 ? "FAIL" : unknown.length > 0 ? "UNKNOWN" : "PASS";
   const detail = verdicts.map((v) => v.note).join("; ");
-  return { ...base, verdict, detail };
+  return applyWaiver(opts, rule, { ...base, verdict, detail }, probeWaiver);
+}
+
+/**
+ * P4 — conditional waivers, applied AFTER aggregation and only to
+ * FAIL/UNKNOWN. Apply-time re-validation is deliberate: even if an AI edits
+ * .ocoding/readiness-waivers.yaml directly (bypassing the CLI's checks), a
+ * `waivable:false` rule is still never waived, a stale-state waiver still
+ * expires, and the precondition probe still runs on every evaluation. The
+ * `readiness_waived` audit event (emitted only by `ocn readiness waive`) is
+ * the single legitimate grant trail — WAIVED in the ledger with no matching
+ * audit event is a tamper signal (future `ocn doctor` check).
+ */
+async function applyWaiver(
+  opts: EvaluateReadinessOptions,
+  rule: ReadinessRule,
+  outcome: ReadinessCheckOutcome,
+  probeWaiver: (probe: string) => Promise<{ ok: boolean; detail: string }>,
+): Promise<ReadinessCheckOutcome> {
+  if (outcome.verdict !== "FAIL" && outcome.verdict !== "UNKNOWN") return outcome;
+  const waiver = opts.waivers?.find((w) => w.checkId === rule.id);
+  if (waiver === undefined) return outcome;
+  if (rule.waivable === false) {
+    return { ...outcome, detail: `${outcome.detail}; waiver ignored: check is not waivable` };
+  }
+  if (opts.currentStateId === undefined || waiver.stateId !== opts.currentStateId) {
+    return {
+      ...outcome,
+      detail: `${outcome.detail}; waiver expired (granted in ${waiver.stateId} — re-affirm with \`ocn readiness waive\`)`,
+    };
+  }
+  const probe = await probeWaiver(waiver.probe);
+  if (!probe.ok) {
+    return { ...outcome, detail: `${outcome.detail}; waiver voided: ${probe.detail}` };
+  }
+  return {
+    ...outcome,
+    verdict: "WAIVED",
+    detail: `${outcome.detail}; waived: ${waiver.reason} (${probe.detail})`,
+    waived: { reason: waiver.reason, grantedAt: waiver.grantedAt },
+  };
 }
 
 export async function evaluateReadiness(opts: EvaluateReadinessOptions): Promise<ReadinessLedger> {
@@ -210,11 +258,30 @@ export async function evaluateReadiness(opts: EvaluateReadinessOptions): Promise
   let collection: Promise<TestCollection> | null = null;
   const getCollection = (): Promise<TestCollection> =>
     (collection ??= collectTestNodes(opts.root, opts.commands.test_list));
+  // P4 — waiver precondition probes, deduped per probe command per run.
+  const waiverProbeCache = new Map<string, Promise<{ ok: boolean; detail: string }>>();
+  const probeWaiver = (probe: string): Promise<{ ok: boolean; detail: string }> => {
+    let cached = waiverProbeCache.get(probe);
+    if (cached === undefined) {
+      cached = runWaiverProbe(opts.root, probe);
+      waiverProbeCache.set(probe, cached);
+    }
+    return cached;
+  };
 
   const checks: ReadinessCheckOutcome[] = [];
   for (const rule of opts.rulebook.checks) {
     checks.push(
-      await evaluateRule(opts, rule, tier, artifactPaths, probeCache, blockCache, getCollection),
+      await evaluateRule(
+        opts,
+        rule,
+        tier,
+        artifactPaths,
+        probeCache,
+        blockCache,
+        getCollection,
+        probeWaiver,
+      ),
     );
   }
   const now = opts.now ?? ((): Date => new Date());
