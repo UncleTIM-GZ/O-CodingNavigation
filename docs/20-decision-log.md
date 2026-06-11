@@ -2984,3 +2984,51 @@ exposes its outputs and the test strategy tests its graph. Therefore:
 ### Out of scope
 
 - 0.2.0 / 0.1.0 numbering unchanged (frozen). The npm package number stays `0.3.0-beta.0`.
+
+## DEC-028｜Readiness Backbone — role-based cross-cutting readiness gate (SOP 0.4.0)
+
+Date: 2026-06-11
+Implements: AM-004 (`docs/amendments/2026-06-11-readiness-backbone-amendment.md`)
+
+### Status
+
+Proposed — design accepted; engine not yet implemented. Ships behind a new SOP 0.4.0 when built.
+
+### Context
+
+The section gate blocks missing-section completion; AM-003 blocks logically un-wired
+completion. Dogfooding on the Lattice project exposed a third class — **role-blind
+completion**: dozens of design docs pass every gate, yet a multi-director review still
+surfaces basic gaps (no git/CI, no adopter, no cost, no operability owner, 1052 LOC behind
+2 smoke tests). OCN's verification is intra-artifact (doc vs. SOP schema) and closed-world
+(silence reads as pass); it has no notion of "ready against the stakeholders who must
+accept it." "Which dimensions are missing" is unenumerable; "which roles must have signed
+off" is bounded and externally catalogued (oprocess 54 roles). The fix converts the
+unverifiable predicate (content complete?) into a verifiable one (every required acceptor
+PASSED or explicitly WAIVED?).
+
+### Decision
+
+Add a cross-cutting **`readiness` gate** driven by a rulebook YAML
+(`readiness-backbone.yaml`, 54 oprocess roles → 55 falsifiable checks), bundled in the SOP
+profile. `ocn check` runs it after the section + logic gates; `ocn advance` runs it before
+transition. Open-world blocking: a `block`-severity, tier-required check passes the gate
+only if `PASS` or `WAIVED` — `FAIL` and `UNKNOWN` both block. On block: `ERR_GATE_FAILED`
+(exit 1) + each blocking check's `fix_hint`. `warn` checks (incl. over-preparation
+`process_proportionality`) surface in `brief` only. `.ocoding/readiness.json` is the
+machine projection; `ocn brief` lists open items + fix_hints as the BUILD worklist.
+
+### Sub-decisions
+
+1. Cross-cutting gate + `obligation_readiness`, **not** a new state-machine step (it validates other artifacts). 20-step machine unchanged.
+2. Rulebook ships in the SOP profile; LLM authors it offline, engine only enforces (no-LLM-judge / local-first preserved). All predicates deterministic.
+3. Exit code `ERR_GATE_FAILED` (1) — a cross-artifact gate, not a single invalid artifact.
+4. New SOP **0.4.0** = runtime default; 0.3.0 frozen + importable.
+5. Waivers human-only (`ocn readiness waive … --reason`, audited); `waivable:false` checks reject; MCP exposes read-only evaluation via `navigator.run_gate`, never waiver.
+6. Number-agnostic resolution via `artifact_aliases` (doc slug globs) + `repo_probes` (filesystem/command facts) — portable across projects that renumber docs.
+
+### Out of scope
+
+- Engine implementation (separate authorized build). This DEC accepts the design only.
+- Concrete extractors for derived predicates (e.g. `each_acceptance_scenario_has_test_ref`) — highest-risk items, spike first (see AM-004 Open design points).
+- 0.1.0–0.3.0 unchanged (frozen).
