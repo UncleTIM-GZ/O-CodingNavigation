@@ -158,6 +158,11 @@ conclusions**. Four resulting laws (rulebook header, R1–R4):
   per-check detail into the message; static text until then.
 - **Assertion-density lint** (optional hardening against assertion-free tests): AST-level
   check, deferred.
+- **Block migration for existing projects** (`ocn readiness init-blocks`, TODO): the
+  P2 `ocn-readiness` stubs ship only in the 0.4.0 doc *templates*; projects authored
+  before 0.4.0 (or under 0.1.0–0.3.0) have no stub to fill, so adopting readiness needs
+  a command that APPENDS an `ocn-readiness` block to each carrier doc that lacks one.
+  Surfaced by the Lattice validation run (see `docs/reports/2026-06-11-readiness-lattice-validation.md`).
 
 ## Validation evidence (pre-implementation)
 
