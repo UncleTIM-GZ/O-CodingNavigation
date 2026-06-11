@@ -66,6 +66,7 @@ Active divergences from `docs/00-08`. Listed newest-first by amendment ID.
 
 | ID | Date | Title | Status | Supersedes | Applies to |
 |---|---|---|---|---|---|
+| [AM-006](./2026-06-12-claude-code-agent-integration-amendment.md) | 2026-06-12 | Claude Code agent integration (`ocn agent setup` + `ocn hook *`) | Accepted | None (additive surface + new machine-facing IO convention) | `docs/06-api-contract.md` (new commands, hook IO bypasses CommandResult), `docs/05` §12.15 (`agent_setup_completed`), `.ocoding/config.yaml` (`commands.lint/typecheck`), `.claude/*` + `CLAUDE.md` writes |
 | [AM-005](./2026-06-11-sop-upgrade-apply-amendment.md) | 2026-06-11 | `ocn sop upgrade` apply mode (forward-only SOP re-pin) | Accepted | None (extends frozen §23 `--plan`-only contract) | `docs/06-api-contract.md` §10/§23, `docs/05-data-model.md` §12.15, `src/core/sop/upgrade.ts`, `src/cli/commands/sop.ts` |
 | [AM-004](./2026-06-11-readiness-backbone-amendment.md) | 2026-06-11 | Readiness Backbone (role-based cross-cutting readiness gate, SOP 0.4.0) | Accepted | None (additive) | `sops/default-ai-coding-sop/0.4.0/*`, `src/core/readiness/*`, `src/core/gate/readiness-gate.ts`, `docs/05`/`06` (gate + audit additions) |
 | [AM-003](./2026-06-03-logic-backbone-amendment.md) | 2026-06-03 | Logic Backbone (machine-verifiable computation/decision graph, SOP 0.3.0) | Active | None (additive) | `docs/07-logic-backbone.md` slot (doc renumber), `src/core/gate/logic-backbone-validator.ts`, SOP 0.3.0 profile |

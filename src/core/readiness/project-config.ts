@@ -14,6 +14,10 @@ export interface ProjectCommands {
   /** P3 — test LISTING command for AC→test trace
    *  (e.g. `pytest --collect-only -q`, `npx vitest list`). */
   readonly test_list?: string;
+  /** AM-006 — agent-hook fast feedback (PostToolUse). Advisory only:
+   *  NOT readiness probes, NOT part of the R4 frozen snapshot. */
+  readonly lint?: string;
+  readonly typecheck?: string;
 }
 
 function nonEmptyString(value: unknown): string | undefined {
@@ -40,9 +44,13 @@ export async function readProjectCommands(root: string): Promise<ProjectCommands
   const build = nonEmptyString(record["build"]);
   const test = nonEmptyString(record["test"]);
   const testList = nonEmptyString(record["test_list"]);
+  const lint = nonEmptyString(record["lint"]);
+  const typecheck = nonEmptyString(record["typecheck"]);
   return {
     ...(build !== undefined ? { build } : {}),
     ...(test !== undefined ? { test } : {}),
     ...(testList !== undefined ? { test_list: testList } : {}),
+    ...(lint !== undefined ? { lint } : {}),
+    ...(typecheck !== undefined ? { typecheck } : {}),
   };
 }

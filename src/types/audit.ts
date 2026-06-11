@@ -31,6 +31,8 @@ export const AuditEventType = z.enum([
   // DEC-029 / AM-005 — `ocn sop upgrade` (plan + apply)
   "sop_version_diff_detected",
   "sop_upgraded",
+  // AM-006 / DEC-031 — Claude Code agent integration
+  "agent_setup_completed",
 ]);
 export type AuditEventType = z.infer<typeof AuditEventType>;
 

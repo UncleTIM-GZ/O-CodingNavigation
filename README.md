@@ -2,7 +2,7 @@
 
 > Local-first, MCP-first, state-machine-driven **AI coding workflow operating system**.
 > CLI: `ocn` · MCP: `ocn-mcp` · License: Apache-2.0
-> **Phase**: SOP 0.4.0 (Readiness Backbone) mainline · **Status**: pre-GA beta · **Public**: on npm as `latest` and `@beta` → [`0.4.0-beta.1`](https://www.npmjs.com/package/o-coding-navigation) · GitHub pre-release: [`v0.4.0-beta.1`](https://github.com/UncleTIM-GZ/O-CodingNavigation/releases/tag/v0.4.0-beta.1)
+> **Phase**: SOP 0.4.0 (Readiness Backbone) mainline · **Status**: pre-GA beta · **Public**: on npm as `latest` and `@beta` → [`0.4.0-beta.2`](https://www.npmjs.com/package/o-coding-navigation) · GitHub pre-release: [`v0.4.0-beta.2`](https://github.com/UncleTIM-GZ/O-CodingNavigation/releases/tag/v0.4.0-beta.2)
 
 > 📑 This README has two parts:
 > **Part 1 — English** (sections 1 – 11) · **Part 2 — 中文版** (§§ A – K)
@@ -78,7 +78,7 @@ OCN treats these as the same problem: *the AI coding loop has no rigorous notion
 | Phase | **SOP 0.4.0 (Readiness Backbone) mainline** — Plan → Build → Verify, with the machine-verified DESIGN logic-backbone gate plus a role-based cross-cutting readiness gate (55 checks) on every step; plan-to-verify smoke covers all 20 steps |
 | Tests | full vitest suite green on Node 20 + Node 22 |
 | Coverage | meets the publish-time gate |
-| npm | `latest` → `0.4.0-beta.1`; `beta` → `0.4.0-beta.1`; `alpha` → `0.1.0-alpha.2` (historical; preserved) |
+| npm | `latest` → `0.4.0-beta.2`; `beta` → `0.4.0-beta.2`; `alpha` → `0.1.0-alpha.2` (historical; preserved) |
 | Maturity | **pre-GA beta** — not stable, not GA, beta only (for controlled testing / dogfood) |
 | External host validation | Validated with Claude Desktop on Windows with WSL2. Cursor and Cline are not yet verified. |
 | MCP transport | stdio only (HTTP/SSE not started) |
@@ -104,7 +104,7 @@ The two stages are connected: planning artifacts (00–10) must pass their gates
 - **MCP safe tools**: 7 read/prepare/create/log tools over stdio; 4 forbidden tools never registered (full list in §7); `projectRoot` validator + threat model ([`docs/security/mcp-threat-model.md`](./docs/security/mcp-threat-model.md)).
 - **Real MCP Host validation**: Claude Desktop on Windows with WSL2 validated end-to-end ([DEC-017](./docs/20-decision-log.md), [report](./docs/reports/2026-04-30-mcp-external-host-validation-report.md)). Cursor and Cline remain unverified.
 - **Executable example**: [`examples/discovery-to-plan/`](./examples/discovery-to-plan/) walks all 10 v1.0 SOP steps end-to-end via `scripts/smoke.sh`. Bundled fixtures derived verbatim from `src/core/templates/*.ts` so they cannot drift.
-- **npm publish discipline**: SOP 0.4.0 mainline published as `o-coding-navigation@0.4.0-beta.1` under strict pre-publish checklists, `prepublishOnly` gate, and `files` allowlist. `latest` and `beta` both point to `0.4.0-beta.1`; `alpha` is preserved at `0.1.0-alpha.2` for historical use. Annotated git tag `v0.4.0-beta.1` and matching GitHub pre-release published.
+- **npm publish discipline**: SOP 0.4.0 mainline published as `o-coding-navigation@0.4.0-beta.2` under strict pre-publish checklists, `prepublishOnly` gate, and `files` allowlist. `latest` and `beta` both point to `0.4.0-beta.2`; `alpha` is preserved at `0.1.0-alpha.2` for historical use. Annotated git tag `v0.4.0-beta.2` and matching GitHub pre-release published.
 
 **Not implemented (deliberately deferred — see §10)**
 
@@ -122,12 +122,12 @@ The two stages are connected: planning artifacts (00–10) must pass their gates
 npm install -g o-coding-navigation
 ```
 
-As of v0.4.0-beta.1, npm latest and beta both point to the SOP 0.4.0 (Readiness Backbone) release.
+As of v0.4.0-beta.2, npm latest and beta both point to the SOP 0.4.0 (Readiness Backbone) release.
 
 Verify:
 
 ```bash
-ocn --version       # 0.4.0-beta.1
+ocn --version       # 0.4.0-beta.2
 ocn --help
 ocn-mcp             # starts the MCP stdio server; press Ctrl+C to exit
 ```
@@ -144,8 +144,8 @@ To uninstall: `npm uninstall -g o-coding-navigation`.
 
 | Channel | Version | npm tag | Notes |
 |---|---|---|---|
-| `latest` (recommended) | `0.4.0-beta.1` | `latest` | SOP 0.4.0 (Readiness Backbone) mainline. |
-| Beta (explicit prerelease pin) | `0.4.0-beta.1` | `beta` | Same artifact as `latest`; use `@beta` when you want to pin the prerelease channel explicitly. |
+| `latest` (recommended) | `0.4.0-beta.2` | `latest` | SOP 0.4.0 (Readiness Backbone) mainline. |
+| Beta (explicit prerelease pin) | `0.4.0-beta.2` | `beta` | Same artifact as `latest`; use `@beta` when you want to pin the prerelease channel explicitly. |
 | Alpha (still available) | `0.1.0-alpha.2` | `alpha` | Prior pre-GA channel; preserved for historical use only. |
 
 Package home: https://www.npmjs.com/package/o-coding-navigation
@@ -535,6 +535,8 @@ All commands accept `--json` to emit a machine-readable `CommandResult` envelope
 | `ocn sop upgrade [--target <version>] [--plan] [--json]` | Move the project's pinned SOP profile forward to a newer bundled version (forward-only; `config.yaml` preserved). `--plan` is a read-only dry-run. | Apply rewrites `.ocoding/` snapshots + `state.json` (atomic, lock-protected); `--plan` writes nothing. | `sop_upgraded` (apply) / `sop_version_diff_detected` (plan) |
 | `ocn readiness list [--json]` | Evaluate all readiness checks for the current state/tier and print the verdict table (PASS/WAIVED/FAIL/UNKNOWN/NA counts + blocking items). | Read-only. | None (pull-mode — avoids audit spam) |
 | `ocn readiness waive <checkId> --reason <r> --probe <cmd> [--json]` | Grant a conditional waiver ("waive-with-probe"): the probe must pass at grant time, is re-verified on every gate run, and the waiver expires when the project leaves the current state. Human-only — never exposed over MCP. | Writes the waiver into `.ocoding/readiness.json`. | `readiness_waived` |
+| `ocn agent setup [--force] [--json]` | One-command Claude Code wiring (AM-006): Stop/PostToolUse hooks in `.claude/settings.json` (merge-only, `command -v ocn` guarded), `.claude/ocn.md` governance contract, `CLAUDE.md` import (append-once), `/ocn-next` slash command. Idempotent; human-only. | Writes/merges the four `.claude` surfaces; never overwrites user entries. | `agent_setup_completed` |
+| `ocn hook stop` / `ocn hook post-edit` | Machine-facing Claude Code hook handlers (called by the agent host, not humans): `stop` re-runs the gate when the agent ends a turn and blocks with fix hints; `post-edit` runs `commands.lint`/`commands.typecheck` for fast feedback. Fail-open by design. | Raw hook-contract IO (stdin JSON in; block JSON / exit 2 + stderr out). | gate-run events via the reused check engine |
 
 `<type>` for `doc create` (SOP 0.4.0 ships templates for all 20 steps):
 `project-brief`, `scope`, `prd`, `acceptance-criteria`, `technical-architecture`,
@@ -559,6 +561,14 @@ Beyond the planning gate, OCN now reads execution-time evidence (git, GitHub PR,
 | `ocn verdict draft [--json] [--mode ...] [--pr <n>]` | Draft an evidence-derived final judgment. | Category `continue-work` / `request-changes` / `ready-for-review` / `ready-to-merge` / `hold-for-manual-review`, with sorted supports / blocks / warnings. |
 
 All six commands are read-only by design: no writes to `.ocoding/`, `docs/`, or any project file; no git mutation; no gh mutation (only `pr view` / `auth status`); no LLM call. `--mode` accepts `local | pr | combined` where applicable; `--pr <n>` enables GitHub evidence in `pr` and `combined` modes. Per-MVP implementation reports live under [`docs/reports/2026-05-02-execution-navigator-*.md`](./docs/reports/) and the closure report linked above.
+
+#### 6.3 Claude Code integration — one command (AM-006 / DEC-031)
+
+```bash
+ocn agent setup      # idempotent; commit .claude/ + CLAUDE.md to share with the team
+```
+
+Wires the whole phase-2 runbook mechanically: a **Stop hook** re-runs `ocn check` whenever the agent tries to end its turn (blocked → fix hints are fed back and the agent keeps working; loop-protected, fail-open), a **PostToolUse hook** runs your configured `commands.lint`/`commands.typecheck` (from `.ocoding/config.yaml`) after every Edit/Write, the **`.claude/ocn.md` governance contract** loads into every session via a CLAUDE.md import, and **`/ocn-next`** pulls `ocn brief` + `ocn next-prompt` and starts the task. Hook commands are guarded with `command -v ocn`, so teammates without ocn installed are unaffected. After setup, the human workflow per task is two actions: `/ocn-next` in Claude Code → review + `ocn advance` in the terminal.
 
 ### 7. MCP tools
 
@@ -655,7 +665,8 @@ The GA Prep phase was a documentation, packaging, and operational-readiness audi
 **Execution Navigator MVP series (post-DEC-024)**
 
 - **MVP 1–6 complete** — the six Execution Navigator commands (§6.2) shipped in PRs #63–#68 and merged to main. Cross-cutting review fixes landed in PR #69 ([report](./docs/reports/2026-05-04-execution-navigator-review-fixes-pr-a.md)). Series closure: [`docs/reports/2026-05-04-execution-navigator-verdict-draft.md`](./docs/reports/2026-05-04-execution-navigator-verdict-draft.md).
-- Current external package: `0.4.0-beta.1` — Planning Gatekeeper (§6.1) + Execution Evidence Navigator (§6.2) + the Logic Backbone DESIGN gate + the Readiness Backbone cross-cutting gate.
+- Current external package: `0.4.0-beta.2` — Planning Gatekeeper (§6.1) + Execution Evidence Navigator (§6.2) + the Logic Backbone DESIGN gate + the Readiness Backbone cross-cutting gate.
+- **Claude Code integration shipped in `0.4.0-beta.2`** — [AM-006](./docs/amendments/2026-06-12-claude-code-agent-integration-amendment.md) / DEC-031: `ocn agent setup` wires hooks + governance contract + `/ocn-next` in one idempotent command; `ocn hook stop|post-edit` carry the enforcement logic inside OCN (fail-open, loop-protected).
 - **Readiness Backbone shipped in `0.4.0-beta.1`** — SOP 0.4.0 ([AM-004](./docs/amendments/2026-06-11-readiness-backbone-amendment.md) / DEC-028) adds a role-based cross-cutting readiness gate: 55 falsifiable checks derived from 54 curated IT roles run inside `ocn check` / `ocn gate` / `ocn advance` after the section + logic gates. Open-world semantics (`FAIL` **and `UNKNOWN`** block); verdict ledger persisted to `.ocoding/readiness.json`; `ocn readiness list` / `ocn readiness waive` (waive-with-probe) commands; `ocn sop upgrade` migrates existing projects; runtime default cut over to 0.4.0 per DEC-030.
 - **Logic Backbone shipped in `0.3.0-beta.1`** — SOP 0.3.0 adds the DESIGN-phase `docs/07-logic-backbone.md` artifact; `ocn check` machine-validates its computation/decision graph (blocks on missing role, duplicate node id, dangling reference, dependency cycle, orphan node, unbound trigger) and on pass writes `.ocoding/logic-graph.json`, which `ocn brief` summarises as execution order + trigger bindings.
 - Still beta, not GA. Validated with Claude Desktop on Windows with WSL2; Cursor and Cline remain unverified.
@@ -747,7 +758,7 @@ OCN 把这四个问题视为同一个问题：*AI 编程闭环缺乏严肃的"�
 | 阶段 | **SOP 0.4.0（就绪主干）主干**——Plan → Build → Verify，除机器校验的 DESIGN 逻辑主干门禁外，新增覆盖每个 step 的基于角色的横切就绪门禁（55 条检查）；plan-to-verify smoke 覆盖全部 20 步 |
 | 测试 | 完整 vitest 套件在 Node 20 + Node 22 全部通过 |
 | 覆盖率 | 满足发布门 |
-| npm | `latest` → `0.4.0-beta.1`；`beta` → `0.4.0-beta.1`；`alpha` → `0.1.0-alpha.2`（历史保留） |
+| npm | `latest` → `0.4.0-beta.2`；`beta` → `0.4.0-beta.2`；`alpha` → `0.1.0-alpha.2`（历史保留） |
 | 成熟度 | **pre-GA beta**——非稳定、非 GA、仅 beta（用于受控测试 / dogfood） |
 | 已验证 Host | 已在 Claude Desktop on Windows + WSL2 验证。Cursor 与 Cline 暂未验证。 |
 | MCP 传输 | 仅 stdio（HTTP/SSE 尚未启动） |
@@ -773,7 +784,7 @@ OCN 现在分为两个衔接阶段：
 - **MCP 安全工具**：stdio 上 7 个只读/准备/创建/日志类工具，4 个禁用工具不会被注册（详见 §G）；`projectRoot` 校验器 + 威胁模型（[`docs/security/mcp-threat-model.md`](./docs/security/mcp-threat-model.md)）。
 - **真实 Host 验证**：Claude Desktop on Windows + WSL2 已完成端到端验证（[DEC-017](./docs/20-decision-log.md)、[报告](./docs/reports/2026-04-30-mcp-external-host-validation-report.md)）。
 - **可执行示例**：[`examples/discovery-to-plan/`](./examples/discovery-to-plan/)，`scripts/smoke.sh` 跑完 v1.0 SOP 全部 10 个 step；fixture 直接来源于 `src/core/templates/*.ts`，避免漂移。
-- **npm 发布纪律**：SOP 0.4.0 主干以 `o-coding-navigation@0.4.0-beta.1` 形式发布，遵循严格的预发布清单与 `prepublishOnly` 门，`files` allowlist 收敛到 `dist/` + LICENSE + README + `docs/quickstart.md` + `docs/mcp-usage.md`；`latest` 与 `beta` 都指向 `0.4.0-beta.1`，`alpha` 仍保留在 `0.1.0-alpha.2`；`v0.4.0-beta.1` 为带注释的 git tag + GitHub pre-release。
+- **npm 发布纪律**：SOP 0.4.0 主干以 `o-coding-navigation@0.4.0-beta.2` 形式发布，遵循严格的预发布清单与 `prepublishOnly` 门，`files` allowlist 收敛到 `dist/` + LICENSE + README + `docs/quickstart.md` + `docs/mcp-usage.md`；`latest` 与 `beta` 都指向 `0.4.0-beta.2`，`alpha` 仍保留在 `0.1.0-alpha.2`；`v0.4.0-beta.2` 为带注释的 git tag + GitHub pre-release。
 
 **尚未实现（刻意延后，详见 §J）**
 
@@ -791,12 +802,12 @@ OCN 现在分为两个衔接阶段：
 npm install -g o-coding-navigation
 ```
 
-从 v0.4.0-beta.1 开始，npm latest 与 beta 均指向 SOP 0.4.0（就绪主干）版本。
+从 v0.4.0-beta.2 开始，npm latest 与 beta 均指向 SOP 0.4.0（就绪主干）版本。
 
 安装后验证：
 
 ```bash
-ocn --version       # 0.4.0-beta.1
+ocn --version       # 0.4.0-beta.2
 ocn --help
 ocn-mcp             # 启动 MCP stdio server；按 Ctrl+C 退出
 ```
@@ -813,8 +824,8 @@ npm install -g o-coding-navigation@beta
 
 | 渠道 | 版本 | npm tag | 说明 |
 |---|---|---|---|
-| `latest`（推荐） | `0.4.0-beta.1` | `latest` | SOP 0.4.0（就绪主干）主干。 |
-| Beta（显式预发布通道） | `0.4.0-beta.1` | `beta` | 与 `latest` 同一份产物；想明确固定在预发布通道时使用 `@beta`。 |
+| `latest`（推荐） | `0.4.0-beta.2` | `latest` | SOP 0.4.0（就绪主干）主干。 |
+| Beta（显式预发布通道） | `0.4.0-beta.2` | `beta` | 与 `latest` 同一份产物；想明确固定在预发布通道时使用 `@beta`。 |
 | Alpha（仍可用） | `0.1.0-alpha.2` | `alpha` | 之前的 pre-GA 通道；仅作历史保留。 |
 
 包主页：https://www.npmjs.com/package/o-coding-navigation
@@ -1202,6 +1213,8 @@ planning 阶段的 artifact（00–10）跑过门禁、项目进入实现阶段�
 | `ocn sop upgrade [--target <version>] [--plan] [--json]` | 把项目锁定的 SOP profile 向前迁移到更新的内置版本（只能向前；保留 `config.yaml`）。`--plan` 为只读 dry-run。 | apply 重写 `.ocoding/` 快照 + `state.json`（原子、带锁保护）；`--plan` 不写任何文件。 | `sop_upgraded`（apply）/ `sop_version_diff_detected`（plan） |
 | `ocn readiness list [--json]` | 按当前 state/tier 评估全部就绪检查，输出判定表（PASS/WAIVED/FAIL/UNKNOWN/NA 计数 + 阻断项）。 | 只读。 | 无（pull 模式——避免刷审计日志） |
 | `ocn readiness waive <checkId> --reason <r> --probe <cmd> [--json]` | 授予条件豁免（"带探针豁免"）：探针在授予时必须通过，每次跑门禁都会重新验证，项目离开当前 state 时豁免失效。仅限人工操作——永不通过 MCP 暴露。 | 把豁免写入 `.ocoding/readiness.json`。 | `readiness_waived` |
+| `ocn agent setup [--force] [--json]` | 一条命令完成 Claude Code 接线（AM-006）：`.claude/settings.json` 写入 Stop/PostToolUse 钩子（仅合并、带 `command -v ocn` 守卫）、`.claude/ocn.md` 治理契约、`CLAUDE.md` 追加导入（仅一次）、`/ocn-next` 斜杠命令。幂等；仅限人工。 | 写入/合并四个 `.claude` 文件面；永不覆盖用户已有条目。 | `agent_setup_completed` |
+| `ocn hook stop` / `ocn hook post-edit` | 机器侧 Claude Code 钩子处理器（由 agent 宿主调用，非人工）：`stop` 在 agent 想结束回合时重跑门禁、不过则带 fix hints 顶回；`post-edit` 跑 `commands.lint`/`typecheck` 给即时反馈。设计为 fail-open。 | 原始钩子契约 IO（stdin JSON 入；block JSON / exit 2 + stderr 出）。 | 经复用的 check 引擎产生门禁审计事件 |
 
 `doc create` 的 `<type>`（SOP 0.4.0 为全部 20 个 step 都提供了模板）：
 `project-brief`、`scope`、`prd`、`acceptance-criteria`、`technical-architecture`、
@@ -1226,6 +1239,14 @@ planning 门禁之外，OCN 现在还能读"实现期证据"（git、GitHub PR�
 | `ocn verdict draft [--json] [--mode ...] [--pr <n>]` | 输出基于证据的最终判定草稿。 | 类别 `continue-work` / `request-changes` / `ready-for-review` / `ready-to-merge` / `hold-for-manual-review`，含按字典序排序的 supports / blocks / warnings。 |
 
 6 条命令按设计都是只读的：不写 `.ocoding/`、`docs/`、任何项目文件；不做 git 写操作；gh 仅 `pr view` / `auth status`；不调 LLM。`--mode` 可选 `local | pr | combined`；`--pr <n>` 在 `pr` / `combined` 模式下启用 GitHub 证据。各 MVP 实现报告见 [`docs/reports/2026-05-02-execution-navigator-*.md`](./docs/reports/) 与上面的收口报告。
+
+#### F.3 Claude Code 集成——一条命令（AM-006 / DEC-031）
+
+```bash
+ocn agent setup      # 幂等；提交 .claude/ 与 CLAUDE.md 即可全队共享
+```
+
+把整套第二阶段 runbook 机械化接线：**Stop 钩子**在 agent 想结束回合时重跑 `ocn check`（不过则把 fix hints 顶回去继续修；带防环旗标、fail-open），**PostToolUse 钩子**在每次 Edit/Write 后跑你在 `.ocoding/config.yaml` 配置的 `commands.lint`/`commands.typecheck`，**`.claude/ocn.md` 治理契约**经 CLAUDE.md 导入随每个会话加载，**`/ocn-next`** 自动注入 `ocn brief` + `ocn next-prompt` 并开始任务。钩子命令带 `command -v ocn` 守卫，没装 ocn 的队友完全不受影响。接线后每个任务人只剩两个动作：Claude Code 里 `/ocn-next` → 终端里 review + `ocn advance`。
 
 ### G. MCP 工具
 
@@ -1322,7 +1343,8 @@ GA Prep 阶段是从 Phase 2 收口走到 beta candidate 准备的一段文档/�
 **Execution Navigator MVP 系列（DEC-024 之后）**
 
 - **MVP 1–6 已完成**——§F.2 的 6 条 Execution Navigator 命令在 PR #63–#68 中陆续 ship 并合入 main；横切 review 修复在 PR #69 落地（[报告](./docs/reports/2026-05-04-execution-navigator-review-fixes-pr-a.md)）。系列收口：[`docs/reports/2026-05-04-execution-navigator-verdict-draft.md`](./docs/reports/2026-05-04-execution-navigator-verdict-draft.md)。
-- 当前外部包：`0.4.0-beta.1`——Planning Gatekeeper（§F.1）+ Execution Evidence Navigator（§F.2）+ Logic Backbone DESIGN 门禁 + Readiness Backbone 横切门禁。
+- 当前外部包：`0.4.0-beta.2`——Planning Gatekeeper（§F.1）+ Execution Evidence Navigator（§F.2）+ Logic Backbone DESIGN 门禁 + Readiness Backbone 横切门禁。
+- **Claude Code 集成在 `0.4.0-beta.2` ship**——[AM-006](./docs/amendments/2026-06-12-claude-code-agent-integration-amendment.md) / DEC-031：`ocn agent setup` 一条幂等命令接线钩子 + 治理契约 + `/ocn-next`；执行逻辑以 `ocn hook stop|post-edit` 内置在 OCN 中（fail-open、防环）。
 - **Readiness Backbone 在 `0.4.0-beta.1` ship**——SOP 0.4.0（[AM-004](./docs/amendments/2026-06-11-readiness-backbone-amendment.md) / DEC-028）新增基于角色的横切就绪门禁：从 54 个精选 IT 角色提炼出 55 条可证伪检查，在 section + logic 门禁之后于 `ocn check` / `ocn gate` / `ocn advance` 中运行。开放世界语义（`FAIL` **和 `UNKNOWN`** 都阻断）；判定账本持久化到 `.ocoding/readiness.json`；新增 `ocn readiness list` / `ocn readiness waive`（带探针豁免）命令；旧项目用 `ocn sop upgrade` 迁移；运行时默认 profile 按 DEC-030 切到 0.4.0。
 - **Logic Backbone 在 `0.3.0-beta.1` ship**——SOP 0.3.0 新增 DESIGN 阶段产物 `docs/07-logic-backbone.md`；`ocn check` 机器校验其计算/决策图（在缺角色、节点 id 重复、悬空引用、依赖循环、孤儿节点、未绑定触发器时阻断），通过则写出 `.ocoding/logic-graph.json`，`ocn brief` 把它汇总成执行顺序 + 触发器绑定。
 - 仍是 beta，非 GA。已在 Claude Desktop on Windows + WSL2 验证；Cursor 与 Cline 仍未验证。

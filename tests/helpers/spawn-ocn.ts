@@ -19,6 +19,9 @@ export interface SpawnOcnOptions {
   cwd: string;
   env?: NodeJS.ProcessEnv;
   timeoutMs?: number;
+  /** AM-006 — piped to the child's stdin then closed (hook-handler tests).
+   *  Default behavior (undefined) keeps stdin "ignore" → immediate EOF. */
+  stdin?: string;
 }
 
 // Launches the OCN CLI in a child Node.js process.
@@ -34,15 +37,18 @@ export async function spawnOcn(
   return new Promise<SpawnOcnResult>((resolvePromise, rejectPromise) => {
     const useDist = existsSync(DIST_ENTRY);
     const command = useDist ? process.execPath : TSX_BIN;
-    const commandArgs = useDist
-      ? [DIST_ENTRY, ...args]
-      : [SRC_ENTRY, ...args];
+    const commandArgs = useDist ? [DIST_ENTRY, ...args] : [SRC_ENTRY, ...args];
 
     const child = spawn(command, commandArgs, {
       cwd: opts.cwd,
       env: { ...process.env, ...opts.env, NODE_NO_WARNINGS: "1" },
-      stdio: ["ignore", "pipe", "pipe"],
+      stdio: [opts.stdin !== undefined ? "pipe" : "ignore", "pipe", "pipe"],
     });
+
+    if (opts.stdin !== undefined) {
+      child.stdin?.write(opts.stdin);
+      child.stdin?.end();
+    }
 
     let stdout = "";
     let stderr = "";
