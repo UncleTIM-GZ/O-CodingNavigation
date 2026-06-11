@@ -3127,3 +3127,56 @@ have lied about runtime behavior.
 
 - SHIP/REFLECT steps (still stubs), `sop version`/`sop diff` (OCN-2-SOP-VERSION).
 - Readiness rulebook content changes — rulebook ships as validated in the Lattice run.
+
+## DEC-031｜Productize the Claude Code integration runbook (`ocn agent setup` + `ocn hook *`)
+
+Date: 2026-06-12
+Implements: AM-006 (`docs/amendments/2026-06-12-claude-code-agent-integration-amendment.md`)
+
+### Status
+
+Accepted — implemented and tested.
+
+### Context
+
+OCN generated agent briefs and enforced gates, but connecting them to a live
+Claude Code session was a hand-maintained runbook (hooks, CLAUDE.md contract,
+per-task prompt ritual). Hand-wiring drifts and gets skipped. The product
+thesis — discipline must be mechanically enforced, not remembered — applies
+to the integration itself.
+
+### Decision
+
+One idempotent command, `ocn agent setup`, wires a project; the enforcement
+logic ships as OCN subcommands (`ocn hook stop|post-edit`), NOT as generated
+shell scripts — upgradeable with the package, unit-testable, cross-platform.
+After setup the human workflow is two actions per task: `/ocn-next` in
+Claude Code, then review + `ocn advance` in the terminal.
+
+### Sub-decisions
+
+1. **Fail-open hooks.** Loop protection via `stop_hook_active`; uninitialized
+   dirs silent; engine errors allow-with-warning. A broken hook must never
+   wedge a session; `ocn check` stays the authoritative verdict.
+2. **`.claude/settings.json` (shared, committed) over settings.local.json**
+   — user decision: team-wide effect on clone. Hook commands carry a
+   `command -v ocn` guard so teammates without ocn get silent no-ops.
+3. **Merge-not-overwrite.** Ours-detection = command string contains
+   `"ocn hook"`; customized variants are left untouched; unrelated keys
+   never touched; no-change runs skip the write (stable mtime). Malformed
+   JSON aborts before ANY write; `--force` backs up to `.bak` then rewrites.
+4. **PostToolUse perf gates.** New optional `commands.lint` (any file) and
+   `commands.typecheck` (TS files only) in config.yaml; advisory only —
+   outside the R4 frozen readiness snapshot. 60s timeout, output tail ≤2000.
+5. **Hook IO bypasses the CommandResult envelope** (raw Claude Code
+   contract); documented as AM-006 divergence from docs/06 §2.5.
+6. **Not exposed over MCP.** Setup writes config (human-only, like init);
+   hooks are called by the agent's host process, not the model.
+7. Governance content ships as OCN-owned `.claude/ocn.md` imported from
+   CLAUDE.md (append-once), zh-primary with bilingual key terms.
+
+### Out of scope
+
+- Other agents (Cursor/Codex wiring) — `agent` command group leaves room.
+- Auto-advance / autonomous looping — advance stays human-only by design.
+- `ocn init --with-agent` convenience flag — possible follow-up.
