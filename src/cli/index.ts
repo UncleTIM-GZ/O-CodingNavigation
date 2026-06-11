@@ -8,6 +8,7 @@ import { registerEvidenceCommand } from "./commands/evidence.js";
 import { registerExecCommand } from "./commands/exec.js";
 import { registerGateCommand } from "./commands/gate.js";
 import { registerGithubCommand } from "./commands/github.js";
+import { registerHookCommand } from "./commands/hook.js";
 import { registerInitCommand } from "./commands/init.js";
 import { registerNextPromptCommand } from "./commands/next-prompt.js";
 import { registerReadinessCommand } from "./commands/readiness.js";
@@ -35,6 +36,8 @@ registerAdvanceCommand(program);
 registerReadinessCommand(program);
 // DEC-029 / AM-005 — SOP profile upgrade (forward-only, human-only).
 registerSopCommand(program);
+// AM-006 / DEC-031 — Claude Code agent integration (hook handlers).
+registerHookCommand(program);
 // Execution Navigator skeleton (DEC-024 PR 1) — read-only, no evidence ingestion yet.
 registerExecCommand(program);
 registerGithubCommand(program);
