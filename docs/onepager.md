@@ -1,6 +1,6 @@
 # O'CodingNavigator (OCN) — 一页纸介绍 + 操作手册
 
-> 版本：`0.4.0-beta.0` · 适用范围：tester / 内部使用 · 状态：beta，非 GA
+> 版本：`0.4.0-beta.1` · 适用范围：tester / 内部使用 · 状态：beta，非 GA
 
 ---
 
@@ -8,7 +8,7 @@
 
 本地优先、MCP-first、状态机驱动的 AI Coding 工作流操作系统。CLI `ocn` + MCP 服务 `ocn-mcp`。所有数据落本地文件（Markdown + JSON + JSONL + YAML），无云、无数据库、不调 LLM。Apache-2.0。
 
-当前版本：`0.4.0-beta.0`（npm `latest` 与 `beta` 同指此版）。仅在 Claude Desktop on Windows + WSL2 验证。Cursor / Cline 未验证。仍是 beta，不是 GA。
+当前版本：`0.4.0-beta.1`（npm `latest` 与 `beta` 同指此版）。仅在 Claude Desktop on Windows + WSL2 验证。Cursor / Cline 未验证。仍是 beta，不是 GA。
 
 ---
 
@@ -26,7 +26,7 @@
 
 Logic Backbone（SOP 0.3.0 新增）：DESIGN 阶段把系统的计算/决策图建成可机器校验的有向图，`ocn check` 拦截孤儿分数/悬空引用/环/未绑定触发，确保逻辑在 BUILD 前接好线。
 
-就绪骨干（Readiness Backbone，SOP 0.4.0 新增）：基于 54 个 IT 角色的 55 条可证伪就绪检查，作为横切门禁在 check / gate / advance 中运行；开放世界语义（UNKNOWN 也阻断），支持带探针的条件豁免（waive-with-probe），旧项目用 `ocn sop upgrade` 一键迁移。
+就绪主干（Readiness Backbone，SOP 0.4.0 新增）：基于 54 个 IT 角色的 55 条可证伪就绪检查，作为横切门禁在 check / gate / advance 中运行；开放世界语义（UNKNOWN 也阻断），支持带探针的条件豁免（waive-with-probe），旧项目用 `ocn sop upgrade` 一键迁移。
 
 ---
 
@@ -57,7 +57,7 @@ Logic Backbone（SOP 0.3.0 新增）：DESIGN 阶段把系统的计算/决策图
 ```bash
 npm install -g o-coding-navigation        # 推荐
 npm install -g o-coding-navigation@beta   # 显式固定 beta
-ocn --version                              # → 0.4.0-beta.0
+ocn --version                              # → 0.4.0-beta.1
 ```
 
 要求：Node.js ≥ 20。
