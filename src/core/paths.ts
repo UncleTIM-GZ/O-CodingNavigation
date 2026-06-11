@@ -22,4 +22,11 @@ export const Paths = {
   readinessFrozenFile: (root: string): string => join(root, ".ocoding", "readiness-frozen.json"),
   docsDir: (root: string): string => join(root, "docs"),
   prdFile: (root: string): string => join(root, "docs", "02-prd.md"),
+  // AM-006 — Claude Code agent integration surface (written by `ocn agent setup`).
+  claudeDir: (root: string): string => join(root, ".claude"),
+  claudeSettings: (root: string): string => join(root, ".claude", "settings.json"),
+  claudeOcnMd: (root: string): string => join(root, ".claude", "ocn.md"),
+  claudeCommandsDir: (root: string): string => join(root, ".claude", "commands"),
+  claudeOcnNextCommand: (root: string): string => join(root, ".claude", "commands", "ocn-next.md"),
+  projectClaudeMd: (root: string): string => join(root, "CLAUDE.md"),
 } as const;
