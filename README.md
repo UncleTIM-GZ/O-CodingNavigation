@@ -531,6 +531,7 @@ All commands accept `--json` to emit a machine-readable `CommandResult` envelope
 | `ocn check [--json]` | Check the current step's artifact against its required sections. | Read-only. | `artifact_gate_run` + `artifact_gate_passed` / `artifact_gate_blocked` |
 | `ocn gate [--json]` | Read-only artifact gate aggregation for the current step. Same emission as `check`; never mutates state. | Read-only. | `artifact_gate_*` (no `correlationId`) |
 | `ocn advance [--json]` | Run gate, then advance to the next step on pass. Lock-protected; never partial. | Writes `state.json` (atomic). | Full advance chain with shared `correlationId` |
+| `ocn sop upgrade [--target <version>] [--plan] [--json]` | Move the project's pinned SOP profile forward to a newer bundled version (forward-only; `config.yaml` preserved). `--plan` is a read-only dry-run. | Apply rewrites `.ocoding/` snapshots + `state.json` (atomic, lock-protected); `--plan` writes nothing. | `sop_upgraded` (apply) / `sop_version_diff_detected` (plan) |
 
 `<type>` for `doc create` (SOP 0.3.0 ships templates for all 20 steps):
 `project-brief`, `scope`, `prd`, `acceptance-criteria`, `technical-architecture`,

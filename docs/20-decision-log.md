@@ -3032,3 +3032,58 @@ machine projection; `ocn brief` lists open items + fix_hints as the BUILD workli
 - Engine implementation (separate authorized build). This DEC accepts the design only.
 - Concrete extractors for derived predicates (e.g. `each_acceptance_scenario_has_test_ref`) — highest-risk items, spike first (see AM-004 Open design points).
 - 0.1.0–0.3.0 unchanged (frozen).
+
+## DEC-029｜`ocn sop upgrade` apply mode — forward-only SOP re-pin for initialized projects
+
+Date: 2026-06-11
+Implements: AM-005 (`docs/amendments/2026-06-11-sop-upgrade-apply-amendment.md`)
+
+### Status
+
+Accepted — implemented and tested.
+
+### Context
+
+Projects pin their SOP profile at `ocn init`; when the installed package ships a newer
+profile (0.4.0, AM-004), an existing project had no upgrade path — readiness commands
+blocked with `ERR_SOP_VERSION` and suggested a re-init that `ocn init` refuses on an
+initialized directory. The "no old projects exist" assumption (AM-003 migration note)
+no longer holds: dogfooded 0.3.0 repos exist and need the readiness gate. The frozen
+contract (`docs/06-api-contract.md` §23) defined only the read-only
+`ocn sop upgrade --plan`; apply mode is the divergence authorized here.
+
+### Decision
+
+Ship `ocn sop upgrade [--target <version>] [--plan] [--json]` with an apply mode:
+under `.ocoding/.lock`, re-render the profile-owned snapshots and move
+`project.sopProfileId/sopProfileVersion` via the atomic state-store write, then audit
+`sop_upgraded` (push). `--plan` stays read-only and audits `sop_version_diff_detected`
+per §23.5.
+
+### Sub-decisions
+
+1. **Forward-only.** Downgrade blocks with `ERR_SOP_VERSION` (exit 5); older profiles
+   require a fresh `ocn init --sop-version <old>`. Idempotent no-op at target (exit 0).
+2. **Positional-cursor compatibility rule.** `currentStateId`/`currentStepId` must
+   exist in the target profile (stable string IDs §4.1 make this checkable); steps
+   added after the cursor become pending, steps before it count as passed (no
+   `completedSteps` field exists). Unreachable for 0.3.0→0.4.0 (identical step data).
+3. **`config.yaml` is user-owned after init** (carries `commands.*` for readiness
+   probes) — preserved on upgrade, written only if missing. Profile-owned snapshots
+   (`sop/gates/artifacts/readiness-rules.yaml`) rewritten unconditionally (heals
+   drift). Snapshot rendering extracted to `src/core/sop/snapshot.ts`, shared with init.
+4. **CLI-only / human-only** (§4.8 — never over MCP). Misleading `ERR_SOP_VERSION`
+   hints in readiness/waive/detect-version now point at `ocn sop upgrade`.
+5. Audit taxonomy: `sop_version_diff_detected` + `sop_upgraded` added to
+   `src/types/audit.ts` (already in docs/05 §12.15 taxonomy).
+6. Default `--target` = runtime default profile (`0.3.0` today); upgrading to 0.4.0
+   requires explicit `--target 0.4.0` until the 0.4.0 cutover DEC flips the default.
+
+### Out of scope
+
+- `ocn sop version` / `ocn sop diff` (OCN-2-SOP-VERSION backlog) and the optional
+  `--plan` save file (`.ocoding/upgrade-plan-<ts>.json`).
+- Runtime pin resolution for 0.1.0–0.3.0 pins (`resolveProfileForProject` still falls
+  back to the default profile below 0.4.0); upgrading to 0.4.0 makes the pin honored.
+- Migration framework / content transforms — the positional model makes them unnecessary
+  for shipped profiles.

@@ -45,8 +45,8 @@ export async function listReadiness(opts: {
     return blocked(
       "ERR_SOP_VERSION",
       msg(
-        `SOP profile ${profile.version} has no readiness rulebook (needs 0.4.0+; re-init with \`ocn init --sop-version 0.4.0\`).`,
-        `SOP profile ${profile.version} 不含就绪规则手册（需 0.4.0+；可用 \`ocn init --sop-version 0.4.0\` 初始化）。`,
+        `SOP profile ${profile.version} has no readiness rulebook (needs 0.4.0+; run \`ocn sop upgrade --target 0.4.0\`).`,
+        `SOP profile ${profile.version} 不含就绪规则手册（需 0.4.0+；可运行 \`ocn sop upgrade --target 0.4.0\` 升级）。`,
       ),
     );
   }

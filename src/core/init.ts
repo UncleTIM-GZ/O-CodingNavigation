@@ -8,6 +8,7 @@ import { msg } from "./i18n.js";
 import { LockTimeoutError, withLock } from "./state/lock.js";
 import { writeStateUnlocked } from "./state/state-store.js";
 import { loadSopProfile, loadSopProfileByVersion, type SopProfileVersion } from "./sop/loader.js";
+import { writeProfileSnapshots } from "./sop/snapshot.js";
 import { createAuditEvent, makeLockAuditHook, safeAudit } from "./audit/index.js";
 
 export interface InitOptions {
@@ -104,21 +105,10 @@ export async function initProject(opts: InitOptions): Promise<CommandResult<Init
           return;
         }
         await fs.mkdir(Paths.docsDir(opts.cwd), { recursive: true });
-        await fs.writeFile(Paths.sopFile(opts.cwd), profile.sopYaml, "utf8");
-        await fs.writeFile(Paths.gatesFile(opts.cwd), profile.gatesYaml, "utf8");
-        // P1-003 — persist artifacts.yaml so the on-disk snapshot fully
-        // expresses the runtime profile (artifact path + requiredForSteps
-        // for every step the runtime claims to know about). Pre-P1-003
-        // only sop.yaml and gates.yaml were written, leaving the artifact
-        // map invisible to anything that read .ocoding/ as ground truth.
-        await fs.writeFile(Paths.artifactsFile(opts.cwd), profile.artifactsYaml, "utf8");
-        await fs.writeFile(Paths.configFile(opts.cwd), profile.defaultConfigYaml, "utf8");
-        // AM-004 — profiles that bundle a readiness rulebook get it
-        // snapshotted alongside sop/gates/artifacts so .ocoding/ fully
-        // expresses the runtime profile (0.1.0–0.3.0 write nothing here).
-        if (profile.readinessYaml !== undefined) {
-          await fs.writeFile(Paths.readinessRulesFile(opts.cwd), profile.readinessYaml, "utf8");
-        }
+        // P1-003 / AM-004 / DEC-029 — the full snapshot surface (sop, gates,
+        // artifacts, config, readiness-rules) is rendered by the shared
+        // snapshot writer so init and `sop upgrade` cannot drift apart.
+        await writeProfileSnapshots(opts.cwd, profile, { configMode: "write" });
         // We already hold the outer lock; use the unlocked variant to avoid
         // a self-acquire deadlock.
         await writeStateUnlocked(opts.cwd, state);

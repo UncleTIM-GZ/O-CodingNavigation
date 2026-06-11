@@ -201,6 +201,15 @@ function getProfile(version: SopProfileVersion): SopProfile {
   return built;
 }
 
+/** DEC-029 — every bundled profile version, in registry order. */
+export const KNOWN_SOP_PROFILE_VERSIONS = Object.keys(
+  PROFILE_SOURCES,
+) as readonly SopProfileVersion[];
+
+export function isKnownSopProfileVersion(version: string): version is SopProfileVersion {
+  return version in PROFILE_SOURCES;
+}
+
 /**
  * Default runtime profile — flipped to 0.3.0 (AM-003 / DEC-025); the prior
  * default was 0.2.0 (DEC-023). Every runtime path (init, status, brief, check,

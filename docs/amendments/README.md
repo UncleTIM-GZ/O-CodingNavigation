@@ -66,6 +66,9 @@ Active divergences from `docs/00-08`. Listed newest-first by amendment ID.
 
 | ID | Date | Title | Status | Supersedes | Applies to |
 |---|---|---|---|---|---|
+| [AM-005](./2026-06-11-sop-upgrade-apply-amendment.md) | 2026-06-11 | `ocn sop upgrade` apply mode (forward-only SOP re-pin) | Accepted | None (extends frozen §23 `--plan`-only contract) | `docs/06-api-contract.md` §10/§23, `docs/05-data-model.md` §12.15, `src/core/sop/upgrade.ts`, `src/cli/commands/sop.ts` |
+| [AM-004](./2026-06-11-readiness-backbone-amendment.md) | 2026-06-11 | Readiness Backbone (role-based cross-cutting readiness gate, SOP 0.4.0) | Accepted | None (additive) | `sops/default-ai-coding-sop/0.4.0/*`, `src/core/readiness/*`, `src/core/gate/readiness-gate.ts`, `docs/05`/`06` (gate + audit additions) |
+| [AM-003](./2026-06-03-logic-backbone-amendment.md) | 2026-06-03 | Logic Backbone (machine-verifiable computation/decision graph, SOP 0.3.0) | Active | None (additive) | `docs/07-logic-backbone.md` slot (doc renumber), `src/core/gate/logic-backbone-validator.ts`, SOP 0.3.0 profile |
 | [AM-002](./2026-04-28-decision-log-path-amendment.md) | 2026-04-28 | Decision-log canonical path move (`19-` → `20-`) | Accepted | `docs/19-decision-log.md` (path) | `docs/00-08` (references), plans, `CLAUDE.md`, `.claude/rules.md`, `.claude/anti-patterns.md`, `implementation-notes.md` |
 | [AM-001](./2026-04-28-audit-storage-path-amendment.md) | 2026-04-28 | Audit storage path reconciliation (`events/` → `audit/`, `docs/21-` → `docs/22-`) | Active | `docs/05-data-model.md` (audit paths), `docs/06-api-contract.md` (audit paths) | `src/core/audit/audit-paths.ts`, audit dual-track persistence |
 

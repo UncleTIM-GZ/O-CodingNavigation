@@ -28,6 +28,9 @@ export const AuditEventType = z.enum([
   // SOP 0.4.0 (AM-004) readiness P4/P5
   "readiness_waived",
   "readiness_config_changed",
+  // DEC-029 / AM-005 — `ocn sop upgrade` (plan + apply)
+  "sop_version_diff_detected",
+  "sop_upgraded",
 ]);
 export type AuditEventType = z.infer<typeof AuditEventType>;
 

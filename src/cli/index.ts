@@ -11,6 +11,7 @@ import { registerGithubCommand } from "./commands/github.js";
 import { registerInitCommand } from "./commands/init.js";
 import { registerNextPromptCommand } from "./commands/next-prompt.js";
 import { registerReadinessCommand } from "./commands/readiness.js";
+import { registerSopCommand } from "./commands/sop.js";
 import { registerStatusCommand } from "./commands/status.js";
 import { registerVerdictCommand } from "./commands/verdict.js";
 import { registerVerifyCommand } from "./commands/verify.js";
@@ -32,6 +33,8 @@ registerGateCommand(program);
 registerAdvanceCommand(program);
 // SOP 0.4.0 (AM-004) — role-based readiness checks.
 registerReadinessCommand(program);
+// DEC-029 / AM-005 — SOP profile upgrade (forward-only, human-only).
+registerSopCommand(program);
 // Execution Navigator skeleton (DEC-024 PR 1) — read-only, no evidence ingestion yet.
 registerExecCommand(program);
 registerGithubCommand(program);

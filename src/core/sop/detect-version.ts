@@ -97,8 +97,8 @@ export async function detectSopVersion(
     let message;
     if (data.diffDetected) {
       message = msg(
-        `SOP version diff detected: locked ${lockedVersion}, current ${currentVersion}.`,
-        `检测到 SOP 版本差异：锁定版本 ${lockedVersion}，当前内置版本 ${currentVersion}。`,
+        `SOP version diff detected: locked ${lockedVersion}, current ${currentVersion}. Run \`ocn sop upgrade\` to move the pin.`,
+        `检测到 SOP 版本差异：锁定版本 ${lockedVersion}，当前内置版本 ${currentVersion}。可运行 \`ocn sop upgrade\` 迁移锁定版本。`,
       );
     } else if (data.snapshotDriftDetected) {
       message = msg(
