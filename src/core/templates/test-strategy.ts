@@ -35,4 +35,20 @@ export const testStrategyTemplate = `# Test Strategy｜测试策略
 ## Non-testable Risks｜不可测试风险
 
 <!-- Risks the test suite cannot catch — escalate to manual review. -->
+
+## Readiness Declarations｜就绪声明
+
+<!-- SOP 0.4.0 readiness block — machine source for this doc's readiness
+     fields (inert on older profiles). R1: fill pointers/parameters only
+     (numbers, IDs, thresholds, paths) — never conclusions; booleans are
+     schema-illegal. Unfilled fields evaluate as UNKNOWN (silence is never
+     pass). Uncomment the example lines under \`fields:\` with real values. -->
+
+\`\`\`ocn-readiness
+artifact: artifact_test_strategy
+fields: {}
+# 填法（取消注释并填真实值）:
+# fields:
+#   coverage_target: "行覆盖 ≥80%"             # numeric_with_unit（拒绝 TBD）
+\`\`\`
 `;

@@ -10,7 +10,8 @@ import { parseHeadings } from "./artifact/markdown-parser.js";
 import { createAuditEvent, safeAudit } from "./audit/index.js";
 import { msg } from "./i18n.js";
 import { blocked, ok } from "./result.js";
-import { loadSopProfile } from "./sop/loader.js";
+import { readinessStepBlockOrNull } from "./gate/readiness-step.js";
+import { resolveProfileForProject } from "./sop/loader.js";
 import { StateInvalidError, StateNotFoundError, readState } from "./state/state-store.js";
 
 export interface CheckOptions {
@@ -136,7 +137,8 @@ export async function checkCurrentArtifact(opts: CheckOptions): Promise<CommandR
     throw err;
   }
 
-  const profile = loadSopProfile();
+  // AM-004 — honor a 0.4.0+ pin (readiness); older pins keep the default.
+  const profile = resolveProfileForProject(state.project.sopProfileVersion);
   const stepId = state.currentStepId;
   const stateId = state.currentStateId;
 
@@ -163,6 +165,37 @@ export async function checkCurrentArtifact(opts: CheckOptions): Promise<CommandR
     command: "check",
   };
 
+  // SOP 0.4.0 (AM-004) — readiness cross-cutting gate, shared with the gate
+  // runner so the two paths cannot drift. Cross-cutting: runs whether or not
+  // the step has a required artifact. Open world: FAIL and UNKNOWN both block
+  // (ERR_GATE_FAILED, exit 1, with fix_hints).
+  const readinessGateOrNull = (
+    blockedArtifactPath: string,
+  ): Promise<CommandResult<CheckData> | null> =>
+    readinessStepBlockOrNull<CheckData>({
+      cwd: opts.cwd,
+      profile,
+      state,
+      executeCommands: true,
+      buildBlockedData: () => ({
+        artifactPath: blockedArtifactPath,
+        status: "blocked",
+        missingRequiredSectionIds: [],
+      }),
+      emitAudit: (message, ids) =>
+        safeAudit(
+          opts.cwd,
+          createAuditEvent({
+            ...baseAuditCtx,
+            eventType: "artifact_gate_blocked",
+            result: "blocked",
+            message,
+            relatedArtifactIds: [artifactId],
+            data: { artifactPath: blockedArtifactPath, status: "blocked", blockingCheckIds: ids },
+          }),
+        ),
+    });
+
   // Step has no required artifact (e.g. state_build / state_verify stubs in
   // v1.0). Mirror runGate: emit gate_run + gate_passed and return ok with
   // status=not_applicable rather than blocking.
@@ -186,6 +219,8 @@ export async function checkCurrentArtifact(opts: CheckOptions): Promise<CommandR
         relatedArtifactIds: [artifactId],
       }),
     );
+    const readinessBlock = await readinessGateOrNull("");
+    if (readinessBlock !== null) return readinessBlock;
     await safeAudit(
       opts.cwd,
       createAuditEvent({
@@ -279,6 +314,10 @@ export async function checkCurrentArtifact(opts: CheckOptions): Promise<CommandR
       missingRequiredSectionIds: missing,
     } satisfies CheckData);
   }
+
+  // SOP 0.4.0 (AM-004) — readiness cross-cutting gate, after the section gate.
+  const readinessBlock = await readinessGateOrNull(artifactPath);
+  if (readinessBlock !== null) return readinessBlock;
 
   const message = passMessage(stepId);
   await emitGateResult(

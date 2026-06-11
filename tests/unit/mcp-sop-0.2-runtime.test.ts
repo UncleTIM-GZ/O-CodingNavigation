@@ -12,13 +12,13 @@ import { whereAmI } from "../../src/mcp/tools/where-am-i.js";
 import { initProject } from "../../src/core/init.js";
 import { createTempProject, type TempProject } from "../helpers/temp-project.js";
 
-// SOP 0.2.0 PR 4 (DEC-023) — runtime cutover. MCP tools must reflect 0.2.0
-// by default because every runtime path now goes through the 0.2.0 profile.
+// SOP 0.4.0 (DEC-030) — runtime cutover. MCP tools must reflect 0.4.0 by
+// default because every runtime path now goes through the 0.4.0 profile.
 // External schemas (tool names, parameter shapes, response shapes) remain
 // unchanged; only `create_artifact.artifactType` enum was widened to cover
-// all 19 0.2.0 ids.
+// all 19 0.2.0 ids (plus the 0.3.0 logic-backbone).
 
-describe("MCP runtime under 0.2.0 cutover", () => {
+describe("MCP runtime under 0.4.0 cutover (DEC-030)", () => {
   let project: TempProject;
 
   beforeEach(async () => {
@@ -30,22 +30,22 @@ describe("MCP runtime under 0.2.0 cutover", () => {
     await project.cleanup();
   });
 
-  it("navigator.where_am_i reports sopProfileVersion 0.3.0 for a fresh project", async () => {
+  it("navigator.where_am_i reports sopProfileVersion 0.4.0 for a fresh project (DEC-030)", async () => {
     const result = await whereAmI.handler({ projectRoot: project.cwd });
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.data?.project.sopProfileVersion).toBe("0.3.0");
+      expect(result.data?.project.sopProfileVersion).toBe("0.4.0");
       expect(result.data?.currentStateId).toBe("state_discovery");
       expect(result.data?.currentStepId).toBe("step_project_brief");
       expect(result.data?.currentArtifactPath).toMatch(/00-project-brief\.md$/);
     }
   });
 
-  it("navigator.brief reflects the 0.3.0 current step + artifact", async () => {
+  it("navigator.brief reflects the 0.4.0 current step + artifact (DEC-030)", async () => {
     const result = await brief.handler({ projectRoot: project.cwd });
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.data?.project.sopProfileVersion).toBe("0.3.0");
+      expect(result.data?.project.sopProfileVersion).toBe("0.4.0");
       expect(result.data?.currentStepId).toBe("step_project_brief");
       // 0.2.0 project_brief requires 7 sections; missing artifact reports them.
       expect(result.data?.currentArtifactStatus).toBe("missing");
@@ -53,12 +53,12 @@ describe("MCP runtime under 0.2.0 cutover", () => {
     }
   });
 
-  it("navigator.detect_sop_version reports 0.3.0 / 0.3.0 with no diff", async () => {
+  it("navigator.detect_sop_version reports 0.4.0 / 0.4.0 with no diff (DEC-030)", async () => {
     const result = await detectSopVersionTool.handler({ projectRoot: project.cwd });
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.data?.lockedSopProfileVersion).toBe("0.3.0");
-      expect(result.data?.currentOcnSopProfileVersion).toBe("0.3.0");
+      expect(result.data?.lockedSopProfileVersion).toBe("0.4.0");
+      expect(result.data?.currentOcnSopProfileVersion).toBe("0.4.0");
       expect(result.data?.diffDetected).toBe(false);
       expect(result.data?.snapshotDriftDetected).toBe(false);
       expect(result.data?.snapshotDriftReason).toBe("snapshot_in_sync");
@@ -84,16 +84,24 @@ describe("MCP runtime under 0.2.0 cutover", () => {
     }
   });
 
-  it("navigator.run_gate passes for project_brief once the bundled template is created", async () => {
-    await createArtifactTool.handler({
-      projectRoot: project.cwd,
-      artifactType: "project-brief",
-    });
-    const result = await runGateTool.handler({ projectRoot: project.cwd });
-    expect(result.ok).toBe(true);
-    if (result.ok) {
-      expect(result.data?.status).toBe("pass");
-      expect(result.data?.currentStepId).toBe("step_project_brief");
+  it("navigator.run_gate passes for project_brief once the bundled template is created (pinned 0.3.0)", async () => {
+    // Pinned to 0.3.0 — this exercises the section-gate pass mechanics on the
+    // frozen 0.3.0 profile; the 0.4.0 readiness gate blocks a fresh project.
+    const pinned = await createTempProject("ocn-mcp-sop030-gate-");
+    try {
+      await initProject({ cwd: pinned.cwd, tier: "minimal", sopVersion: "0.3.0" });
+      await createArtifactTool.handler({
+        projectRoot: pinned.cwd,
+        artifactType: "project-brief",
+      });
+      const result = await runGateTool.handler({ projectRoot: pinned.cwd });
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.data?.status).toBe("pass");
+        expect(result.data?.currentStepId).toBe("step_project_brief");
+      }
+    } finally {
+      await pinned.cleanup();
     }
   });
 

@@ -13,7 +13,9 @@ const runGateSchema = z.object(runGateInputShape);
 export const runGateTool = {
   name: "navigator.run_gate",
   description:
-    "Run the artifact gate against the current step (read-only — does NOT mutate state).",
+    "Run the artifact gate against the current step (read-only — does NOT mutate state, " +
+    "and does NOT execute project build/test commands; command-backed readiness checks " +
+    "report UNKNOWN over MCP).",
   inputShape: runGateInputShape,
   async handler(args: unknown): Promise<MCPToolResult<GateResult>> {
     try {
@@ -29,6 +31,8 @@ export const runGateTool = {
         actor: "ai_agent",
         source: "core",
         command: "mcp.run_gate",
+        // W1 — MCP is read-only: never execute the project's shell commands.
+        executeCommands: false,
       });
       return mcpFromCommandResult(result);
     } catch (err) {

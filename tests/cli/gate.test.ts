@@ -10,12 +10,15 @@ import { createTempProject, type TempProject } from "../helpers/temp-project.js"
 // applies. Use the bundled PRD template (covers all 0.2.0 sections) for
 // pass cases and an empty body for blocked cases.
 
-describe("ocn gate", () => {
+describe("ocn gate (pinned 0.3.0)", () => {
   let project: TempProject;
 
   beforeEach(async () => {
+    // Pinned 0.3.0 — section-gate mechanics, no readiness cross-cutting gate.
     project = await createTempProject();
-    await spawnOcn(["init", "--tier", "minimal"], { cwd: project.cwd });
+    await spawnOcn(["init", "--tier", "minimal", "--sop-version", "0.3.0"], {
+      cwd: project.cwd,
+    });
   });
 
   afterEach(async () => {

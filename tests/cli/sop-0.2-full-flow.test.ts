@@ -145,19 +145,21 @@ describe("ocn — SOP 0.3.0 full 20-step flow (CLI)", () => {
     await project.cleanup();
   });
 
-  it("fresh `ocn init` writes 0.3.0 state.json + snapshot files", async () => {
+  // SOP 0.4.0 (DEC-030) — fresh default init now pins 0.4.0 and snapshots
+  // the readiness rulebook alongside the classic snapshot files.
+  it("fresh `ocn init` writes 0.4.0 state.json + snapshot files", async () => {
     const initRes = await spawnOcn(["init", "--tier", "minimal"], { cwd: project.cwd });
     expect(initRes.exitCode).toBe(0);
 
     const state = JSON.parse(
       await fs.readFile(join(project.cwd, ".ocoding", "state.json"), "utf8"),
     );
-    expect(state.project.sopProfileVersion).toBe("0.3.0");
+    expect(state.project.sopProfileVersion).toBe("0.4.0");
     expect(state.currentStateId).toBe("state_discovery");
     expect(state.currentStepId).toBe("step_project_brief");
 
     const sopYaml = await fs.readFile(join(project.cwd, ".ocoding", "sop.yaml"), "utf8");
-    expect(sopYaml).toMatch(/version: 0\.3\.0/);
+    expect(sopYaml).toMatch(/version: 0\.4\.0/);
     expect(sopYaml).toContain("step_final_build_verdict");
     expect(sopYaml).toContain("step_logic_backbone");
 
@@ -169,11 +171,15 @@ describe("ocn — SOP 0.3.0 full 20-step flow (CLI)", () => {
     expect(artifactsYaml).toContain("docs/07-logic-backbone.md");
 
     const configYaml = await fs.readFile(join(project.cwd, ".ocoding", "config.yaml"), "utf8");
-    expect(configYaml).toContain("0.3.0");
+    expect(configYaml).toContain("0.4.0");
+
+    await fs.access(join(project.cwd, ".ocoding", "readiness-rules.yaml"));
   }, 30_000);
 
-  it("walks all 20 steps via doc create + advance and terminates cleanly at step_final_build_verdict", async () => {
-    await spawnOcn(["init", "--tier", "minimal"], { cwd: project.cwd });
+  it("walks all 20 steps via doc create + advance and terminates cleanly at step_final_build_verdict (pinned 0.3.0)", async () => {
+    await spawnOcn(["init", "--tier", "minimal", "--sop-version", "0.3.0"], {
+      cwd: project.cwd,
+    });
 
     for (let i = 0; i < FULL_PATH.length; i++) {
       const here = FULL_PATH[i]!;
@@ -221,8 +227,10 @@ describe("ocn — SOP 0.3.0 full 20-step flow (CLI)", () => {
     expect(finalState.currentStepId).toBe("step_final_build_verdict");
   }, 240_000);
 
-  it("brief at step_final_build_verdict reports pass with no blockers", async () => {
-    await spawnOcn(["init", "--tier", "minimal"], { cwd: project.cwd });
+  it("brief at step_final_build_verdict reports pass with no blockers (pinned 0.3.0)", async () => {
+    await spawnOcn(["init", "--tier", "minimal", "--sop-version", "0.3.0"], {
+      cwd: project.cwd,
+    });
     // Walk to step_final_build_verdict via the canonical FULL_PATH.
     for (let i = 0; i < FULL_PATH.length; i++) {
       const here = FULL_PATH[i]!;

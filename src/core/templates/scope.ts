@@ -36,4 +36,23 @@ export const scopeTemplate = `# Scope｜范围
 
 <!-- The assumptions this scope rests on. Each one becomes a risk if it
      turns out false; track them so verification can challenge them. -->
+
+## Readiness Declarations｜就绪声明
+
+<!-- SOP 0.4.0 readiness block — machine source for this doc's readiness
+     fields (inert on older profiles). R1: fill pointers/parameters only
+     (numbers, IDs, thresholds, paths) — never conclusions; booleans are
+     schema-illegal. Unfilled fields evaluate as UNKNOWN (silence is never
+     pass). Uncomment the example lines under \`fields:\` with real values. -->
+
+\`\`\`ocn-readiness
+artifact: artifact_scope
+fields: {}
+# 填法（取消注释并填真实值）:
+# fields:
+#   stop_conditions: ["GA = 通过率 ≥95%"]      # count_gte:1（可量化）
+#   in_scope: "核心 Runtime / 门禁 / …"        # not_empty
+#   must_not_do: "永久不做清单见上文"          # not_empty
+#   mobile_target: "N/A 非移动项目"            # not_empty（或走 WAIVED）
+\`\`\`
 `;

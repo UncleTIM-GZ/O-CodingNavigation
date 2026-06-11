@@ -9,6 +9,9 @@ export interface SopProfile {
   readonly gatesYaml: string;
   readonly artifactsYaml: string;
   readonly defaultConfigYaml: string;
+  /** SOP 0.4.0 (AM-004) — bundled readiness rulebook YAML. Absent on
+   *  0.1.0–0.3.0 profiles; presence is what activates the readiness gate. */
+  readonly readinessYaml?: string;
 
   // PR #1 — required sections for a step (used by gate-runner + check)
   readonly requiredSectionsForStep: (stepId: string) => readonly RequiredSectionDef[];

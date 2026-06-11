@@ -37,7 +37,7 @@ The following were noted during implementation but explicitly NOT done in the sp
 - **OCN-2-MCP** — Minimal MCP Server with 7 tools (`navigator.where_am_i`, `navigator.brief`, `navigator.run_gate`, `navigator.create_artifact`, `navigator.capture_log`, `navigator.detect_sop_version`, `navigator.generate_next_prompt`). Never expose `navigator.advance_phase` in v1.0.
 - **OCN-2-DOCTOR** — `ocn doctor` validates state.json/sop.yaml/gates.yaml + recovers from `.ocoding/state.json.bak`.
 - **OCN-2-RESET** — `ocn reset --keep-docs / --keep-state / --hard` with twice-confirm and audit write.
-- **OCN-2-SOP-VERSION** — `ocn sop {version,diff,upgrade --plan}`. SOP loader must accept multiple profile versions and produce a structured diff.
+- **OCN-2-SOP-VERSION** — `ocn sop {version,diff,upgrade --plan}`. SOP loader must accept multiple profile versions and produce a structured diff. *Partially delivered (DEC-029 / AM-005): `ocn sop upgrade [--target] [--plan]` shipped incl. apply mode; `sop version` / `sop diff` remain.*
 - **OCN-2-BASELINE** — `ocn baseline create` + `docs/15-baseline.md` + `.ocoding/baselines/<ulid>.json`.
 - **OCN-2-LOG** — `ocn log [--type dev|decision]` writes `docs/18-dev-log.md` / `docs/19-decision-log.md`.
 - **OCN-2-PROMPT** — `ocn prompt next` generates next-step prompt for AI coding hosts.

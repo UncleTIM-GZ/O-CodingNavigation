@@ -35,4 +35,21 @@ export const mvpPlanTemplate = `# MVP Plan｜MVP 计划
 ## Known Risks｜已知风险
 
 <!-- Risks that could derail the plan and the planned mitigations. -->
+
+## Readiness Declarations｜就绪声明
+
+<!-- SOP 0.4.0 readiness block — machine source for this doc's readiness
+     fields (inert on older profiles). R1: fill pointers/parameters only
+     (numbers, IDs, thresholds, paths) — never conclusions; booleans are
+     schema-illegal. Unfilled fields evaluate as UNKNOWN (silence is never
+     pass). Uncomment the example lines under \`fields:\` with real values. -->
+
+\`\`\`ocn-readiness
+artifact: artifact_mvp_plan
+fields: {}
+# 填法（取消注释并填真实值）:
+# fields:
+#   phases: 3                                  # count_gte:1（阶段数）
+#   risks: 2                                   # count_gte:1（已识别风险数）
+\`\`\`
 `;

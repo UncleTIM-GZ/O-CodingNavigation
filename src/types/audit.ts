@@ -25,6 +25,12 @@ export const AuditEventType = z.enum([
   "advance_succeeded",
   "advance_failed",
   "state_transitioned",
+  // SOP 0.4.0 (AM-004) readiness P4/P5
+  "readiness_waived",
+  "readiness_config_changed",
+  // DEC-029 / AM-005 — `ocn sop upgrade` (plan + apply)
+  "sop_version_diff_detected",
+  "sop_upgraded",
 ]);
 export type AuditEventType = z.infer<typeof AuditEventType>;
 
@@ -57,8 +63,14 @@ export const AuditEvent = z
     actor: AuditActor,
     source: AuditSource,
     projectRoot: z.string().min(1),
-    currentStateId: z.string().regex(/^state_/).optional(),
-    currentStepId: z.string().regex(/^step_/).optional(),
+    currentStateId: z
+      .string()
+      .regex(/^state_/)
+      .optional(),
+    currentStepId: z
+      .string()
+      .regex(/^step_/)
+      .optional(),
     relatedArtifactIds: z.array(z.string()).optional(),
     relatedPaths: z.array(z.string()).optional(),
     command: z.string().optional(),

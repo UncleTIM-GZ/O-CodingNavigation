@@ -49,4 +49,19 @@ Multiple Given/When/Then blocks. Example:
 ## Human Review Requirement｜人工评审要求
 
 <!-- Which items require a named human reviewer in addition to test signals. -->
+
+## Readiness Declarations｜就绪声明
+
+<!-- SOP 0.4.0 readiness block — declare the scenario IDs (pointers, R1).
+     The engine traces each ID against COLLECTED test node names
+     (commands.test_list, e.g. pytest --collect-only -q) — comment
+     references never count (R2). Empty list = UNKNOWN, never pass. -->
+
+\`\`\`ocn-readiness
+artifact: artifact_acceptance
+fields: {}
+# 填法（取消注释并填真实场景 ID）:
+# fields:
+#   scenarios: ["AC-F01", "AC-F02"]   # 每个 ID 须出现在真实测试函数名中
+\`\`\`
 `;

@@ -34,7 +34,9 @@ describe("core/check.checkCurrentArtifact (PRD via 0.2.0)", () => {
 
   beforeEach(async () => {
     project = await createTempProject();
-    await initProject({ cwd: project.cwd, tier: "minimal" });
+    // Pinned to 0.3.0 — these tests exercise section-gate mechanics on the
+    // frozen 0.3.0 profile (the 0.4.0 readiness gate would block pass paths).
+    await initProject({ cwd: project.cwd, tier: "minimal", sopVersion: "0.3.0" });
     await seedToStepPrd(project.cwd);
   });
 
@@ -80,7 +82,9 @@ describe("core/check.checkCurrentArtifact — current-step generic", () => {
 
   beforeEach(async () => {
     project = await createTempProject();
-    await initProject({ cwd: project.cwd, tier: "minimal" });
+    // Pinned to 0.3.0 — these tests exercise section-gate mechanics on the
+    // frozen 0.3.0 profile (the 0.4.0 readiness gate would block pass paths).
+    await initProject({ cwd: project.cwd, tier: "minimal", sopVersion: "0.3.0" });
     // No seed — `ocn init` lands at state_discovery / step_project_brief, the
     // very first step. That is the step P1-002 explicitly broke before.
   });

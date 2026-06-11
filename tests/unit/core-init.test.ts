@@ -15,7 +15,7 @@ describe("core/init.initProject", () => {
     await project.cleanup();
   });
 
-  it("creates the four .ocoding files with correct content", async () => {
+  it("creates the .ocoding snapshot files with correct content (0.4.0 default, DEC-030)", async () => {
     const result = await initProject({ cwd: project.cwd, tier: "minimal" });
     expect(result.ok).toBe(true);
     if (!result.ok) return;
@@ -31,15 +31,22 @@ describe("core/init.initProject", () => {
 
     const sopYaml = await fs.readFile(join(project.cwd, ".ocoding/sop.yaml"), "utf8");
     expect(sopYaml).toMatch(/profile: default-ai-coding-sop/);
-    // SOP 0.3.0 default — fresh init writes the 0.3.0 snapshot.
-    expect(sopYaml).toMatch(/version: 0\.3\.0/);
-    expect(state.project.sopProfileVersion).toBe("0.3.0");
+    // SOP 0.4.0 default (DEC-030) — fresh init writes the 0.4.0 snapshot.
+    expect(sopYaml).toMatch(/version: 0\.4\.0/);
+    expect(state.project.sopProfileVersion).toBe("0.4.0");
     const gatesYaml = await fs.readFile(join(project.cwd, ".ocoding/gates.yaml"), "utf8");
     // 0.2.0 PRD requires section_product_form (not section_scenarios).
     expect(gatesYaml).toMatch(/section_product_form/);
     const configYaml = await fs.readFile(join(project.cwd, ".ocoding/config.yaml"), "utf8");
     expect(configYaml).toMatch(/tier: minimal/);
-    expect(configYaml).toMatch(/version: 0\.3\.0/);
+    expect(configYaml).toMatch(/version: 0\.4\.0/);
+
+    // AM-004 / DEC-030 — fresh 0.4.0 init also writes the readiness rulebook.
+    const readinessYaml = await fs.readFile(
+      join(project.cwd, ".ocoding/readiness-rules.yaml"),
+      "utf8",
+    );
+    expect(readinessYaml.length).toBeGreaterThan(0);
 
     // P1-003 — artifacts.yaml is now part of the persisted snapshot.
     const artifactsYaml = await fs.readFile(join(project.cwd, ".ocoding/artifacts.yaml"), "utf8");

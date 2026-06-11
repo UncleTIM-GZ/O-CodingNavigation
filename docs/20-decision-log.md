@@ -2984,3 +2984,146 @@ exposes its outputs and the test strategy tests its graph. Therefore:
 ### Out of scope
 
 - 0.2.0 / 0.1.0 numbering unchanged (frozen). The npm package number stays `0.3.0-beta.0`.
+
+## DEC-028｜Readiness Backbone — role-based cross-cutting readiness gate (SOP 0.4.0)
+
+Date: 2026-06-11
+Implements: AM-004 (`docs/amendments/2026-06-11-readiness-backbone-amendment.md`)
+
+### Status
+
+Proposed — design accepted; engine not yet implemented. Ships behind a new SOP 0.4.0 when built.
+
+### Context
+
+The section gate blocks missing-section completion; AM-003 blocks logically un-wired
+completion. Dogfooding on the Lattice project exposed a third class — **role-blind
+completion**: dozens of design docs pass every gate, yet a multi-director review still
+surfaces basic gaps (no git/CI, no adopter, no cost, no operability owner, 1052 LOC behind
+2 smoke tests). OCN's verification is intra-artifact (doc vs. SOP schema) and closed-world
+(silence reads as pass); it has no notion of "ready against the stakeholders who must
+accept it." "Which dimensions are missing" is unenumerable; "which roles must have signed
+off" is bounded and externally catalogued (oprocess 54 roles). The fix converts the
+unverifiable predicate (content complete?) into a verifiable one (every required acceptor
+PASSED or explicitly WAIVED?).
+
+### Decision
+
+Add a cross-cutting **`readiness` gate** driven by a rulebook YAML
+(`readiness-backbone.yaml`, 54 oprocess roles → 55 falsifiable checks), bundled in the SOP
+profile. `ocn check` runs it after the section + logic gates; `ocn advance` runs it before
+transition. Open-world blocking: a `block`-severity, tier-required check passes the gate
+only if `PASS` or `WAIVED` — `FAIL` and `UNKNOWN` both block. On block: `ERR_GATE_FAILED`
+(exit 1) + each blocking check's `fix_hint`. `warn` checks (incl. over-preparation
+`process_proportionality`) surface in `brief` only. `.ocoding/readiness.json` is the
+machine projection; `ocn brief` lists open items + fix_hints as the BUILD worklist.
+
+### Sub-decisions
+
+1. Cross-cutting gate + `obligation_readiness`, **not** a new state-machine step (it validates other artifacts). 20-step machine unchanged.
+2. Rulebook ships in the SOP profile; LLM authors it offline, engine only enforces (no-LLM-judge / local-first preserved). All predicates deterministic.
+3. Exit code `ERR_GATE_FAILED` (1) — a cross-artifact gate, not a single invalid artifact.
+4. New SOP **0.4.0** = runtime default; 0.3.0 frozen + importable.
+5. Waivers human-only (`ocn readiness waive … --reason`, audited); `waivable:false` checks reject; MCP exposes read-only evaluation via `navigator.run_gate`, never waiver.
+6. Number-agnostic resolution via `artifact_aliases` (doc slug globs) + `repo_probes` (filesystem/command facts) — portable across projects that renumber docs.
+
+### Out of scope
+
+- Engine implementation (separate authorized build). This DEC accepts the design only.
+- Concrete extractors for derived predicates (e.g. `each_acceptance_scenario_has_test_ref`) — highest-risk items, spike first (see AM-004 Open design points).
+- 0.1.0–0.3.0 unchanged (frozen).
+
+## DEC-029｜`ocn sop upgrade` apply mode — forward-only SOP re-pin for initialized projects
+
+Date: 2026-06-11
+Implements: AM-005 (`docs/amendments/2026-06-11-sop-upgrade-apply-amendment.md`)
+
+### Status
+
+Accepted — implemented and tested.
+
+### Context
+
+Projects pin their SOP profile at `ocn init`; when the installed package ships a newer
+profile (0.4.0, AM-004), an existing project had no upgrade path — readiness commands
+blocked with `ERR_SOP_VERSION` and suggested a re-init that `ocn init` refuses on an
+initialized directory. The "no old projects exist" assumption (AM-003 migration note)
+no longer holds: dogfooded 0.3.0 repos exist and need the readiness gate. The frozen
+contract (`docs/06-api-contract.md` §23) defined only the read-only
+`ocn sop upgrade --plan`; apply mode is the divergence authorized here.
+
+### Decision
+
+Ship `ocn sop upgrade [--target <version>] [--plan] [--json]` with an apply mode:
+under `.ocoding/.lock`, re-render the profile-owned snapshots and move
+`project.sopProfileId/sopProfileVersion` via the atomic state-store write, then audit
+`sop_upgraded` (push). `--plan` stays read-only and audits `sop_version_diff_detected`
+per §23.5.
+
+### Sub-decisions
+
+1. **Forward-only.** Downgrade blocks with `ERR_SOP_VERSION` (exit 5); older profiles
+   require a fresh `ocn init --sop-version <old>`. Idempotent no-op at target (exit 0).
+2. **Positional-cursor compatibility rule.** `currentStateId`/`currentStepId` must
+   exist in the target profile (stable string IDs §4.1 make this checkable); steps
+   added after the cursor become pending, steps before it count as passed (no
+   `completedSteps` field exists). Unreachable for 0.3.0→0.4.0 (identical step data).
+3. **`config.yaml` is user-owned after init** (carries `commands.*` for readiness
+   probes) — preserved on upgrade, written only if missing. Profile-owned snapshots
+   (`sop/gates/artifacts/readiness-rules.yaml`) rewritten unconditionally (heals
+   drift). Snapshot rendering extracted to `src/core/sop/snapshot.ts`, shared with init.
+4. **CLI-only / human-only** (§4.8 — never over MCP). Misleading `ERR_SOP_VERSION`
+   hints in readiness/waive/detect-version now point at `ocn sop upgrade`.
+5. Audit taxonomy: `sop_version_diff_detected` + `sop_upgraded` added to
+   `src/types/audit.ts` (already in docs/05 §12.15 taxonomy).
+6. Default `--target` = runtime default profile (`0.3.0` today); upgrading to 0.4.0
+   requires explicit `--target 0.4.0` until the 0.4.0 cutover DEC flips the default.
+
+### Out of scope
+
+- `ocn sop version` / `ocn sop diff` (OCN-2-SOP-VERSION backlog) and the optional
+  `--plan` save file (`.ocoding/upgrade-plan-<ts>.json`).
+- Runtime pin resolution for 0.1.0–0.3.0 pins (`resolveProfileForProject` still falls
+  back to the default profile below 0.4.0); upgrading to 0.4.0 makes the pin honored.
+- Migration framework / content transforms — the positional model makes them unnecessary
+  for shipped profiles.
+
+## DEC-030｜SOP 0.4.0 runtime cutover — readiness backbone becomes the default
+
+Date: 2026-06-11
+Executes: DEC-028 sub-decision 4 ("New SOP 0.4.0 = runtime default") / AM-004; relies on DEC-029 (`ocn sop upgrade`) as the migration path.
+
+### Status
+
+Accepted — implemented and tested.
+
+### Context
+
+The readiness engine (P0–P5) shipped and was validated by dogfooding (Lattice run);
+`ocn sop upgrade` (DEC-029) gives existing projects a forward path. The remaining gap
+was the cutover itself: `DEFAULT_SOP_PROFILE_VERSION` was still 0.3.0, so fresh
+projects did not get the readiness gate and docs describing 0.4.0 as current would
+have lied about runtime behavior.
+
+### Decision
+
+1. **`DEFAULT_SOP_PROFILE_VERSION` → `"0.4.0"`.** Fresh `ocn init` pins 0.4.0, writes
+   `readiness-rules.yaml`, and `check`/`gate`/`advance` run the readiness
+   cross-cutting gate by default.
+2. **`resolveProfileForProject` honors every known pin** (previously only
+   readiness-carrying pins, AM-004 minimal form). Required by the cutover: otherwise
+   0.1.0–0.3.0 pins would silently fall back to the 0.4.0 default and hit the
+   readiness gate without opting in. A 0.3.0-pinned repo keeps exact 0.3.0 behavior
+   until the human runs `ocn sop upgrade --target 0.4.0`. This retires the AM-003
+   "old pins get the default profile" migration note.
+3. **Test policy.** Default-version assertions updated to 0.4.0; flow-mechanics tests
+   (advance/check/gate/audit/e2e walks) pin `--sop-version 0.3.0` explicitly — they
+   test the frozen profile's mechanics, not the default. 0.4.0 gate behavior is
+   covered by the readiness suites.
+4. Package version moves to `0.4.0-beta.0` (npm `latest` + `beta`); 0.3.0 profile
+   stays frozen + importable (`ocn init --sop-version 0.3.0`).
+
+### Out of scope
+
+- SHIP/REFLECT steps (still stubs), `sop version`/`sop diff` (OCN-2-SOP-VERSION).
+- Readiness rulebook content changes — rulebook ships as validated in the Lattice run.
