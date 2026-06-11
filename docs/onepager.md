@@ -28,6 +28,8 @@ Logic Backbone（SOP 0.3.0 新增）：DESIGN 阶段把系统的计算/决策图
 
 就绪主干（Readiness Backbone，SOP 0.4.0 新增）：基于 54 个 IT 角色的 55 条可证伪就绪检查，作为横切门禁在 check / gate / advance 中运行；开放世界语义（UNKNOWN 也阻断），支持带探针的条件豁免（waive-with-probe），旧项目用 `ocn sop upgrade` 一键迁移。
 
+Claude Code 自动接线（0.4.0-beta.2 新增）：`ocn agent setup` 一条命令生成钩子 + 治理契约 + `/ocn-next` 斜杠命令——agent 结束回合自动过门禁、每次编辑自动跑 lint/typecheck 反馈；入库后全队克隆即生效，人只剩 `/ocn-next` 与 `ocn advance` 两个动作。
+
 ---
 
 ## 典型落地场景

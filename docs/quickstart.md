@@ -18,7 +18,8 @@
 
 **Use OCN**
 2. [First 5 minutes (DISCOVERY → SPEC walkthrough)](#2-first-5-minutes-discovery--spec-walkthrough)
-   - 2.7 [Post-plan execution flow](#27-post-plan-execution-flow)
+   - 2.7 [One-command Claude Code wiring](#27-one-command-claude-code-wiring-040-beta2)
+   - 2.8 [Post-plan execution flow](#28-post-plan-execution-flow)
 3. [Expected file tree after init](#3-expected-file-tree-after-init)
 
 **Reference**
@@ -158,7 +159,16 @@ ocn brief
 
 Prints the current-step required sections, the AI Governance reminders, and the Uncertainty Policy. Pipe it into your AI coding host so the agent resumes with full context.
 
-### 2.7 Post-plan execution flow
+### 2.7 One-command Claude Code wiring (0.4.0-beta.2+)
+
+```bash
+ocn agent setup
+git add .claude CLAUDE.md && git commit   # share with the team
+```
+
+Generates four surfaces in one idempotent command (AM-006): Stop/PostToolUse hooks in `.claude/settings.json` (the Stop hook re-runs `ocn check` whenever the agent tries to end its turn; the PostToolUse hook streams `commands.lint`/`commands.typecheck` errors back after every edit — both guarded by `command -v ocn`, so teammates without ocn are unaffected), the `.claude/ocn.md` governance contract (loaded via a CLAUDE.md import), and the `/ocn-next` slash command. After wiring, the per-task human workflow is two actions: `/ocn-next` in Claude Code → review + `ocn advance`.
+
+### 2.8 Post-plan execution flow
 
 After your planning artifacts (00–10) pass their gates and the project enters implementation, the Execution Navigator commands take over (full reference: [README §6.2](../README.md#62-execution-navigator-commands)). They are read-only — they summarise what is actually true in the repo, the PR, the acceptance evidence, and the verification signals.
 
@@ -283,7 +293,8 @@ Every tool requires an absolute `projectRoot` argument. The host (or your prompt
 
 **使用 OCN**
 - §B. [5 分钟上手（DISCOVERY → SPEC 演练）](#b-5-分钟上手discovery--spec-演练)
-   - §B.7 [实现阶段：执行证据流](#b7-实现阶段执行证据流)
+   - §B.7 [一条命令接线 Claude Code](#b7-一条命令接线-claude-code040-beta2)
+   - §B.8 [实现阶段：执行证据流](#b8-实现阶段执行证据流)
 - §C. [`ocn init` 后的预期文件树](#c-ocn-init-后的预期文件树)
 
 **参考资料**
@@ -423,7 +434,16 @@ ocn brief
 
 输出当前 step 的必填章节、AI 治理提醒和不确定性策略。把它直接喂给你的 AI 编程 host，agent 就能在完整上下文里继续工作。
 
-### B.7 实现阶段：执行证据流
+### B.7 一条命令接线 Claude Code（0.4.0-beta.2+）
+
+```bash
+ocn agent setup
+git add .claude CLAUDE.md && git commit   # 入库全队共享
+```
+
+一条幂等命令生成四件套（AM-006）：`.claude/settings.json` 的 Stop/PostToolUse 钩子（Stop 钩子在 agent 想结束回合时重跑 `ocn check`；PostToolUse 钩子在每次编辑后把 `commands.lint`/`typecheck` 错误直接回灌——均带 `command -v ocn` 守卫，没装 ocn 的队友不受影响）、`.claude/ocn.md` 治理契约（经 CLAUDE.md 导入随会话加载）、`/ocn-next` 斜杠命令。接线后每个任务人只剩两个动作：Claude Code 里 `/ocn-next` → review + `ocn advance`。
+
+### B.8 实现阶段：执行证据流
 
 planning 阶段的 artifact（00–10）跑过门禁、项目进入实现阶段后，Execution Navigator 命令接力（完整参考：[README §F.2](../README.md#f2-execution-navigator-命令)）。它们都是只读的——汇总 repo、PR、AC、验证信号到底是什么状态。
 
