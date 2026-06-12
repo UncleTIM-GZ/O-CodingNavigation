@@ -138,6 +138,11 @@ describe("advanceState", () => {
     expect(terminalAdvance.ok).toBe(false);
     if (!terminalAdvance.ok) {
       expect(terminalAdvance.code).toBe("ERR_STATE_MACHINE");
+      // DEC-033 P3 — the terminal refusal points the human at the two legal
+      // ways forward (cycle new / rewind) in both languages.
+      expect(terminalAdvance.message.en).toContain("ocn cycle new");
+      expect(terminalAdvance.message.zh).toContain("ocn cycle new");
+      expect(terminalAdvance.message.zh).toContain("ocn rewind");
     }
   }, 120_000);
 });
