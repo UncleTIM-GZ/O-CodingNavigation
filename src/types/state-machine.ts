@@ -40,3 +40,15 @@ export interface AdvanceResult {
   readonly gate?: GateResult;
   readonly correlationId: string;
 }
+
+/**
+ * RewindResult captures the outcome of `rewindState(opts)` (DEC-033). On
+ * success, `from`/`to` describe the backwards move and `reason` echoes the
+ * mandatory human-supplied justification.
+ */
+export interface RewindResult {
+  readonly from: StepLocation;
+  readonly to?: StepLocation;
+  readonly reason?: string;
+  readonly correlationId: string;
+}

@@ -36,6 +36,10 @@ export const AuditEventType = z.enum([
   // AM-007 / DEC-032 — task backbone: a task's frozen verify command exited 0
   // and the ledger entry flipped to done (push event, `ocn task check`).
   "task_completed",
+  // DEC-033 — controlled cursor rewind (`ocn rewind`, push event). Distinct
+  // from the contract-§25 `reset_executed` (file-deletion reset) by ruling:
+  // rewind moves the cursor backwards, it never deletes files.
+  "cursor_rewind",
 ]);
 export type AuditEventType = z.infer<typeof AuditEventType>;
 
