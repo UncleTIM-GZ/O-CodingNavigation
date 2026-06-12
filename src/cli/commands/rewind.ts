@@ -2,6 +2,7 @@ import type { Command } from "commander";
 import { rewindState } from "../../core/rewind/rewind-state.js";
 import { msg } from "../../core/i18n.js";
 import { blocked } from "../../core/result.js";
+import { resolveActorOrExit } from "../cli-actor.js";
 import { outputResult } from "../output.js";
 
 // DEC-033 P1 — `ocn rewind --to <step> --reason <text>`: controlled in-round
@@ -13,6 +14,7 @@ import { outputResult } from "../output.js";
 interface RewindCliOptions {
   readonly to?: string;
   readonly reason?: string;
+  readonly actor?: string;
   readonly json: boolean;
 }
 
@@ -24,6 +26,7 @@ export function registerRewindCommand(program: Command): void {
     )
     .option("--to <stepId>", "Target step id (stable string id, e.g. step_build_plan)")
     .option("--reason <text>", "Mandatory justification, recorded in the audit trail")
+    .option("--actor <actor>", "Caller identity override (user|ai_agent)")
     .option("--json", "Emit machine-readable JSON CommandResult", false)
     .action(async (rawOpts: RewindCliOptions) => {
       if (rawOpts.to === undefined || rawOpts.to.trim().length === 0) {
@@ -49,10 +52,12 @@ export function registerRewindCommand(program: Command): void {
         );
         return;
       }
+      const actor = resolveActorOrExit(rawOpts.actor, rawOpts.json);
       const result = await rewindState({
         cwd: process.cwd(),
         targetStepId: rawOpts.to,
         reason: rawOpts.reason,
+        actor,
       });
       outputResult(result, { json: rawOpts.json });
     });

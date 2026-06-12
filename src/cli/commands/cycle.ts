@@ -2,6 +2,7 @@ import type { Command } from "commander";
 import { cycleNew } from "../../core/cycle/cycle-new.js";
 import { msg } from "../../core/i18n.js";
 import { blocked } from "../../core/result.js";
+import { exitIfAiAgent, resolveActorOrExit } from "../cli-actor.js";
 import { outputResult } from "../output.js";
 
 // DEC-033 P3 — `ocn cycle new --yes`: archive this round, open the next one.
@@ -28,6 +29,7 @@ export function registerCycleCommand(program: Command): void {
     .option("--yes", "Confirm archiving the whole .ocoding runtime state", false)
     .option("--json", "Emit machine-readable JSON CommandResult", false)
     .action(async (rawOpts: CycleCliOptions) => {
+      exitIfAiAgent(resolveActorOrExit(undefined, rawOpts.json), "ocn cycle new", rawOpts.json);
       if (!rawOpts.yes) {
         outputResult(
           blocked(

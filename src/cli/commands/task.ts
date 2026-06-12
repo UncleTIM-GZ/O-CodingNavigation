@@ -1,6 +1,7 @@
 import type { Command } from "commander";
 import { runTaskCheck } from "../../core/task/task-check.js";
 import { listTasks } from "../../core/task/task-list.js";
+import { resolveActorOrExit } from "../cli-actor.js";
 import { outputResult } from "../output.js";
 
 // AM-007 / DEC-032 — Task Backbone CLI surface (SOP 0.5.0+).
@@ -30,12 +31,25 @@ export function registerTaskCommand(program: Command): void {
       "Run a task's frozen verify command (default: first pending task with cleared depends); exit 0 marks it done",
     )
     .argument("[taskId]", "Task id (e.g. task_phase0_runtime_skeleton)")
+    .option("--actor <actor>", "Caller identity override (user|ai_agent)")
+    .option(
+      "--rationale <text>",
+      "AI decision trace: background / evidence / action (mandatory for ai_agent)",
+    )
     .option("--json", "Emit machine-readable JSON CommandResult", false)
-    .action(async (taskId: string | undefined, rawOpts: { json: boolean }) => {
-      const result = await runTaskCheck({
-        cwd: process.cwd(),
-        ...(taskId !== undefined ? { taskId } : {}),
-      });
-      outputResult(result, { json: rawOpts.json });
-    });
+    .action(
+      async (
+        taskId: string | undefined,
+        rawOpts: { actor?: string; rationale?: string; json: boolean },
+      ) => {
+        const actor = resolveActorOrExit(rawOpts.actor, rawOpts.json);
+        const result = await runTaskCheck({
+          cwd: process.cwd(),
+          actor,
+          ...(taskId !== undefined ? { taskId } : {}),
+          ...(rawOpts.rationale !== undefined ? { rationale: rawOpts.rationale } : {}),
+        });
+        outputResult(result, { json: rawOpts.json });
+      },
+    );
 }

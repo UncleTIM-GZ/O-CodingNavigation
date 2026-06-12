@@ -1,37 +1,47 @@
-import { join } from "node:path";
+import type { AuditActor } from "../../types/audit.js";
 import type { CommandResult } from "../../types/result.js";
 import type { AdvanceResult, GateResult, StepLocation } from "../../types/state-machine.js";
 import type { ProjectState } from "../../types/state.js";
-import type { CreateAuditEventInput } from "../audit/audit-event.js";
 import { newCorrelationId } from "../audit/correlation.js";
-import { createAuditEvent, makeLockAuditHook, safeAudit } from "../audit/index.js";
+import { createAuditEvent, safeAudit } from "../audit/index.js";
+import { type AutomationSurface, loadAutomation } from "../automation/ai-guard.js";
+import { authorizeAiAdvance } from "../automation/authorization.js";
+import { recordAiGateFailure, clearFailureCounter } from "../automation/circuit-breaker.js";
+import { writeAutomationRuntime } from "../automation/automation-runtime-store.js";
 import { runGate } from "../gate/gate-runner.js";
 import { msg } from "../i18n.js";
-import { taskLedgerGuardOrNull } from "./task-ledger-guard.js";
-import { Paths } from "../paths.js";
 import { blocked, ok } from "../result.js";
 import { loadSopProfile } from "../sop/loader.js";
-import { LockTimeoutError, withLock } from "../state/lock.js";
-import {
-  StateInvalidError,
-  StateNotFoundError,
-  readState,
-  writeStateUnlocked,
-} from "../state/state-store.js";
+import { StateInvalidError, StateNotFoundError, readState } from "../state/state-store.js";
+import { readTaskLedger } from "../task/task-ledger-store.js";
+import { makeAdvanceEventBuilder } from "./advance-events.js";
+import { applyAdvanceTransition, emitTransitionAudits } from "./advance-transition.js";
+import { taskLedgerGuardOrNull } from "./task-ledger-guard.js";
+
+// `ocn advance` orchestrator. The lock-protected mutation and audit plumbing
+// live in advance-transition.ts / advance-events.ts (AM-009 size split).
 
 export interface AdvanceOptions {
   readonly cwd: string;
+  /** AM-009 — caller identity for the audit trail. Defaults to "user". */
+  readonly actor?: AuditActor;
+  /** AM-009 — mandatory for ai_agent callers: the decision trace
+   *  (background / evidence / action) recorded in the audit events. */
+  readonly rationale?: string;
 }
 
-type AdvanceEventType =
-  | "advance_started"
-  | "advance_succeeded"
-  | "advance_failed"
-  | "state_transitioned"
-  | "state_write_succeeded";
+/** Compact machine context appended to ai_agent advance audits — independent
+ *  of the AI's self-reported rationale (decision-trace layer 2). */
+async function ledgerSummary(cwd: string): Promise<{ done: number; pending: number } | null> {
+  const ledger = await readTaskLedger(cwd);
+  if (ledger === null) return null;
+  const done = ledger.tasks.filter((t) => t.status === "done").length;
+  return { done, pending: ledger.tasks.length - done };
+}
 
 export async function advanceState(opts: AdvanceOptions): Promise<CommandResult<AdvanceResult>> {
   const correlationId = newCorrelationId();
+  const actor = opts.actor ?? "user";
 
   // Read state once outside the lock to derive context for audit emission.
   let state: ProjectState;
@@ -62,32 +72,42 @@ export async function advanceState(opts: AdvanceOptions): Promise<CommandResult<
     stateId: state.currentStateId,
     stepId: state.currentStepId,
   };
+  const buildEvent = makeAdvanceEventBuilder({ cwd: opts.cwd, from, correlationId, actor });
 
-  const buildAdvanceEvent = (
-    eventType: AdvanceEventType,
-    result: "executed" | "success" | "failed",
-    message: { en: string; zh: string },
-    data?: unknown,
-    nextLocation?: StepLocation,
-  ): CreateAuditEventInput => ({
-    eventType,
-    result,
-    actor: "user",
-    source: "cli",
-    projectRoot: opts.cwd,
-    currentStateId: nextLocation?.stateId ?? from.stateId,
-    currentStepId: nextLocation?.stepId ?? from.stepId,
-    command: "advance",
-    correlationId,
-    message,
-    ...(data !== undefined ? { data } : {}),
-  });
+  // 0. AM-009 — ai_agent callers need the human's automation grant for the
+  // advance TARGET phase, an un-tripped circuit breaker, and a rationale.
+  let automation: AutomationSurface | null = null;
+  if (actor === "ai_agent") {
+    automation = await loadAutomation(opts.cwd);
+    const target = loadSopProfile().nextStep(from.stateId, from.stepId);
+    const refusal = authorizeAiAdvance(
+      { ...automation, ...(opts.rationale !== undefined ? { rationale: opts.rationale } : {}) },
+      target?.stateId ?? null,
+    );
+    if (refusal !== null) {
+      await safeAudit(
+        opts.cwd,
+        createAuditEvent(
+          buildEvent("advance_failed", "failed", refusal.message, {
+            from,
+            reason: refusal.reason,
+            rationale: opts.rationale ?? null,
+          }),
+        ),
+      );
+      return blocked("ERR_IO_OR_CONFIG", refusal.message, {
+        from,
+        reason: refusal.reason,
+        correlationId,
+      });
+    }
+  }
 
   // 1. advance_started
   await safeAudit(
     opts.cwd,
     createAuditEvent(
-      buildAdvanceEvent(
+      buildEvent(
         "advance_started",
         "executed",
         msg(
@@ -103,15 +123,51 @@ export async function advanceState(opts: AdvanceOptions): Promise<CommandResult<
   const gate = await runGate({
     cwd: opts.cwd,
     correlationId,
-    actor: "user",
+    actor,
     source: "cli",
     command: "advance",
   });
 
-  // 3a. Gate blocked → emit advance_failed; no state mutation.
+  // 3a. Gate blocked → emit advance_failed; no state mutation. An ai_agent
+  // failure also feeds the circuit breaker (consecutive failures on the same
+  // step suspend auto mode — AM-009).
   if (!gate.ok) {
     const gateData = gate.data as GateResult | undefined;
     const reason = gate.code === "ERR_GATE_FAILED" ? "gate_blocked" : gate.code;
+    let breaker: { count: number; suspended: boolean } | undefined;
+    if (automation !== null) {
+      const outcome = recordAiGateFailure(
+        automation.runtime,
+        from.stepId,
+        automation.config.circuitBreaker.maxConsecutiveGateFailures,
+      );
+      await writeAutomationRuntime(opts.cwd, outcome.runtime);
+      breaker = {
+        count: outcome.runtime.failureCounter?.count ?? 0,
+        suspended: outcome.runtime.suspended,
+      };
+      if (outcome.tripped) {
+        await safeAudit(
+          opts.cwd,
+          createAuditEvent({
+            eventType: "auto_mode_changed",
+            result: "success",
+            actor: "system",
+            source: "cli",
+            projectRoot: opts.cwd,
+            currentStateId: from.stateId,
+            currentStepId: from.stepId,
+            command: "advance",
+            correlationId,
+            message: msg(
+              `Circuit breaker tripped: ${breaker.count} consecutive gate failures at ${from.stepId} — auto mode suspended; a human must run \`ocn auto resume\`.`,
+              `熔断触发：${from.stepId} 连续 ${breaker.count} 次门禁失败——自动模式已暂停，需人工执行 \`ocn auto resume\` 恢复。`,
+            ),
+            data: { action: "suspend", stepId: from.stepId, failureCount: breaker.count },
+          }),
+        );
+      }
+    }
     const failMessage = msg(
       `Advance blocked: gate failed at ${from.stateId} / ${from.stepId}.`,
       `推进被阻：在 ${from.stateId} / ${from.stepId} 处门禁未通过。`,
@@ -119,10 +175,11 @@ export async function advanceState(opts: AdvanceOptions): Promise<CommandResult<
     await safeAudit(
       opts.cwd,
       createAuditEvent(
-        buildAdvanceEvent("advance_failed", "failed", failMessage, {
+        buildEvent("advance_failed", "failed", failMessage, {
           from,
           reason,
           gate: gateData,
+          ...(automation !== null ? { rationale: opts.rationale, breaker } : {}),
         }),
       ),
     );
@@ -131,7 +188,10 @@ export async function advanceState(opts: AdvanceOptions): Promise<CommandResult<
       ...(gateData !== undefined ? { gate: gateData } : {}),
       correlationId,
     };
-    return blocked("ERR_GATE_FAILED", failMessage, advanceData);
+    return blocked("ERR_GATE_FAILED", failMessage, {
+      ...advanceData,
+      ...(breaker ? { breaker } : {}),
+    });
   }
 
   // 3b. Gate passed → compute next step.
@@ -148,7 +208,7 @@ export async function advanceState(opts: AdvanceOptions): Promise<CommandResult<
     await safeAudit(
       opts.cwd,
       createAuditEvent(
-        buildAdvanceEvent("advance_failed", "failed", failMessage, {
+        buildEvent("advance_failed", "failed", failMessage, {
           from,
           reason: "no_next_step",
         }),
@@ -165,7 +225,7 @@ export async function advanceState(opts: AdvanceOptions): Promise<CommandResult<
     await safeAudit(
       opts.cwd,
       createAuditEvent(
-        buildAdvanceEvent("advance_failed", "failed", ledgerBlock.message, {
+        buildEvent("advance_failed", "failed", ledgerBlock.message, {
           from,
           reason: "task_ledger_pending",
           pendingTaskIds: ledgerBlock.pendingTaskIds,
@@ -176,136 +236,31 @@ export async function advanceState(opts: AdvanceOptions): Promise<CommandResult<
     return blocked("ERR_GATE_FAILED", ledgerBlock.message, advanceData);
   }
 
-  // 4. Lock-protected state mutation. PR #5 §4: thread correlationId so
-  // lock events join the advance-flow JSONL trail.
-  const lockFile = join(Paths.ocodingDir(opts.cwd), ".lock");
-  const lockHook = makeLockAuditHook({
-    projectRoot: opts.cwd,
-    command: "advance",
-    currentStateId: from.stateId,
-    currentStepId: from.stepId,
+  // 4. Lock-protected state mutation (stale-check inside).
+  const transitionFailure = await applyAdvanceTransition({
+    cwd: opts.cwd,
+    from,
+    next,
     correlationId,
+    buildEvent,
   });
-
-  // Sentinel thrown from inside the lock when a concurrent advance has already
-  // moved the project past `from`. We surface it as a structured
-  // ERR_STATE_MACHINE result rather than a thrown error to keep the
-  // command-level envelope contract.
-  class StaleAdvanceError extends Error {
-    constructor(public readonly observed: StepLocation) {
-      super("stale advance — state changed during advance");
-      this.name = "StaleAdvanceError";
-    }
-  }
-
-  try {
-    await withLock(
-      {
-        lockFile,
-        command: "advance",
-        projectRoot: opts.cwd,
-        lifecycle: lockHook,
-      },
-      async () => {
-        // Re-read inside the lock to detect concurrent advance.
-        // PR (post-Codex P1 fix): the previous implementation re-read but
-        // did not compare; the lock-protected critical section then wrote
-        // the pre-lock-computed `next` regardless of whether another caller
-        // had already advanced. If two advance calls race from the same
-        // `from`, the second to acquire the lock observes that the project
-        // has already moved and aborts with a structured stale-state error
-        // instead of overwriting the newer state with `next`.
-        const currentState = await readState(opts.cwd);
-        if (
-          currentState.currentStateId !== from.stateId ||
-          currentState.currentStepId !== from.stepId
-        ) {
-          throw new StaleAdvanceError({
-            stateId: currentState.currentStateId,
-            stepId: currentState.currentStepId,
-          });
-        }
-        const newState: ProjectState = {
-          ...currentState,
-          currentStateId: next.stateId,
-          currentStepId: next.stepId,
-        };
-        await writeStateUnlocked(opts.cwd, newState);
-      },
-    );
-  } catch (err) {
-    if (err instanceof StaleAdvanceError) {
-      const failMessage = msg(
-        `Advance aborted: project state changed during advance (now at ${err.observed.stateId} / ${err.observed.stepId}).`,
-        `推进已放弃：在推进期间状态被并发改写（当前位于 ${err.observed.stateId} / ${err.observed.stepId}）。`,
-      );
-      await safeAudit(
-        opts.cwd,
-        createAuditEvent(
-          buildAdvanceEvent("advance_failed", "failed", failMessage, {
-            from,
-            observed: err.observed,
-            reason: "stale_state",
-          }),
-        ),
-      );
-      const advanceData: AdvanceResult = { from, correlationId };
-      return blocked("ERR_STATE_MACHINE", failMessage, advanceData);
-    }
-    if (err instanceof LockTimeoutError) {
-      const failMessage = msg(
-        "Could not acquire OCN lock during advance. Another OCN process may be running.",
-        "推进期间无法获取 OCN 锁，可能有其他 OCN 进程正在运行。",
-      );
-      await safeAudit(
-        opts.cwd,
-        createAuditEvent(
-          buildAdvanceEvent("advance_failed", "failed", failMessage, {
-            from,
-            reason: "lock_timeout",
-            lockFile: err.lockFile,
-            waitedMs: err.waitedMs,
-          }),
-        ),
-      );
-      const advanceData: AdvanceResult = { from, correlationId };
-      return blocked("ERR_IO_OR_CONFIG", failMessage, advanceData);
-    }
-    throw err;
-  }
+  if (transitionFailure !== null) return transitionFailure;
 
   // 5. Emit state_transitioned + state_write_succeeded + advance_succeeded.
-  const transitionMessage = msg(
-    `State transitioned: ${from.stateId} / ${from.stepId} → ${next.stateId} / ${next.stepId}.`,
-    `状态已推进：${from.stateId} / ${from.stepId} → ${next.stateId} / ${next.stepId}。`,
-  );
-  await safeAudit(
-    opts.cwd,
-    createAuditEvent(
-      buildAdvanceEvent(
-        "state_transitioned",
-        "success",
-        transitionMessage,
-        { from, to: next },
-        next,
-      ),
-    ),
-  );
-  await safeAudit(
-    opts.cwd,
-    createAuditEvent(
-      buildAdvanceEvent(
-        "state_write_succeeded",
-        "success",
-        msg(
-          `state.json updated to ${next.stateId} / ${next.stepId}.`,
-          `state.json 已更新为 ${next.stateId} / ${next.stepId}。`,
-        ),
-        { from, to: next, stateFile: Paths.stateFile(opts.cwd) },
-        next,
-      ),
-    ),
-  );
+  await emitTransitionAudits(opts.cwd, from, next, buildEvent);
+
+  // AM-009 — a passing gate resets the consecutive-failure counter, and the
+  // ai_agent success audit carries the decision trace: the AI's rationale
+  // plus engine-assembled machine context (independent of the AI's honesty).
+  let trace: Record<string, unknown> = {};
+  if (automation !== null) {
+    const cleared = clearFailureCounter(automation.runtime);
+    if (cleared !== automation.runtime) await writeAutomationRuntime(opts.cwd, cleared);
+    trace = {
+      rationale: opts.rationale,
+      context: { gatePassed: true, taskLedger: await ledgerSummary(opts.cwd) },
+    };
+  }
 
   const successMessage = msg(
     `Advance succeeded: ${from.stateId} / ${from.stepId} → ${next.stateId} / ${next.stepId}.`,
@@ -314,7 +269,13 @@ export async function advanceState(opts: AdvanceOptions): Promise<CommandResult<
   await safeAudit(
     opts.cwd,
     createAuditEvent(
-      buildAdvanceEvent("advance_succeeded", "success", successMessage, { from, to: next }, next),
+      buildEvent(
+        "advance_succeeded",
+        "success",
+        successMessage,
+        { from, to: next, ...trace },
+        next,
+      ),
     ),
   );
 

@@ -1,10 +1,12 @@
 import type { Command } from "commander";
 import { listReadiness } from "../../core/readiness/readiness.js";
 import { waiveReadiness } from "../../core/readiness/waive.js";
+import { exitIfAiAgent, resolveActorOrExit } from "../cli-actor.js";
 import { outputResult } from "../output.js";
 
 // SOP 0.4.0 (AM-004) — `ocn readiness list` + `ocn readiness waive` (P4,
-// human-only; never exposed over MCP per §4.8).
+// human-only; never exposed over MCP per §4.8). AM-009 hardens human-only
+// from governance text into a technical refusal of ai_agent callers.
 
 export function registerReadinessCommand(program: Command): void {
   const readiness = program
@@ -33,6 +35,11 @@ export function registerReadinessCommand(program: Command): void {
     )
     .option("--json", "Emit machine-readable JSON CommandResult", false)
     .action(async (checkId: string, rawOpts: { reason: string; probe: string; json: boolean }) => {
+      exitIfAiAgent(
+        resolveActorOrExit(undefined, rawOpts.json),
+        "ocn readiness waive",
+        rawOpts.json,
+      );
       const result = await waiveReadiness({
         cwd: process.cwd(),
         checkId,

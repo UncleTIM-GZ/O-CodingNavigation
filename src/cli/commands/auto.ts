@@ -6,6 +6,7 @@ import {
   autoStatus,
   autoSwitch,
 } from "../../core/automation/auto-mode.js";
+import { autoTrace } from "../../core/automation/auto-trace.js";
 import { msg } from "../../core/i18n.js";
 import { blocked } from "../../core/result.js";
 import { outputResult } from "../output.js";
@@ -33,7 +34,10 @@ async function runSwitch(action: AutoSwitchAction, rawOpts: AutoCliOptions): Pro
     outputResult(
       blocked(
         "ERR_IO_OR_CONFIG",
-        msg("Invalid --phase value; expected 1, 2 or all.", "--phase 取值不合法；只接受 1、2 或 all。"),
+        msg(
+          "Invalid --phase value; expected 1, 2 or all.",
+          "--phase 取值不合法；只接受 1、2 或 all。",
+        ),
         { reason: "automation_phase_invalid" },
       ),
       { json: rawOpts.json },
@@ -53,7 +57,12 @@ async function runSwitch(action: AutoSwitchAction, rawOpts: AutoCliOptions): Pro
     }
     throw err;
   }
-  const result = await autoSwitch({ cwd: process.cwd(), action, actor, ...(phase !== undefined ? { phase } : {}) });
+  const result = await autoSwitch({
+    cwd: process.cwd(),
+    action,
+    actor,
+    ...(phase !== undefined ? { phase } : {}),
+  });
   outputResult(result, { json: rawOpts.json });
 }
 
@@ -84,6 +93,20 @@ export function registerAutoCommand(program: Command): void {
     .option("--actor <actor>", "Caller identity override (user|ai_agent)")
     .option("--json", "Emit machine-readable JSON CommandResult", false)
     .action(async (rawOpts: AutoCliOptions) => runSwitch("resume", rawOpts));
+
+  auto
+    .command("trace")
+    .description("Replay the automation decision trace from the audit log (pull mode, no audit)")
+    .option("--limit <n>", "Max events to show (default 50)")
+    .option("--json", "Emit machine-readable JSON CommandResult", false)
+    .action(async (rawOpts: { limit?: string; json: boolean }) => {
+      const limit = rawOpts.limit !== undefined ? Number.parseInt(rawOpts.limit, 10) : undefined;
+      const result = await autoTrace(
+        process.cwd(),
+        Number.isFinite(limit) && limit !== undefined ? limit : undefined,
+      );
+      outputResult(result, { json: rawOpts.json });
+    });
 
   auto
     .command("status")
