@@ -20,6 +20,7 @@ import {
   buildSection,
   buildVerificationBlock,
 } from "./next-prompt-sections.js";
+import { automationLoopLines } from "../automation/governance-text.js";
 import type { NextPromptRiskFlag, NextPromptSummary } from "./types.js";
 import type { PromptInputs } from "./next-prompt-shapes.js";
 import { resolveTaskDispatch, taskStopCondition } from "./next-prompt-task-dispatch.js";
@@ -106,6 +107,13 @@ export function assemblePrompt(input: PromptInputs): AssembledPrompt {
   sections.push(buildSection("## Required verification commands", verification));
   sections.push(buildSection("## Stop conditions", stop));
   sections.push(buildSection("## Expected completion output", expected));
+
+  // AM-009 — active auto mode appends the self-driving loop + machine stop
+  // conditions. Manual / suspended / absent → byte-identical legacy prompt.
+  const loop = input.automation !== undefined ? automationLoopLines(input.automation) : [];
+  if (loop.length > 0) {
+    sections.push(buildSection("## Automation loop", loop));
+  }
 
   return { prompt: sections.join("\n\n"), riskFlags: flags };
 }

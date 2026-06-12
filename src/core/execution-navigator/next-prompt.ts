@@ -14,6 +14,7 @@ import { join } from "node:path";
 import type { CommandResult } from "../../types/result.js";
 import { ok } from "../result.js";
 import { msg } from "../i18n.js";
+import { loadAutomationStatus } from "../automation/governance-text.js";
 import { readTaskLedger } from "../task/task-ledger-store.js";
 import { buildEvidenceContext, type EvidenceContext } from "./evidence-context.js";
 import { mapEvidence } from "./evidence-map.js";
@@ -115,6 +116,10 @@ export async function generateNextPrompt(
   // ledger; absent (older pins / gate not yet passed) → legacy prompt shape.
   const taskLedger = ctx.ocn.isOcnProject === true ? await readTaskLedger(opts.cwd) : null;
 
+  // AM-009 — auto-mode status feeds the "## Automation loop" section.
+  const automation =
+    ctx.ocn.isOcnProject === true ? await loadAutomationStatus(opts.cwd) : undefined;
+
   const input: PromptInputs = {
     opts: {
       agent: opts.agent,
@@ -133,6 +138,7 @@ export async function generateNextPrompt(
     smokeAvailable,
     warnings,
     ...(taskLedger !== null ? { taskLedger } : {}),
+    ...(automation !== undefined ? { automation } : {}),
   };
 
   const { prompt, riskFlags } = assemblePrompt(input);

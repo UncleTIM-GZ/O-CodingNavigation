@@ -23,7 +23,9 @@ export const OCN_MD_CONTENT = `# OCN 治理契约｜OCN Governance Contract
 ## 3. 禁止动作｜Forbidden Actions
 
 - 永不编辑 \`.ocoding/state.json\`（仅 OCN 引擎持锁写入）。
-- 永不执行 \`ocn advance\` —— 推进状态是人类专属操作。
+- \`ocn advance\` / \`ocn task check\` 是否可由 AI 执行，以 \`ocn brief\` 的治理段为准：
+  默认禁止（人类专属）；仅当 brief 声明自动模式（AM-009）已开启时，按其指示
+  以 \`OCN_ACTOR=ai_agent\` + \`--rationale\` 执行，熔断与人工专属禁区始终生效。
 - 永不扩大当前 step 的范围；scope 文档即法律。
 - 永不跳过或绕过 \`ocn check\` 门禁。Stop 钩子拦截时：按 fix hints
   修复后重试；仍不过则停下，把问题交还人类处理。
@@ -35,7 +37,9 @@ export const OCN_MD_CONTENT = `# OCN 治理契约｜OCN Governance Contract
 2. \`ocn next-prompt --agent claude-code\` —— 取得本步任务简报，照此执行。
 3. TDD 小步实现（增量 ≤100 行/次逻辑变更）。
 4. \`ocn check\` —— 自查三道门（章节/逻辑主干/就绪）；blocked 则按 fix hints 修复。
-5. 报告结果，停下等待人类 review 与 \`ocn advance\`。
+5. 手动模式：报告结果，停下等待人类 review 与 \`ocn advance\`。
+   自动模式（brief 治理段声明开启时）：按 next prompt 的 Automation loop 区块
+   自行推进，直到触发停机条件后交还人类。
 
 > 提示：在 Claude Code 中输入 \`/ocn-next\` 可自动完成第 1–2 步并开始执行。
 `;

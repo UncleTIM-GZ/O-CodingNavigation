@@ -23,6 +23,8 @@ allowed-tools: Bash(ocn brief:*), Bash(ocn next-prompt:*), Bash(ocn check:*)
 1. 先复述本任务要满足的契约与验收标准（此步不写代码）
 2. TDD：先写能追溯到 AC 的失败测试，再实现到通过，再重构
 3. 只动本任务范围内的文件，不扩 scope
-4. 永不编辑 .ocoding/state.json，永不执行 ocn advance
-5. 完成后用 \`ocn check\` 自查；通过后停下来报告，等人类 review 与 advance
+4. 永不编辑 .ocoding/state.json；advance/task check 是否可执行以 brief 治理段为准
+   （默认禁止；自动模式开启时按 Automation loop 区块以 OCN_ACTOR=ai_agent 执行）
+5. 完成后用 \`ocn check\` 自查；手动模式停下来报告等人类 advance，
+   自动模式按停机条件自行推进或交还
 `;

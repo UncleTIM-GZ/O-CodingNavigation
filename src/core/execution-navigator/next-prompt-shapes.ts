@@ -2,6 +2,7 @@
 // builders. Avoids a circular import.
 
 import type { TaskLedger } from "../../types/task.js";
+import type { AutomationStatusView } from "../automation/governance-text.js";
 import type {
   AcceptanceParseResult,
   EvidenceMapMappingData,
@@ -35,4 +36,7 @@ export interface PromptInputs {
   /** SOP 0.5.0 (AM-007 / DEC-032) — task ledger for BUILD-state dispatch.
    *  Absent/null → legacy prompt behavior, byte-for-byte. */
   readonly taskLedger?: TaskLedger | null;
+  /** AM-009 — auto-mode status. Absent / fully-off → legacy prompt,
+   *  byte-for-byte. Active → appends the "## Automation loop" section. */
+  readonly automation?: AutomationStatusView;
 }
