@@ -41,6 +41,13 @@ describe("MCP tool registry — exactly 7 allowed tools", () => {
     }
   });
 
+  it("AM-009: auto mode adds NOTHING to the MCP surface — no auto/task/rewind/cycle tool", () => {
+    for (const name of ALLOWED_TOOL_NAMES) {
+      expect(name).not.toMatch(/auto|task|rewind|cycle|advance/);
+    }
+    expect(ALLOWED_TOOLS).toHaveLength(7);
+  });
+
   it("FORBIDDEN_TOOL_NAMES enumerates the 4 must-not-expose tools", () => {
     expect(FORBIDDEN_TOOL_NAMES).toEqual([
       "navigator.advance_phase",
