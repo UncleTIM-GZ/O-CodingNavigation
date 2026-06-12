@@ -38,7 +38,10 @@ export const AuditEventType = z.enum([
   "task_completed",
   // DEC-033 — controlled cursor rewind (`ocn rewind`, push event). Distinct
   // from the contract-§25 `reset_executed` (file-deletion reset) by ruling:
-  // rewind moves the cursor backwards, it never deletes files.
+  // rewind moves the cursor backwards, it never deletes files. Deliberately a
+  // SINGLE event type for success and failure (result: success|failed +
+  // data.failureReason), per proposal §3.3 — rewind is one atomic decision,
+  // not a multi-phase flow like advance_started/.../advance_succeeded.
   "cursor_rewind",
 ]);
 export type AuditEventType = z.infer<typeof AuditEventType>;

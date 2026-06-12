@@ -55,6 +55,17 @@ describe("ocn rewind (pinned 0.3.0)", () => {
     expect(parsed.code).toBe("ERR_IO_OR_CONFIG");
   }, 30_000);
 
+  it("exits 4 (ERR_IO_OR_CONFIG) on a whitespace-only --reason", async () => {
+    const result = await spawnOcn(
+      ["rewind", "--to", "step_project_brief", "--reason", "   ", "--json"],
+      { cwd: project.cwd },
+    );
+    expect(result.exitCode).toBe(4);
+    const parsed = JSON.parse(result.stdout);
+    expect(parsed.ok).toBe(false);
+    expect(parsed.code).toBe("ERR_IO_OR_CONFIG");
+  }, 30_000);
+
   it("exits 4 on an uninitialized directory", async () => {
     const bare = await createTempProject("ocn-cli-rewind-bare-");
     try {

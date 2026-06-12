@@ -30,13 +30,11 @@ export function registerRewindCommand(program: Command): void {
         outputResult(
           blocked(
             "ERR_IO_OR_CONFIG",
-            msg(
-              "Rewind refused: --to <stepId> is required.",
-              "回拨被拒：必须提供 --to <stepId>。",
-            ),
+            msg("Rewind refused: --to <stepId> is required.", "回拨被拒：必须提供 --to <stepId>。"),
           ),
           { json: rawOpts.json },
         );
+        return;
       }
       if (rawOpts.reason === undefined || rawOpts.reason.trim().length === 0) {
         outputResult(
@@ -49,6 +47,7 @@ export function registerRewindCommand(program: Command): void {
           ),
           { json: rawOpts.json },
         );
+        return;
       }
       const result = await rewindState({
         cwd: process.cwd(),

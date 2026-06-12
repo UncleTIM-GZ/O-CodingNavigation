@@ -34,6 +34,9 @@ export function resolveRewindTarget(
   if (fromIndex === -1) {
     return { ok: false, failure: "cursor_not_in_profile" };
   }
+  // Step ids are globally unique across states by contract (CLAUDE.md §4.2 —
+  // renaming/reusing one is a breaking SOP version bump), so the first match
+  // is THE match; profiles are bundled code, not runtime-editable data.
   const targetIndex = order.findIndex((location) => location.stepId === targetStepId);
   const target = targetIndex === -1 ? undefined : order[targetIndex];
   if (target === undefined) {
