@@ -4,6 +4,7 @@ import { registerAdvanceCommand } from "./commands/advance.js";
 import { registerAgentCommand } from "./commands/agent.js";
 import { registerBriefCommand } from "./commands/brief.js";
 import { registerCheckCommand } from "./commands/check.js";
+import { registerCycleCommand } from "./commands/cycle.js";
 import { registerDocCommand } from "./commands/doc.js";
 import { registerEvidenceCommand } from "./commands/evidence.js";
 import { registerExecCommand } from "./commands/exec.js";
@@ -13,6 +14,7 @@ import { registerHookCommand } from "./commands/hook.js";
 import { registerInitCommand } from "./commands/init.js";
 import { registerNextPromptCommand } from "./commands/next-prompt.js";
 import { registerReadinessCommand } from "./commands/readiness.js";
+import { registerRewindCommand } from "./commands/rewind.js";
 import { registerSopCommand } from "./commands/sop.js";
 import { registerStatusCommand } from "./commands/status.js";
 import { registerTaskCommand } from "./commands/task.js";
@@ -34,6 +36,10 @@ registerDocCommand(program);
 registerCheckCommand(program);
 registerGateCommand(program);
 registerAdvanceCommand(program);
+// DEC-033 — controlled cursor rewind + round lifecycle (human-only; never
+// exposed over MCP).
+registerRewindCommand(program);
+registerCycleCommand(program);
 // SOP 0.4.0 (AM-004) — role-based readiness checks.
 registerReadinessCommand(program);
 // DEC-029 / AM-005 — SOP profile upgrade (forward-only, human-only).

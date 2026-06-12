@@ -214,7 +214,7 @@ After `doc create project-brief` you'll also see `docs/00-project-brief.md`. Aft
 |---|---|---|
 | `ERR_IO_OR_CONFIG: project not initialized` | Running a command before `ocn init`. | `ocn init` first. |
 | `ERR_GATE_FAILED` from `ocn check` / `ocn gate` / `ocn advance` | Current artifact is missing a required section. | Read the bilingual `missingRequiredSectionIds` list and add those headings. |
-| `ERR_STATE_MACHINE` from `ocn advance` | Already at the last wired step (DISCOVERY → PLAN have steps; BUILD onward have state IDs only). | This is expected once you reach the end of the wired step map. Future PRs will wire BUILD/VERIFY/SHIP/REFLECT steps. |
+| `ERR_STATE_MACHINE` from `ocn advance` | Already at the terminal step (`state_verify / step_final_build_verdict` — SHIP/REFLECT are stubs). | Start the next round with `ocn cycle new --yes` (archives this round, keeps docs/), or rework this round with `ocn rewind --to <step> --reason ...` (AM-008). |
 | `ERR_ARTIFACT_INVALID` from `ocn doc create <type>` | `<type>` is not one of the 20 supported. | Pick from the full registry (00–18 plus `logic-backbone`), e.g. `project-brief`, `scope`, `prd`, `acceptance-criteria`, `technical-architecture`, `logic-backbone`. |
 | `ERR_IO_OR_CONFIG: lock acquire timeout` | A previous `ocn advance` was killed mid-write and the lock is stale. | Wait 30 s for the stale-recovery path to fire automatically, or inspect `.ocoding/.lock` — if its PID is not running, it is safe to delete. |
 | `ocn-mcp` writes nothing on stderr but the host shows nothing happening | MCP stdio is silent on the success path by design (audit fallback uses a silent logger). | Use the host's tool-list view to confirm 7 tools loaded. |
@@ -489,7 +489,7 @@ ocn-demo/
 |---|---|---|
 | `ERR_IO_OR_CONFIG: project not initialized` | 在 `ocn init` 之前就跑了别的命令。 | 先 `ocn init`。 |
 | `ocn check` / `ocn gate` / `ocn advance` 抛 `ERR_GATE_FAILED` | 当前产物缺必填章节。 | 看双语 `missingRequiredSectionIds` 列表，把缺的章节标题补上。 |
-| `ocn advance` 抛 `ERR_STATE_MACHINE` | 已到达"被挂上 step 的最后一步"（DISCOVERY → PLAN 有 step；BUILD 之后只有 state ID）。 | 这是预期行为。后续 PR 才会给 BUILD/VERIFY/SHIP/REFLECT 加 step。 |
+| `ocn advance` 抛 `ERR_STATE_MACHINE` | 已到达终点步（`state_verify / step_final_build_verdict`——SHIP/REFLECT 为 stub）。 | 用 `ocn cycle new --yes` 收档重开新一轮（docs/ 保留），或用 `ocn rewind --to <step> --reason ...` 轮内返工（AM-008）。 |
 | `ocn doc create <type>` 抛 `ERR_ARTIFACT_INVALID` | `<type>` 不在 20 类之内。 | 从完整注册表里选（00–18 加 `logic-backbone`），如 `project-brief`、`scope`、`prd`、`acceptance-criteria`、`technical-architecture`、`logic-backbone`。 |
 | `ERR_IO_OR_CONFIG: lock acquire timeout` | 上一次 `ocn advance` 中途被杀，锁残留。 | 等 30 秒等陈旧锁回收触发，或检查 `.ocoding/.lock`——里面的 PID 已经不在跑就可以删。 |
 | `ocn-mcp` stderr 一片空，但 host 也没动静 | MCP stdio 在成功路径上**故意**安静（audit fallback 走 silent logger）。 | 看 host 的 tools 面板，确认 7 个工具加载成功。 |

@@ -139,9 +139,11 @@ export async function advanceState(opts: AdvanceOptions): Promise<CommandResult<
   const next = profile.nextStep(from.stateId, from.stepId);
 
   if (next === null) {
+    // DEC-033 (ruling ⑨) — no machine judgement at the terminal: just point
+    // the human at the two legal ways forward.
     const failMessage = msg(
-      `No next step after ${from.stateId} / ${from.stepId}; this is the terminal step.`,
-      `${from.stateId} / ${from.stepId} 之后没有下一步：已到达终点。`,
+      `No next step after ${from.stateId} / ${from.stepId}; this is the terminal step. Start the next round with \`ocn cycle new --yes\`, or rework this round with \`ocn rewind --to <step> --reason ...\`.`,
+      `${from.stateId} / ${from.stepId} 之后没有下一步：已到达终点。可用 \`ocn cycle new --yes\` 收档重开新一轮，或用 \`ocn rewind --to <step> --reason ...\` 轮内返工。`,
     );
     await safeAudit(
       opts.cwd,

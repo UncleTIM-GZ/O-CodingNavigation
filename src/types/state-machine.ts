@@ -40,3 +40,29 @@ export interface AdvanceResult {
   readonly gate?: GateResult;
   readonly correlationId: string;
 }
+
+/**
+ * RewindResult captures the outcome of `rewindState(opts)` (DEC-033). On
+ * success, `from`/`to` describe the backwards move and `reason` echoes the
+ * mandatory human-supplied justification.
+ */
+export interface RewindResult {
+  readonly from: StepLocation;
+  readonly to?: StepLocation;
+  readonly reason?: string;
+  readonly correlationId: string;
+}
+
+/**
+ * CycleResult captures the outcome of `cycleNew(opts)` (DEC-033). On success,
+ * `round` is the archived round's number (also the archive dir name prefix —
+ * ruling ②: the directory name is the round counter, no schema field) and
+ * `archivePath` is project-relative.
+ */
+export interface CycleResult {
+  readonly from: StepLocation;
+  readonly to?: StepLocation;
+  readonly round?: number;
+  readonly archivePath?: string;
+  readonly correlationId: string;
+}

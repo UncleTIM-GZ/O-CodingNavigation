@@ -36,6 +36,19 @@ export const AuditEventType = z.enum([
   // AM-007 / DEC-032 — task backbone: a task's frozen verify command exited 0
   // and the ledger entry flipped to done (push event, `ocn task check`).
   "task_completed",
+  // DEC-033 — controlled cursor rewind (`ocn rewind`, push event). Distinct
+  // from the contract-§25 `reset_executed` (file-deletion reset) by ruling:
+  // rewind moves the cursor backwards, it never deletes files. Deliberately a
+  // SINGLE event type for success and failure (result: success|failed +
+  // data.failureReason), per proposal §3.3 — rewind is one atomic decision,
+  // not a multi-phase flow like advance_started/.../advance_succeeded.
+  "cursor_rewind",
+  // DEC-033 — `ocn cycle new` (push event): the round was archived and a new
+  // round opened. Same single-type design as cursor_rewind (result:
+  // success|failed + data.failureReason). The audit JSONL itself is never
+  // archived (ruling ③ — one continuous log spans all cycles), so this event
+  // is the stitch between rounds.
+  "cycle_started",
 ]);
 export type AuditEventType = z.infer<typeof AuditEventType>;
 

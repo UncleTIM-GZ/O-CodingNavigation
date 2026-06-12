@@ -2,7 +2,7 @@
 
 > Generated: 2026-04-28 · Updated: 2026-06-12
 > SOP Profile: `default-ai-coding-sop@0.5.0` (runtime default since DEC-032; 0.1.0 / 0.2.0 / 0.3.0 / 0.4.0 frozen + importable)
-> Current State: shipped — Planning Gatekeeper + Execution Navigator + Logic Backbone + Readiness Backbone + **Task Backbone** (incl. `ocn sop upgrade`).
+> Current State: shipped — Planning Gatekeeper + Execution Navigator + Logic Backbone + Readiness Backbone + **Task Backbone** (incl. `ocn sop upgrade`) + **Rewind & Cycle** (DEC-033/AM-008).
 > Published: `o-coding-navigation@0.5.0-beta.0` (pre-GA beta).
 > Skeleton Spike (Phase 0) is **complete**; the sections below that describe it are kept as historical context.
 
@@ -160,7 +160,7 @@ navigator.detect_sop_version
 navigator.generate_next_prompt
 ```
 
-**FORBIDDEN to expose in v1.0**: `navigator.advance_phase` (state advancement is human-only via CLI), reset, sop upgrade apply, capture decision (formal decisions are human-only).
+**FORBIDDEN to expose in v1.0**: `navigator.advance_phase` (state advancement is human-only via CLI), reset, rewind, cycle new (cursor movement and round lifecycle are human-only — DEC-033), sop upgrade apply, capture decision (formal decisions are human-only).
 
 ### 4.9 Artifact Existence ≠ Step Complete
 
@@ -221,7 +221,7 @@ DISCOVERY → SPEC → DESIGN → PLAN → BUILD → VERIFY → SHIP → REFLECT
 ```
 SOP Profile  : default-ai-coding-sop@0.5.0 (runtime default — DEC-032)
 Published    : o-coding-navigation@0.5.0-beta.0 (npm latest + beta; alpha preserved at 0.1.0-alpha.2)
-Surface      : Planning Gatekeeper (00–19) + Execution Navigator + readiness (list/waive) + task (list/check) + sop upgrade + MCP (7 tools)
+Surface      : Planning Gatekeeper (00–19) + Execution Navigator + readiness (list/waive) + task (list/check) + sop upgrade + rewind/cycle + MCP (7 tools)
 State machine: 20 wired steps across DISCOVERY → SPEC → DESIGN → PLAN → BUILD → VERIFY (SHIP/REFLECT stubs)
 Status       : pre-GA beta, dogfooded; Skeleton Spike + 0.2.0/0.3.0/0.4.0/0.5.0 cutovers + logic, readiness & task backbones shipped
 ```
@@ -233,6 +233,7 @@ Status       : pre-GA beta, dogfooded; Skeleton Spike + 0.2.0/0.3.0/0.4.0/0.5.0 
 - **SOP 0.3.0 — done (AM-003 / DEC-025).** The **Logic Backbone**: a DESIGN-phase artifact `docs/07-logic-backbone.md` whose computation/decision graph is machine-validated. `ocn check` blocks (`ERR_ARTIFACT_INVALID`, exit 2) on missing role / duplicate node id / dangling reference / dependency cycle / orphan node / unbound trigger; on pass it writes `.ocoding/logic-graph.json` and `ocn brief` surfaces execution order + trigger bindings. See `src/core/gate/logic-backbone-validator.ts` + `docs/amendments/2026-06-03-logic-backbone-amendment.md`.
 - **SOP 0.4.0 — done (AM-004/AM-005, DEC-028/029/030).** The **Readiness Backbone**: a role-based cross-cutting readiness gate (55 falsifiable checks from 54 IT roles) that runs in `check`/`gate`/`advance` after the section + logic gates. Open-world: `block`-severity tier-required checks must be `PASS` or `WAIVED` — `FAIL` and `UNKNOWN` both block (`ERR_GATE_FAILED`, exit 1) with per-check `fix_hint`s; ledger at `.ocoding/readiness.json`. `ocn readiness list` / `ocn readiness waive … --reason --probe` (waive-with-probe: grant-time probe, re-verified every gate, expires on state change; human-only). `ocn sop upgrade [--target] [--plan]` (DEC-029) re-pins existing projects forward (preserves `config.yaml` + cursor + artifacts). Runtime default flipped to 0.4.0 (DEC-030); pins are honored at runtime — a 0.3.0-pinned repo keeps 0.3.0 behavior until upgraded.
 - **SOP 0.5.0 — done (AM-007 / DEC-032).** The **Task Backbone**: build plans carry machine-parseable Task Spec blocks (`## Task Specs｜任务规格`: goal/traces/touches/verify/dod + optional depends/phase/timeout). The build-plan gate validates six hard defects (duplicate/invalid id, missing field, dangling `traces` → AC ids, dangling `touches` → logic-graph nodes, dangling/cyclic `depends`, zero tasks) and freezes each task's verify-command hash into `.ocoding/task-ledger.json` (R4). Completion is decided ONLY by `ocn task check` running the frozen command (exit 0 → done + `task_completed` audit; drift → refused); `ocn task list` is the read-only ledger view (pull-mode, no audit). `/ocn-next` / `ocn next-prompt` dispatch the first pending task in `state_build`; `ocn advance` out of BUILD blocks while tasks are pending（任务台账不清，不准进 VERIFY）; `ocn brief` shows the ledger summary. Closes the fourth false-completion class: receipt-only completion (honest-but-empty BUILD receipts passing every gate; discovered via the Lattice dogfood). Runtime default flipped to 0.5.0 (DEC-032); 0.4.0 frozen + importable; `ocn sop upgrade` migrates. See `docs/amendments/2026-06-12-task-backbone-amendment.md`.
+- **Rewind & Cycle — done (AM-008 / DEC-033).** Controlled cursor rollback + round restart (engine/CLI feature, NOT an SOP bump). `ocn rewind --to <step> --reason …` moves the cursor to a strictly-earlier step in the pinned profile's declaration order (mandatory reason; docs/ untouched; `latestGateResult` cleared; zero gate exemption — every advance afterwards re-runs the full gate stack). `ocn cycle new --yes` archives the round's runtime state to `.ocoding/cycles/<n>-<ISO-ts>/` (the dir name IS the round counter — no schema field) and restarts at the first step; docs/ kept for gate fast-forward; pin and user-owned `config.yaml` preserved. The audit JSONL is never archived — one continuous log spans all rounds; push events `cursor_rewind` / `cycle_started` (single type each, result success|failed). Both commands are human-only, CLI-only — never exposed over MCP. The terminal `no_next_step` refusal signposts both. Naming ruling: `rewind` yields the `reset` name to the frozen contract §25 file-deletion semantics (untouched). See `docs/rewind-cycle-proposal.md` + `docs/amendments/2026-06-12-rewind-cycle-amendment.md`.
 
 ### Original Skeleton Spike acceptance (historical)
 

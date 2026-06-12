@@ -3233,3 +3233,74 @@ Convert "implementation actually happened per plan" (unverifiable) into
 
 - Receipt auto-generation from ledger+audit (0.6.0 candidate).
 - Multi-command verify lists; task-level waivers (edit plan → re-gate).
+
+## DEC-033｜Rewind & Cycle — 受控游标回拨与重开循环（引擎/CLI，非 SOP bump）
+
+Date: 2026-06-12
+Implements: full design in `docs/rewind-cycle-proposal.md`（accepted 2026-06-12，
+含 §8 全部开放点裁决）；新命令契约面以常规 amendment 随实现落地，冻结契约
+§25 不动
+
+### Status
+
+Accepted — implementation authorized（P0–P3）。
+
+### Context
+
+Dogfood（2026-06-12）暴露"游标只进不退"的三个现实缺口：(1) 0.4.0 项目
+通过 build-plan 门禁后中途升级 0.5.0，游标已越过台账唯一生成点
+（gate-runner 仅在 step_build_plan 写 ledger；upgrade 按 DEC-029 保留
+游标），Task Backbone 本轮静默失效且无恢复路径；(2) 终点步
+step_final_build_verdict 后无受控重开方式（SHIP/REFLECT 为 stub）；
+(3) 手改 state.json 成为事实逃生通道——绕过锁/备份/原子写且零审计，
+审计链出现不可解释的时间倒流。纪律产品不能逼用户破坏纪律。
+
+### Decision
+
+把不可避免的回退从体外手术变成体内受控操作——时间线永远向前，游标可以
+向后：
+
+1. **`ocn rewind --to <step> --reason <text>`**（轮内回拨）：目标步必须
+   存在于当前 pin 的 profile（stateOrder/stepsForState）且严格早于当前
+   游标；持锁 + 锁内 stale 检查 + 备份/原子写（与 advance 同机制）；
+   push 审计 `cursor_rewind`（from/to/reason/actor/correlationId）。
+   docs/ 产物一律不动；readiness waiver 按既有 state-change 语义自动
+   失效；回拨后每次 advance 重过完整门禁（含 0.5.0 任务门禁）——这构成
+   现场 (1) 的标准修复路径。
+2. **`ocn cycle new --yes`**（跨轮重开）：归档本轮 `.ocoding` 运行时状态，
+   游标归零开新一轮；docs/ 产物保留供门禁快进；审计连续性为底线
+   （`cycle_started` push 事件衔接前后轮）；不复用 init 路径，
+   profile 快照渲染复用 snapshot.ts。
+3. **命名**：游标回拨命名 `rewind`（倒带），`reset` 名字与 `reset_executed`
+   事件保留给冻结契约 §25 既有的文件删除式归零语义（回到原点）——两动词
+   各归其位，§25 不取代、不修改。
+4. **人类专属**：两命令均 CLI-only，MCP 白名单 7 工具不变（§2.6/§4.8——
+   与 advance_phase 同类的"项目位于何处"最高权力，不交给 agent）。
+5. **退出码沿用 §4.6 稳定表**，不新增码位；BilingualMessage +
+   CommandResult text/--json 双渲染。
+6. **非 SOP 版本升级**：状态机步骤集与门禁内容不变，不触碰 profile；
+   state.json 不加字段（历史唯一载体 = 审计链），schemaVersion 不动。
+
+### 开放点裁决（2026-06-12，与提案 §8 一一对应）
+
+1. 台账：rewind 不动 `task-ledger.json`，重过门禁时按 DEC-032 决策 3 的
+   哈希语义自动对账；实现须验证 stale 台账不会在 `state_plan` 期间误触发
+   brief/next-prompt 的台账分支。
+2. 归档布局：方案 A `.ocoding/cycles/<n>-<ISO-ts>/`（+ 可选 docs 摘要）；
+   轮次号载体 = 归档目录名编号（零 schema 变更）。
+3. 审计连续性：方案甲——审计目录不归档、跨轮连续。
+4. cycle 后维持当前 pin，输出附升级提示。
+5. rewind 允许跨 state 回拨，不设 `--cross-state` 旗标。
+6. state.json 不加 history/cycle 字段。
+7. 命名让位：见 Decision 3。
+8. waiver 失效维持 state 级粒度，不为 rewind 引入事件驱动失效。
+9. 终点步上 rewind 不加机器强判，文案提示与 cycle new 的分工。
+10. `cycle new` 强制 `--yes`；`rewind` 不另加（强制 `--reason` 即确认）。
+
+### Out of scope
+
+- 契约 §25 文件删除式 `ocn reset` 的实现——`reset` 名字与 `reset_executed`
+  事件保留给该语义，留待后续独立立项。
+- 跨轮 docs 产物的自动失效/刷新（verify 阶段旧收据快进风险靠人 review
+  与就绪检查，机器强判留作后续候选）。
+- 游标历史的结构化快查字段与多轮统计报表。
