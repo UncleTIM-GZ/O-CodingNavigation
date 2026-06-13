@@ -98,7 +98,13 @@ export async function advanceState(opts: AdvanceOptions): Promise<CommandResult<
   );
 
   // 2. Run gate (carries the same correlationId via runGate's parameter).
-  const gate = await runGate({ cwd: opts.cwd, correlationId, actor, source: "cli", command: "advance" });
+  const gate = await runGate({
+    cwd: opts.cwd,
+    correlationId,
+    actor,
+    source: "cli",
+    command: "advance",
+  });
 
   // 3a. Gate blocked → emit advance_failed; no state mutation. An ai_agent
   // failure also feeds the circuit breaker.
@@ -141,13 +147,15 @@ export async function advanceState(opts: AdvanceOptions): Promise<CommandResult<
     );
     await safeAudit(
       opts.cwd,
-      createAuditEvent(buildEvent("advance_failed", "failed", failMessage, { from, reason: "no_next_step" })),
+      createAuditEvent(
+        buildEvent("advance_failed", "failed", failMessage, { from, reason: "no_next_step" }),
+      ),
     );
     return blocked("ERR_STATE_MACHINE", failMessage, { from, correlationId });
   }
 
-  // 3c. SOP 0.5.0 (AM-007 / DEC-032) — task backbone transition gate:
-  // 任务台账不清，不准进 VERIFY。No ledger → legacy pass-through.
+  // 3c. SOP 0.5.0 (AM-007 / DEC-032), widened by AM-010 / DEC-035 — task-first
+  // gate: 任务台账不清，不准在 BUILD 内前进（含 BUILD 内步进）。No ledger → legacy pass-through.
   const ledgerBlock = await taskLedgerGuardOrNull(opts.cwd, from, next);
   if (ledgerBlock !== null) {
     await safeAudit(
@@ -164,13 +172,21 @@ export async function advanceState(opts: AdvanceOptions): Promise<CommandResult<
   }
 
   // 4. Lock-protected state mutation (stale-check inside).
-  const transitionFailure = await applyAdvanceTransition({ cwd: opts.cwd, from, next, correlationId, buildEvent });
+  const transitionFailure = await applyAdvanceTransition({
+    cwd: opts.cwd,
+    from,
+    next,
+    correlationId,
+    buildEvent,
+  });
   if (transitionFailure !== null) return transitionFailure;
 
   // 5. Emit state_transitioned + state_write_succeeded + advance_succeeded.
   await emitTransitionAudits(opts.cwd, from, next, buildEvent);
   const trace =
-    automation !== null ? await clearBreakerAndBuildTrace(opts.cwd, automation, opts.rationale) : {};
+    automation !== null
+      ? await clearBreakerAndBuildTrace(opts.cwd, automation, opts.rationale)
+      : {};
   const successMessage = msg(
     `Advance succeeded: ${from.stateId} / ${from.stepId} → ${next.stateId} / ${next.stepId}.`,
     `推进成功：${from.stateId} / ${from.stepId} → ${next.stateId} / ${next.stepId}。`,
@@ -178,7 +194,13 @@ export async function advanceState(opts: AdvanceOptions): Promise<CommandResult<
   await safeAudit(
     opts.cwd,
     createAuditEvent(
-      buildEvent("advance_succeeded", "success", successMessage, { from, to: next, ...trace }, next),
+      buildEvent(
+        "advance_succeeded",
+        "success",
+        successMessage,
+        { from, to: next, ...trace },
+        next,
+      ),
     ),
   );
 

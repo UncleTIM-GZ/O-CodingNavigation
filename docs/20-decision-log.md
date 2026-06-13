@@ -3353,3 +3353,44 @@ P（里程碑）时，完成一个 P 后自动回拨游标继续下一个 P，�
 默认手动 + 开关 human-only + 熔断 + 硬禁区 + 判定权零让渡，保住"卖纪律"
 叙事：纪律不是放慢人，而是约束机器。残余风险（actor 可伪造、task check
 失败不计熔断、phase1 无人复核连推）及对冲见 AM-009 §Consequences。
+
+---
+
+## DEC-035｜Task-first in BUILD — 把任务台账门扩成 BUILD 内每次前进门（引擎/CLI，非 SOP bump）
+
+Date: 2026-06-14
+Implements: `docs/amendments/2026-06-14-build-task-first-amendment.md`（AM-010）
+
+### Status
+
+Accepted — implemented（分支 feat/build-task-first）。
+
+### Context
+
+Lattice dogfood 暴露：agent 在 BUILD 把三个文档步
+（implementation_log→change_evidence→integration_notes）全写完、游标推到 BUILD
+末端，而 4 个实施任务仍 pending；直到最后一脚 BUILD→VERIFY 才被 AM-007 边界门
+拦下。净效果是"先写收据（集成笔记）后干活（任务）"，债务拖到状态边界才收。
+根因是 `taskLedgerGuardOrNull` 的 `next.stateId === "state_build"` 子句放行了一切
+BUILD 内步进，让游标跑在了本已接通的 `/ocn-next` 任务派发循环前面。
+
+### Decision（要点；全文见 AM-010）
+
+1. **扩宽门禁**：台账有 pending 时，游标在 `state_build` 内**任意一次向前 advance**
+   都被拒（不止 BUILD→VERIFY 边界），强制 task-first。
+2. **裁决权零变更**：只把"收债时机"提前；任务是否完成仍只认 `ocn task check` 跑
+   冻结命令 exit 0。台账 schema、审计分类、completion 语义一字未改。
+3. **task-first 循环本已接通**：`next-prompt`／`/ocn-next` 已在进入 `state_build`
+   时派发第一个 ready pending 任务；本次只是不让游标越过它。
+4. **文案按目标态分叉**：跨界（→VERIFY）保留 AM-007 措辞（"不准进入 VERIFY"）；
+   BUILD 内用 task-first 措辞点名 `/ocn-next` + `ocn task check`。两者均
+   `ERR_GATE_FAILED`（exit 1），均带 `advance_failed` / `reason: "task_ledger_pending"`
+   审计与 pending ids。
+5. **零回归**：台账缺失（≤0.4.0 pin / 过门禁前）→ null → 按旧逻辑放行。
+6. **不 bump SOP**（沿 AM-008/AM-009 先例）；**MCP 白名单 7 工具不增不减**。
+
+### Consequences
+
+把"先写收据后干活"这一受边界门容许的残余味道在更早处堵死，BUILD 收据只能描述
+已完成的活儿。代价是 BUILD 内步进现在硬依赖台账清零——但抽干本就是 BUILD 的正事，
+游标停在 implementation_log 抽干即可，无死锁。

@@ -5,6 +5,7 @@ import { advanceState } from "../../src/core/advance/advance-state.js";
 import { taskLedgerGuardOrNull } from "../../src/core/advance/task-ledger-guard.js";
 import { initProject } from "../../src/core/init.js";
 import { verifyHashOf, writeTaskLedger } from "../../src/core/task/task-ledger-store.js";
+import { readState } from "../../src/core/state/state-store.js";
 import { getTemplate } from "../../src/core/templates/index.js";
 import type { LedgerTask, TaskLedger } from "../../src/types/task.js";
 import { seedState } from "../helpers/seed-state.js";
@@ -99,7 +100,7 @@ describe("advance — task ledger transition gate (SOP 0.5.0)", () => {
     if (result.ok) expect(result.data?.to?.stateId).toBe("state_verify");
   });
 
-  it("pending ledger does NOT block transitions WITHIN state_build", async () => {
+  it("blocks intra-build advance while tasks pending (task-first, AM-010)", async () => {
     await seedState(project.cwd, {
       currentStateId: "state_build",
       currentStepId: "step_implementation_log",
@@ -110,6 +111,33 @@ describe("advance — task ledger transition gate (SOP 0.5.0)", () => {
       "utf8",
     );
     await writeTaskLedger(project.cwd, makeLedger([ledgerTask("task_a", "pending")]));
+    const result = await advanceState({ cwd: project.cwd });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.code).toBe("ERR_GATE_FAILED");
+      expect(result.message.en).toContain("task_a");
+      expect(result.message.en).toContain("/ocn-next");
+      expect(result.message.zh).toContain("/ocn-next");
+      // intra-build refusal must NOT claim a VERIFY crossing
+      expect(result.message.zh).not.toContain("不准进入 VERIFY");
+    }
+    // cursor must not have moved
+    const state = await readState(project.cwd);
+    expect(state.currentStateId).toBe("state_build");
+    expect(state.currentStepId).toBe("step_implementation_log");
+  });
+
+  it("walks forward within state_build once tasks are done", async () => {
+    await seedState(project.cwd, {
+      currentStateId: "state_build",
+      currentStepId: "step_implementation_log",
+    });
+    await fs.writeFile(
+      join(project.cwd, "docs", "12-implementation-log.md"),
+      getTemplate("implementation-log").template,
+      "utf8",
+    );
+    await writeTaskLedger(project.cwd, makeLedger([ledgerTask("task_a", "done")]));
     const result = await advanceState({ cwd: project.cwd });
     expect(result.ok).toBe(true);
     if (result.ok) {
@@ -144,9 +172,10 @@ describe("taskLedgerGuardOrNull — unit semantics", () => {
     expect(block?.message.en).toContain("+2 more");
   });
 
-  it("returns null for non-build→verify boundaries and absent ledgers", async () => {
+  it("returns null when entering BUILD (from outside) and for absent ledgers", async () => {
     expect(await taskLedgerGuardOrNull(project.cwd, FROM, NEXT)).toBeNull(); // no ledger
     await writeTaskLedger(project.cwd, makeLedger([ledgerTask("task_a", "pending")]));
+    // entry into BUILD (from.stateId !== state_build) is never guarded
     expect(
       await taskLedgerGuardOrNull(
         project.cwd,
@@ -154,5 +183,19 @@ describe("taskLedgerGuardOrNull — unit semantics", () => {
         { stateId: "state_build", stepId: "step_implementation_log" },
       ),
     ).toBeNull();
+  });
+
+  it("blocks intra-build forward moves with a task-first message (AM-010)", async () => {
+    await writeTaskLedger(project.cwd, makeLedger([ledgerTask("task_a", "pending")]));
+    const block = await taskLedgerGuardOrNull(
+      project.cwd,
+      { stateId: "state_build", stepId: "step_implementation_log" },
+      { stateId: "state_build", stepId: "step_change_evidence" },
+    );
+    expect(block).not.toBeNull();
+    expect(block?.pendingTaskIds).toEqual(["task_a"]);
+    expect(block?.message.en).toContain("/ocn-next");
+    expect(block?.message.en).toContain("task_a");
+    expect(block?.message.zh).not.toContain("不准进入 VERIFY");
   });
 });
