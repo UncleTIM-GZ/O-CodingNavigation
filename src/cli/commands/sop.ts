@@ -1,5 +1,6 @@
 import type { Command } from "commander";
 import { upgradeSopProfile } from "../../core/sop/upgrade.js";
+import { exitIfAiAgent, resolveActorOrExit } from "../cli-actor.js";
 import { outputResult } from "../output.js";
 
 // DEC-029 / AM-005 — `ocn sop upgrade [--target <version>] [--plan]`.
@@ -20,6 +21,7 @@ export function registerSopCommand(program: Command): void {
     .option("--plan", "Dry-run: validate and show the upgrade plan without writing", false)
     .option("--json", "Emit machine-readable JSON CommandResult", false)
     .action(async (rawOpts: { target?: string; plan: boolean; json: boolean }) => {
+      exitIfAiAgent(resolveActorOrExit(undefined, rawOpts.json), "ocn sop upgrade", rawOpts.json);
       const result = await upgradeSopProfile({
         cwd: process.cwd(),
         ...(rawOpts.target !== undefined ? { targetVersion: rawOpts.target } : {}),

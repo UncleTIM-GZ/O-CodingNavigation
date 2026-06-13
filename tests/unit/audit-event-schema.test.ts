@@ -18,9 +18,9 @@ describe("AuditEvent schema", () => {
   });
 
   it("rejects non-Z timestamps", () => {
-    expect(
-      AuditEvent.safeParse({ ...valid, timestamp: "2026-04-28T03:14:15+08:00" }).success,
-    ).toBe(false);
+    expect(AuditEvent.safeParse({ ...valid, timestamp: "2026-04-28T03:14:15+08:00" }).success).toBe(
+      false,
+    );
   });
 
   it("rejects ULIDs containing forbidden letters (I, L, O, U)", () => {
@@ -30,9 +30,7 @@ describe("AuditEvent schema", () => {
   });
 
   it("rejects ULIDs with the wrong length", () => {
-    expect(
-      AuditEvent.safeParse({ ...valid, eventId: "TOO_SHORT" }).success,
-    ).toBe(false);
+    expect(AuditEvent.safeParse({ ...valid, eventId: "TOO_SHORT" }).success).toBe(false);
   });
 
   it("accepts every event type from the verbatim taxonomy", () => {
@@ -71,22 +69,27 @@ describe("AuditEvent schema", () => {
     }
   });
 
-  it("rejects an unknown eventType", () => {
+  it("accepts auto_mode_changed (AM-009, single type for on/off/resume/suspend)", () => {
     expect(
-      AuditEvent.safeParse({ ...valid, eventType: "ocn_blew_up" }).success,
-    ).toBe(false);
+      AuditEvent.safeParse({
+        ...valid,
+        eventType: "auto_mode_changed",
+        actor: "system",
+        data: { action: "suspend", failureCount: 5 },
+      }).success,
+    ).toBe(true);
+  });
+
+  it("rejects an unknown eventType", () => {
+    expect(AuditEvent.safeParse({ ...valid, eventType: "ocn_blew_up" }).success).toBe(false);
   });
 
   it("rejects empty bilingual message fields", () => {
-    expect(
-      AuditEvent.safeParse({ ...valid, message: { en: "", zh: "你好" } }).success,
-    ).toBe(false);
+    expect(AuditEvent.safeParse({ ...valid, message: { en: "", zh: "你好" } }).success).toBe(false);
   });
 
   it("rejects extra unknown keys (strict mode)", () => {
-    expect(
-      AuditEvent.safeParse({ ...valid, extra: 1 }).success,
-    ).toBe(false);
+    expect(AuditEvent.safeParse({ ...valid, extra: 1 }).success).toBe(false);
   });
 
   it("accepts optional currentStateId / currentStepId with correct prefixes", () => {
@@ -100,8 +103,6 @@ describe("AuditEvent schema", () => {
   });
 
   it("rejects currentStateId without state_ prefix", () => {
-    expect(
-      AuditEvent.safeParse({ ...valid, currentStateId: "spec" }).success,
-    ).toBe(false);
+    expect(AuditEvent.safeParse({ ...valid, currentStateId: "spec" }).success).toBe(false);
   });
 });

@@ -13,6 +13,12 @@ export type SettingsMergeResult =
 
 export const OCN_HOOK_MARKER = "ocn hook";
 
+// AM-009 — every Bash call from the agent carries the actor signature, so
+// `ocn advance` / `ocn task check` run by the agent are attributed (and
+// authorized) as ai_agent without relying on a per-command flag.
+export const OCN_ACTOR_ENV_KEY = "OCN_ACTOR";
+export const OCN_ACTOR_ENV_VALUE = "ai_agent";
+
 const STOP_GROUP = {
   hooks: [
     {
@@ -46,7 +52,9 @@ function containsOcnHook(group: unknown): boolean {
   if (!isPlainObject(group) || !Array.isArray(group["hooks"])) return false;
   return group["hooks"].some(
     (h) =>
-      isPlainObject(h) && typeof h["command"] === "string" && h["command"].includes(OCN_HOOK_MARKER),
+      isPlainObject(h) &&
+      typeof h["command"] === "string" &&
+      h["command"].includes(OCN_HOOK_MARKER),
   );
 }
 
@@ -65,9 +73,21 @@ function ensureEventGroup(hooks: JsonObject, event: string, group: unknown): boo
   return true;
 }
 
+/** Returns true when the env key was added; existing values (even customized
+ *  ones) are left untouched. Throws on a malformed env slot. */
+function ensureActorEnv(root: JsonObject): boolean {
+  if (root["env"] === undefined) root["env"] = {};
+  const env = root["env"];
+  if (!isPlainObject(env)) throw new Error("malformed");
+  if (env[OCN_ACTOR_ENV_KEY] !== undefined) return false;
+  env[OCN_ACTOR_ENV_KEY] = OCN_ACTOR_ENV_VALUE;
+  return true;
+}
+
 export function mergeClaudeSettings(existingText: string | null): SettingsMergeResult {
   if (existingText === null) {
     const fresh: JsonObject = {
+      env: { [OCN_ACTOR_ENV_KEY]: OCN_ACTOR_ENV_VALUE },
       hooks: { Stop: [STOP_GROUP], PostToolUse: [POST_EDIT_GROUP] },
     };
     return { ok: true, content: serialize(fresh), action: "created" };
@@ -88,7 +108,8 @@ export function mergeClaudeSettings(existingText: string | null): SettingsMergeR
   try {
     const stopAdded = ensureEventGroup(hooks, "Stop", STOP_GROUP);
     const postEditAdded = ensureEventGroup(hooks, "PostToolUse", POST_EDIT_GROUP);
-    if (!stopAdded && !postEditAdded) {
+    const envAdded = ensureActorEnv(root);
+    if (!stopAdded && !postEditAdded && !envAdded) {
       return { ok: true, content: existingText, action: "skipped" };
     }
     return { ok: true, content: serialize(root), action: "updated" };

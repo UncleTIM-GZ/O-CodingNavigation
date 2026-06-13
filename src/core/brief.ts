@@ -10,6 +10,11 @@ import { readReadinessLedger } from "./readiness/readiness-store.js";
 import type { ReadinessLedger } from "../types/readiness.js";
 import { readTaskLedger } from "./task/task-ledger-store.js";
 import type { TaskLedger } from "../types/task.js";
+import {
+  type AutomationStatusView,
+  governanceReminder,
+  loadAutomationStatus,
+} from "./automation/governance-text.js";
 import { blocked, ok } from "./result.js";
 import { msg } from "./i18n.js";
 import { loadSopProfile } from "./sop/loader.js";
@@ -39,12 +44,10 @@ export interface BriefData {
   readonly readiness?: ReadinessBriefSummary;
   /** Present once a task ledger has been persisted (SOP 0.5.0 / AM-007). */
   readonly tasks?: TaskBriefSummary;
+  /** AM-009 — present only when auto mode is on (or suspended). Manual-mode
+   *  briefs are byte-identical to pre-AM-009 output. */
+  readonly automation?: AutomationStatusView;
 }
-
-const AI_GOVERNANCE_REMINDER =
-  "AI must NOT mark a blocked artifact as complete. AI must NOT advance project state. " +
-  "AI must NOT mutate .ocoding/state.json directly. AI must NOT modify SOP profile content " +
-  "without an explicit Decision Log entry.";
 
 const UNCERTAINTY_POLICY =
   'If data is insufficient, AI must explicitly state "数据不足" or "需要人工确认" ' +
@@ -154,6 +157,12 @@ export async function generateBrief(opts: BriefOptions): Promise<CommandResult<B
   const taskLedger = await readTaskLedger(opts.cwd);
   const tasks = taskLedger === null ? undefined : summarizeTasks(taskLedger);
 
+  // AM-009 — the governance reminder follows the human's automation grant;
+  // manual mode renders the pre-AM-009 text byte-identically.
+  const automationStatus = await loadAutomationStatus(opts.cwd);
+  const automationActive =
+    automationStatus.phase1 || automationStatus.phase2 || automationStatus.suspended;
+
   return ok(
     msg(
       `Brief for ${state.project.name} — ${state.currentStateId} / ${state.currentStepId}`,
@@ -168,11 +177,12 @@ export async function generateBrief(opts: BriefOptions): Promise<CommandResult<B
       currentObjective: objective,
       currentBlockers: blockers,
       nextActions,
-      aiGovernanceReminder: AI_GOVERNANCE_REMINDER,
+      aiGovernanceReminder: governanceReminder(automationStatus),
       uncertaintyPolicy: UNCERTAINTY_POLICY,
       ...(logicBackbone !== undefined ? { logicBackbone } : {}),
       ...(readiness !== undefined ? { readiness } : {}),
       ...(tasks !== undefined ? { tasks } : {}),
+      ...(automationActive ? { automation: automationStatus } : {}),
     },
   );
 }

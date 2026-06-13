@@ -3304,3 +3304,52 @@ step_final_build_verdict 后无受控重开方式（SHIP/REFLECT 为 stub）；
 - 跨轮 docs 产物的自动失效/刷新（verify 阶段旧收据快进风险靠人 review
   与就绪检查，机器强判留作后续候选）。
 - 游标历史的结构化快查字段与多轮统计报表。
+
+---
+
+## DEC-034｜Auto Mode — 可选自动模式：human-only 改述为 human-authorized（引擎/CLI，非 SOP bump）
+
+Date: 2026-06-13
+Implements: `docs/amendments/2026-06-13-auto-mode-amendment.md`（AM-009）
+
+### Status
+
+Accepted — implemented（PR-1…PR-5，分支 feat/auto-mode）。
+
+### Context
+
+gate 栈（章节门 + 逻辑主干门 + 就绪门 + 任务台账门）硬化后，"每一步等人按
+回车"成为新瓶颈：判定已经是机器的，触发还是人的。Owner 需求：两阶段
+（第一阶段 = DISCOVERY→SPEC→DESIGN→PLAN；第二阶段 = BUILD→VERIFY）可分别
+或一起开启自动模式，手动保持默认；并且（同日补充裁决）build plan 含多个
+P（里程碑）时，完成一个 P 后自动回拨游标继续下一个 P，直至全部开发完成。
+
+### Decision（要点；全文见 AM-009）
+
+1. **触发权可委托，裁决权永不委托**：advance 仍 100% 过完整 gate 栈，任务
+   完成仍只认冻结命令 exit 0。自动化的是按按钮的手，不是裁判。
+2. **开关 = 授权事件**：`ocn auto on --phase <1|2|all>`（--phase 必填）/
+   off / resume / status / trace；开关 human-only、CLI-only、写
+   `auto_mode_changed` 审计；配置入用户所有的 config.yaml `automation:` 块
+   （缺失/损坏 = 全手动，fail-safe）。
+3. **phase 归属按 advance 目标态**：PLAN→BUILD 跨界属 phase2；SHIP/REFLECT
+   永不委托。
+4. **phase2 委托面**：advance + `task check`（限 BUILD/VERIFY）+ 里程碑
+   回拨（仅 `rewind --to step_build_plan`、仅从 BUILD/VERIFY 发起）。
+5. **硬禁区（任何模式 human-only）**：readiness waive、cycle new、
+   sop upgrade、advance override、任意其他 rewind、`ocn auto` 本身。
+6. **熔断器**：同一 step 连续 N 次（默认 5）AI 门禁失败 → suspended
+   （actor=system 审计），人不受影响，`ocn auto resume` 解除；状态存
+   `.ocoding/automation-runtime.json`（随 cycle 归档重置）。
+7. **actor 通道**：flag > `OCN_ACTOR` env > user；agent setup 注入
+   settings env；治理签名而非安全边界（威胁模型 = 诚实代理）；手动模式下
+   ai_agent 首次被技术性拦截。
+8. **决策痕迹三层**：强制 `--rationale`（背景/依据/操作）+ 引擎机器上下文
+   （gate 结果、台账摘要、冻结命令、耗时）+ `ocn auto trace` 复盘视图。
+9. **不 bump SOP**（沿 AM-008 先例）；**MCP 白名单 7 工具不增不减**。
+
+### Consequences
+
+默认手动 + 开关 human-only + 熔断 + 硬禁区 + 判定权零让渡，保住"卖纪律"
+叙事：纪律不是放慢人，而是约束机器。残余风险（actor 可伪造、task check
+失败不计熔断、phase1 无人复核连推）及对冲见 AM-009 §Consequences。

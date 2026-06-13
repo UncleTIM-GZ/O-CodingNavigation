@@ -1,10 +1,13 @@
 import { join } from "node:path";
+import type { AuditActor } from "../../types/audit.js";
 import type { CommandResult } from "../../types/result.js";
 import type { RewindResult, StepLocation } from "../../types/state-machine.js";
 import type { ProjectState } from "../../types/state.js";
 import type { CreateAuditEventInput } from "../audit/audit-event.js";
 import { newCorrelationId } from "../audit/correlation.js";
 import { createAuditEvent, makeLockAuditHook, safeAudit } from "../audit/index.js";
+import { loadAutomation } from "../automation/ai-guard.js";
+import { authorizeAiRewind } from "../automation/authorization.js";
 import { msg } from "../i18n.js";
 import { Paths } from "../paths.js";
 import { blocked, ok } from "../result.js";
@@ -31,6 +34,10 @@ export interface RewindOptions {
   /** Mandatory non-empty justification — a rewind without a reason is
    *  refused (mirrors readiness waive / advance override). */
   readonly reason: string;
+  /** AM-009 — caller identity. ai_agent is authorized for exactly ONE shape:
+   *  the milestone-loop rewind to step_build_plan from BUILD/VERIFY under
+   *  phase-2 auto mode; everything else stays human-only. */
+  readonly actor?: AuditActor;
 }
 
 /** Sentinel thrown inside the lock when a concurrent writer has already
@@ -46,6 +53,7 @@ interface RewindContext {
   readonly cwd: string;
   readonly correlationId: string;
   readonly from: StepLocation;
+  readonly actor: AuditActor;
 }
 
 function buildEvent(
@@ -58,7 +66,7 @@ function buildEvent(
   return {
     eventType: "cursor_rewind",
     result,
-    actor: "user",
+    actor: ctx.actor,
     source: "cli",
     projectRoot: ctx.cwd,
     currentStateId: location?.stateId ?? ctx.from.stateId,
@@ -119,7 +127,25 @@ export async function rewindState(opts: RewindOptions): Promise<CommandResult<Re
     stateId: state.currentStateId,
     stepId: state.currentStepId,
   };
-  const ctx: RewindContext = { cwd: opts.cwd, correlationId, from };
+  const actor = opts.actor ?? "user";
+  const ctx: RewindContext = { cwd: opts.cwd, correlationId, from, actor };
+
+  // AM-009 — milestone-loop authorization for ai_agent callers (--reason
+  // doubles as the rationale; it is already mandatory below).
+  if (actor === "ai_agent") {
+    const automation = await loadAutomation(opts.cwd);
+    const refusal = authorizeAiRewind(
+      { ...automation, rationale: opts.reason },
+      { fromStateId: from.stateId, targetStepId: opts.targetStepId },
+    );
+    if (refusal !== null) {
+      await auditFailure(ctx, refusal.message, refusal.reason, {
+        targetStepId: opts.targetStepId,
+        reason: opts.reason,
+      });
+      return blocked("ERR_IO_OR_CONFIG", refusal.message, { from, correlationId });
+    }
+  }
 
   if (opts.reason.trim().length === 0) {
     const message = msg(

@@ -2,6 +2,7 @@
 import { Command } from "commander";
 import { registerAdvanceCommand } from "./commands/advance.js";
 import { registerAgentCommand } from "./commands/agent.js";
+import { registerAutoCommand } from "./commands/auto.js";
 import { registerBriefCommand } from "./commands/brief.js";
 import { registerCheckCommand } from "./commands/check.js";
 import { registerCycleCommand } from "./commands/cycle.js";
@@ -36,6 +37,9 @@ registerDocCommand(program);
 registerCheckCommand(program);
 registerGateCommand(program);
 registerAdvanceCommand(program);
+// AM-009 / DEC-034 — Auto Mode authorization switch (human-only; never
+// exposed over MCP).
+registerAutoCommand(program);
 // DEC-033 — controlled cursor rewind + round lifecycle (human-only; never
 // exposed over MCP).
 registerRewindCommand(program);

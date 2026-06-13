@@ -49,6 +49,14 @@ export const AuditEventType = z.enum([
   // archived (ruling ③ — one continuous log spans all cycles), so this event
   // is the stitch between rounds.
   "cycle_started",
+  // AM-009 / DEC-034 — auto-mode switch lifecycle (`ocn auto on/off/resume`
+  // plus the engine-initiated circuit-breaker suspend). Same single-type
+  // design as cursor_rewind: result success|failed, data.action
+  // ("on"|"off"|"resume"|"suspend") + before/after phases. The on/off/resume
+  // events are human-only by construction (the switch refuses ai_agent), so
+  // this slice of the audit log stays trustworthy even though actor labels
+  // are a governance signature rather than a security boundary.
+  "auto_mode_changed",
 ]);
 export type AuditEventType = z.infer<typeof AuditEventType>;
 

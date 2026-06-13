@@ -533,6 +533,7 @@ All commands accept `--json` to emit a machine-readable `CommandResult` envelope
 | `ocn check [--json]` | Check the current step's artifact against its required sections. | Read-only. | `artifact_gate_run` + `artifact_gate_passed` / `artifact_gate_blocked` |
 | `ocn gate [--json]` | Read-only artifact gate aggregation for the current step. Same emission as `check`; never mutates state. | Read-only. | `artifact_gate_*` (no `correlationId`) |
 | `ocn advance [--json]` | Run gate, then advance to the next step on pass. Lock-protected; never partial. | Writes `state.json` (atomic). | Full advance chain with shared `correlationId` |
+| `ocn auto on --phase <1|2|all>` / `off [--phase]` / `resume` / `status` / `trace` `[--json]` | **Auto Mode switch (AM-009 / DEC-034)** — delegate gate-green advances to the AI agent per phase (phase 1 = DISCOVERY→PLAN, phase 2 = BUILD→VERIFY incl. `task check` + the milestone rewind). The switch itself is human-only and refuses `OCN_ACTOR=ai_agent`; manual mode stays the default. `status`/`trace` are pull-mode (no audit); `trace` replays every ai_agent decision (rationale + engine-recorded context). | Writes the `automation:` block in `config.yaml` (comment-preserving) + `.ocoding/automation-runtime.json` (circuit breaker). | `auto_mode_changed` (on/off/resume/suspend) |
 | `ocn sop upgrade [--target <version>] [--plan] [--json]` | Move the project's pinned SOP profile forward to a newer bundled version (forward-only; `config.yaml` preserved). `--plan` is a read-only dry-run. | Apply rewrites `.ocoding/` snapshots + `state.json` (atomic, lock-protected); `--plan` writes nothing. | `sop_upgraded` (apply) / `sop_version_diff_detected` (plan) |
 | `ocn rewind --to <stepId> --reason <text> [--json]` | Move the cursor back to a strictly-earlier step in this round (DEC-033 / AM-008). `--reason` is mandatory; docs/ artifacts are untouched; no gate exemption — every advance after a rewind re-runs the full gate stack. **Milestone loop** (phased projects, e.g. P0→P4 with per-phase go/no-go): after each milestone's verdict, rewind to `step_build_plan`, APPEND the next phase's Task Specs (keep finished specs verbatim — verify-command text unchanged ⇒ hash unchanged ⇒ done preserved), re-gate — the ledger becomes the project's cumulative progress account. Human-only — never exposed over MCP. | Writes `state.json` (atomic, lock-protected; `latestGateResult` cleared). | `cursor_rewind` (success and failed) |
 | `ocn cycle new --yes [--json]` | Archive this round's runtime state to `.ocoding/cycles/<n>-<ts>/` and restart at the first step (DEC-033 / AM-008). docs/ are kept so next-round gates fast-forward; the pin and user-owned `config.yaml` stay; the audit JSONL is never archived — one continuous log spans all rounds. `--yes` is mandatory. Use it when the round's completion boundary (01-scope) is reached — per-milestone iteration inside one round is `ocn rewind`'s job. Human-only — never exposed over MCP. | Moves `.ocoding` runtime files into the archive; rewrites snapshots + `state.json`. | `cycle_started` (success and failed) |
@@ -574,6 +575,18 @@ ocn agent setup      # idempotent; commit .claude/ + CLAUDE.md to share with the
 ```
 
 Wires the whole phase-2 runbook mechanically: a **Stop hook** re-runs `ocn check` whenever the agent tries to end its turn (blocked → fix hints are fed back and the agent keeps working; loop-protected, fail-open), a **PostToolUse hook** runs your configured `commands.lint`/`commands.typecheck` (from `.ocoding/config.yaml`) after every Edit/Write, the **`.claude/ocn.md` governance contract** loads into every session via a CLAUDE.md import, and **`/ocn-next`** pulls `ocn brief` + `ocn next-prompt` and starts the task. Hook commands are guarded with `command -v ocn`, so teammates without ocn installed are unaffected. After setup, the human workflow per task is two actions: `/ocn-next` in Claude Code → review + `ocn advance` in the terminal.
+
+#### 6.4 Auto Mode — optional, off by default (AM-009 / DEC-034)
+
+```bash
+ocn auto on --phase 1     # delegate the planning pipeline (DISCOVERY→PLAN)
+ocn auto on --phase all   # full auto: planning + BUILD/VERIFY loop + milestone rewinds
+ocn auto status           # current grant + circuit-breaker state
+ocn auto trace            # replay every AI decision: rationale + machine context
+ocn auto off              # back to fully manual (the default)
+```
+
+Auto Mode delegates the **trigger**, never the **judgement**: every advance still runs the full gate stack, task completion is still decided only by the frozen verify command's exit 0. The AI must sign each call (`OCN_ACTOR=ai_agent`, injected by `ocn agent setup`) and justify it (`--rationale` — background / evidence / action); the engine independently records machine context on the audit trail. Safety net: N consecutive gate failures on one step (default 5) trip a circuit breaker that suspends automation until a human runs `ocn auto resume` — humans are never affected. Hard human-only zones in every mode: `readiness waive`, `cycle new`, `sop upgrade`, overrides, any non-milestone rewind, and `ocn auto` itself. The MCP surface is unchanged (7 tools, test-pinned). With phase 2 on, multi-P build plans complete end-to-end: after each milestone's verdict the agent rewinds to `step_build_plan`, appends the next P's Task Specs, re-gates (done tasks carry over), and continues — stopping only when every milestone is done.
 
 ### 7. MCP tools
 
@@ -1217,6 +1230,7 @@ planning 阶段的 artifact（00–10）跑过门禁、项目进入实现阶段�
 | `ocn check [--json]` | 检查当前 step 的产物是否满足必填章节。 | 只读。 | `artifact_gate_run` + `artifact_gate_passed` / `artifact_gate_blocked` |
 | `ocn gate [--json]` | 当前 step 的只读门禁聚合。和 `check` 输出相同；不改状态。 | 只读。 | `artifact_gate_*`（无 `correlationId`） |
 | `ocn advance [--json]` | 跑门禁，通过后推进到下一 step。带锁保护，永不部分写入。 | 原子写 `state.json`。 | 完整 advance 事件链，共享 `correlationId` |
+| `ocn auto on --phase <1|2|all>` / `off [--phase]` / `resume` / `status` / `trace` `[--json]` | **自动模式开关（AM-009 / DEC-034）**——按阶段把「门禁全绿后的推进」委托给 AI（第一阶段 = DISCOVERY→PLAN；第二阶段 = BUILD→VERIFY，含 `task check` 与里程碑回拨）。开关本身人工专属（拒绝 `OCN_ACTOR=ai_agent`）；手动模式仍是默认。`status`/`trace` 为 pull 模式不写审计；`trace` 按时间线重放每条 AI 决策（理由 + 引擎记录的机器上下文）。 | 写 `config.yaml` 的 `automation:` 块（保留注释）+ `.ocoding/automation-runtime.json`（熔断器）。 | `auto_mode_changed`（on/off/resume/suspend） |
 | `ocn sop upgrade [--target <version>] [--plan] [--json]` | 把项目锁定的 SOP profile 向前迁移到更新的内置版本（只能向前；保留 `config.yaml`）。`--plan` 为只读 dry-run。 | apply 重写 `.ocoding/` 快照 + `state.json`（原子、带锁保护）；`--plan` 不写任何文件。 | `sop_upgraded`（apply）/ `sop_version_diff_detected`（plan） |
 | `ocn rewind --to <stepId> --reason <text> [--json]` | 把游标拨回本轮中严格更早的一步（DEC-033 / AM-008）。`--reason` 必填；docs/ 产物一律不动；回拨零豁免——之后每次 advance 重过完整门禁。**里程碑循环**（分阶段项目，如 P0→P4 各配 go/no-go）：每个里程碑裁定后回拨到 `step_build_plan`，**追加**下一阶段 Task Specs（已完成任务规格原文保留——verify 命令一字不动 ⇒ 哈希不变 ⇒ done 保留），重过门禁——台账即成为项目级累积进度账。人类专属——不暴露 MCP。 | 写 `state.json`（原子、带锁；`latestGateResult` 置空）。 | `cursor_rewind`（成功与失败） |
 | `ocn cycle new --yes [--json]` | 把本轮运行时状态归档至 `.ocoding/cycles/<n>-<ts>/` 并从首步重开新一轮（DEC-033 / AM-008）。docs/ 保留供下一轮门禁快进；pin 与用户所有的 `config.yaml` 不变；审计 JSONL 不随轮归档——单链贯穿所有轮次。`--yes` 强制。在本轮完成边界（01 范围）达成时使用——轮内的逐里程碑迭代属于 `ocn rewind` 的职权。人类专属——不暴露 MCP。 | 运行时文件移入归档；重写快照 + `state.json`。 | `cycle_started`（成功与失败） |
@@ -1258,6 +1272,18 @@ ocn agent setup      # 幂等；提交 .claude/ 与 CLAUDE.md 即可全队共享
 ```
 
 把整套第二阶段 runbook 机械化接线：**Stop 钩子**在 agent 想结束回合时重跑 `ocn check`（不过则把 fix hints 顶回去继续修；带防环旗标、fail-open），**PostToolUse 钩子**在每次 Edit/Write 后跑你在 `.ocoding/config.yaml` 配置的 `commands.lint`/`commands.typecheck`，**`.claude/ocn.md` 治理契约**经 CLAUDE.md 导入随每个会话加载，**`/ocn-next`** 自动注入 `ocn brief` + `ocn next-prompt` 并开始任务。钩子命令带 `command -v ocn` 守卫，没装 ocn 的队友完全不受影响。接线后每个任务人只剩两个动作：Claude Code 里 `/ocn-next` → 终端里 review + `ocn advance`。
+
+#### F.4 自动模式——可选，默认关闭（AM-009 / DEC-034）
+
+```bash
+ocn auto on --phase 1     # 委托第一阶段（DISCOVERY→PLAN 规划流水线）
+ocn auto on --phase all   # 全自动：规划 + BUILD/VERIFY 循环 + 里程碑回拨
+ocn auto status           # 当前授权 + 熔断器状态
+ocn auto trace            # 复盘每条 AI 决策：理由 + 机器上下文
+ocn auto off              # 回到全手动（默认）
+```
+
+自动模式委托的是**触发权**，永不委托**裁决权**：每次推进仍跑完整门禁栈，任务完成仍只认冻结验收命令的 exit 0。AI 每次调用必须签名（`OCN_ACTOR=ai_agent`，由 `ocn agent setup` 注入）并说明理由（`--rationale`——背景/依据/操作）；引擎另行独立记录机器上下文入审计。兜底：同一步骤连续 N 次（默认 5）门禁失败即熔断暂停，需人工 `ocn auto resume` 恢复——人工操作不受任何影响。任何模式下的人工专属硬禁区：`readiness waive`、`cycle new`、`sop upgrade`、override、非里程碑回拨、`ocn auto` 本身。MCP 面零变化（7 个工具，测试钉死）。开启第二阶段后，多 P 构建计划可一跑到底：每个里程碑裁定后 AI 自动回拨到 `step_build_plan`、追加下一个 P 的任务规格、重过门禁（done 任务保留）继续，直至全部里程碑完成才停。
 
 ### G. MCP 工具
 

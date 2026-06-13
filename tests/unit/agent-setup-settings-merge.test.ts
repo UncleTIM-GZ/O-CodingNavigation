@@ -49,10 +49,16 @@ describe("mergeClaudeSettings (AM-006)", () => {
 
   it("skips (and returns the original text) when OCN entries already exist — even customized", () => {
     const existing = JSON.stringify({
+      env: { OCN_ACTOR: "user" }, // customized actor value — left untouched (AM-009)
       hooks: {
-        Stop: [{ hooks: [{ type: "command", command: "ocn hook stop --custom-flag", timeout: 60 }] }],
+        Stop: [
+          { hooks: [{ type: "command", command: "ocn hook stop --custom-flag", timeout: 60 }] },
+        ],
         PostToolUse: [
-          { matcher: "Edit", hooks: [{ type: "command", command: "nice -n 10 ocn hook post-edit" }] },
+          {
+            matcher: "Edit",
+            hooks: [{ type: "command", command: "nice -n 10 ocn hook post-edit" }],
+          },
         ],
       },
     });
@@ -61,6 +67,32 @@ describe("mergeClaudeSettings (AM-006)", () => {
     if (!result.ok) return;
     expect(result.action).toBe("skipped");
     expect(result.content).toBe(existing);
+  });
+
+  it("AM-009: injects env.OCN_ACTOR=ai_agent on create and on merge when absent", () => {
+    const created = mergeClaudeSettings(null);
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+    expect((parseContent(created)["env"] as Record<string, string>)["OCN_ACTOR"]).toBe("ai_agent");
+
+    const existing = JSON.stringify({
+      hooks: {
+        Stop: [{ hooks: [{ type: "command", command: "ocn hook stop" }] }],
+        PostToolUse: [
+          { matcher: "Edit|Write", hooks: [{ type: "command", command: "ocn hook post-edit" }] },
+        ],
+      },
+    });
+    const merged = mergeClaudeSettings(existing);
+    expect(merged.ok).toBe(true);
+    if (!merged.ok) return;
+    expect(merged.action).toBe("updated");
+    expect((parseContent(merged)["env"] as Record<string, string>)["OCN_ACTOR"]).toBe("ai_agent");
+  });
+
+  it("AM-009: flags malformed when env is not an object", () => {
+    const result = mergeClaudeSettings(JSON.stringify({ env: "nope", hooks: {} }));
+    expect(result.ok).toBe(false);
   });
 
   it("appends only the missing event when the other already has an OCN entry", () => {

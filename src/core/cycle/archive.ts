@@ -38,6 +38,8 @@ function archiveMoveSources(cwd: string): readonly string[] {
     Paths.readinessWaiversFile(cwd),
     Paths.readinessFrozenFile(cwd),
     Paths.taskLedgerFile(cwd),
+    // AM-009 — circuit-breaker state is per-round: archived + reset here.
+    Paths.automationRuntimeFile(cwd),
   ];
 }
 
