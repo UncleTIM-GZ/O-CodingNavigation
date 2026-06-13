@@ -206,6 +206,8 @@ export async function runTaskCheck(opts: TaskCheckOptions): Promise<CommandResul
         command: "task.check",
         taskId: opts.taskId ?? null,
         reason: refusal.reason,
+        // Decision trace stays complete even on refusal (parity with advance).
+        rationale: opts.rationale ?? null,
       });
     }
   }
