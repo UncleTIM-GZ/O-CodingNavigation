@@ -45,6 +45,8 @@ export function governanceReminder(s: AutomationStatusView): string {
         "`ocn rewind --to step_build_plan --reason ...` (multi-P build plans)"
       : "") +
     ". Judgement is never delegated: gates and frozen verify commands decide, the AI only triggers. " +
+    "Before exercising ANY ai_agent trigger, AI MUST first obtain an independent fresh-context expert review of the changes " +
+    "(see the next-prompt Automation loop) — it stands in for the skipped human and is advisory due-diligence; the gate, not the review, is the arbiter. " +
     "Still human-only in every mode: readiness waive, cycle new, sop upgrade, advance override, any other rewind, and `ocn auto` itself.";
   const suspension = s.suspended
     ? " CURRENTLY SUSPENDED (circuit breaker tripped) — delegation is paused; ai_agent calls are refused until a human runs `ocn auto resume`."
@@ -64,19 +66,28 @@ export function governanceReminder(s: AutomationStatusView): string {
 export function automationLoopLines(s: AutomationStatusView): readonly string[] {
   if ((!s.phase1 && !s.phase2) || s.suspended) return [];
   const lines: string[] = [
-    "Auto mode is ON — after finishing this step, continue WITHOUT waiting for a human:",
-    '1. Run `ocn check`; fix until the gate passes (rationale = background / evidence / action).',
+    "Auto mode is ON — no human will check this step, so YOU must stand in for the human reviewer before every delegated trigger. " +
+      "After finishing this step, continue WITHOUT waiting for a human:",
+    "1. Run `ocn check`; fix until the gate passes (rationale = background / evidence / action).",
+    "2. INDEPENDENT EXPERT REVIEW (stands in for the skipped human): dispatch a fresh-context subagent acting as a senior human-expert " +
+      "reviewer. Give it this step's requirements + the traced AC ids + the diff / changed files + the OCN contract; require a PASS/FAIL " +
+      "verdict with concrete findings. Dispatching this in-harness subagent (the Task/Agent tool, no external network) is REQUIRED here and " +
+      'does NOT count as the "Do not call any LLM API or external network service" forbidden action, nor the "LLM or external API call ' +
+      "becomes necessary\" stop condition — those govern the TASK's own external calls, not your in-harness review. On FAIL: record the " +
+      "findings, fix within the task scope, re-run `ocn check`, and re-review — at most 3 fix attempts; if it still fails, record the " +
+      "unresolved findings in your --rationale (and via `ocn log`) and proceed anyway (the gate, not the review, is the arbiter). The " +
+      "verdict covers the current changes — re-review only when the changes change.",
   ];
   if (s.phase2) {
     lines.push(
-      "2. In BUILD: `OCN_ACTOR=ai_agent ocn task check --rationale ...` until the ledger is clear.",
-      '3. `OCN_ACTOR=ai_agent ocn advance --rationale ...`, then regenerate the next prompt and continue.',
-      "4. Milestone loop: when this milestone (P) is verified and the build plan declares more milestones, " +
+      "3. In BUILD, once the review verdict stands and `ocn check` is green: `OCN_ACTOR=ai_agent ocn task check --rationale ...` until the ledger is clear.",
+      "4. `OCN_ACTOR=ai_agent ocn advance --rationale ...` (re-review first only if the changes changed since step 2), then regenerate the next prompt and continue.",
+      "5. Milestone loop: when this milestone (P) is verified and the build plan declares more milestones, " +
         "run `OCN_ACTOR=ai_agent ocn rewind --to step_build_plan --reason ...`, append the next P's Task Specs, re-gate, continue.",
     );
   } else {
     lines.push(
-      '2. `OCN_ACTOR=ai_agent ocn advance --rationale ...`, then regenerate the next prompt and continue.',
+      "3. Once the review verdict stands and `ocn check` is green: `OCN_ACTOR=ai_agent ocn advance --rationale ...`, then regenerate the next prompt and continue.",
     );
   }
   lines.push(

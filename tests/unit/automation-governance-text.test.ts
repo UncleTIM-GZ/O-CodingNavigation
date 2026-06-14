@@ -32,6 +32,12 @@ describe("governanceReminder", () => {
     expect(text).toContain("readiness waive, cycle new, sop upgrade");
   });
 
+  it("auto grant requires an independent expert review before any trigger", () => {
+    const text = governanceReminder({ phase1: true, phase2: false, suspended: false });
+    expect(text).toContain("independent fresh-context expert review");
+    expect(text).toContain("the gate, not the review, is the arbiter");
+  });
+
   it("phase2 grant: adds task check + milestone rewind to the delegation", () => {
     const text = governanceReminder({ phase1: false, phase2: true, suspended: false });
     expect(text).toContain("phase 2 (BUILD→VERIFY)");
@@ -55,6 +61,46 @@ describe("automationLoopLines", () => {
   it("is empty in manual mode and while suspended", () => {
     expect(automationLoopLines(MANUAL_STATUS)).toEqual([]);
     expect(automationLoopLines({ phase1: true, phase2: true, suspended: true })).toEqual([]);
+  });
+
+  it("inserts an independent expert-review step before triggers (auto only)", () => {
+    const phase2 = automationLoopLines({ phase1: false, phase2: true, suspended: false }).join(
+      "\n",
+    );
+    expect(phase2).toContain("INDEPENDENT EXPERT REVIEW");
+    expect(phase2).toContain("fresh-context subagent");
+    expect(phase2).toContain("at most 3 fix attempts");
+    expect(phase2).toContain("the gate, not the review, is the arbiter");
+
+    const phase1 = automationLoopLines({ phase1: true, phase2: false, suspended: false }).join(
+      "\n",
+    );
+    expect(phase1).toContain("INDEPENDENT EXPERT REVIEW");
+
+    // manual/suspended carry no review text
+    expect(automationLoopLines(MANUAL_STATUS).join("\n")).not.toContain("EXPERT REVIEW");
+  });
+
+  it("review carve-out names BOTH the forbidden action and the stop condition (no self-deadlock)", () => {
+    const lines = automationLoopLines({ phase1: false, phase2: true, suspended: false }).join("\n");
+    expect(lines).toContain("Do not call any LLM API or external network service");
+    expect(lines).toContain("LLM or external API call becomes necessary");
+    expect(lines).toContain("not your in-harness review");
+  });
+
+  it("triggers stay correctly numbered after inserting the review step", () => {
+    const phase1Lines = automationLoopLines({ phase1: true, phase2: false, suspended: false });
+    expect(phase1Lines.find((l) => l.includes("ocn advance --rationale"))?.startsWith("3.")).toBe(
+      true,
+    );
+    expect(phase1Lines.join("\n")).not.toContain("4.");
+
+    const phase2Lines = automationLoopLines({ phase1: false, phase2: true, suspended: false });
+    expect(phase2Lines.find((l) => l.includes("ocn task check"))?.startsWith("3.")).toBe(true);
+    expect(phase2Lines.find((l) => l.includes("ocn advance --rationale"))?.startsWith("4.")).toBe(
+      true,
+    );
+    expect(phase2Lines.find((l) => l.includes("Milestone loop"))?.startsWith("5.")).toBe(true);
   });
 
   it("phase2 loop includes task check, advance, the milestone rewind, and machine stop conditions", () => {
