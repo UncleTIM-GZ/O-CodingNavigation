@@ -94,10 +94,12 @@ An **opt-in, declaration-driven, AST-based Contract Backbone** with **two cleanl
 
 ### D1 — Declared source of truth (no derivation)
 
-The DESIGN api-contract artifact gains an optional `ocn-api-contract` fenced block (YAML):
+The DESIGN api-contract artifact gains an optional fenced block whose info string is **exactly
+`ocn-api-contract`** (the body is YAML). The tag is the selector — an untagged ` ```yaml ` / ` ```json `
+block is **intentionally not** picked up, so an unrelated YAML block can never be silently captured as the
+contract (`src/core/artifact/api-contract-parser.ts`):
 
-```yaml
-# ocn-api-contract
+```ocn-api-contract
 endpoints:
   - id: endpoint_list_users      # stable string id (§4.1)
     method: GET

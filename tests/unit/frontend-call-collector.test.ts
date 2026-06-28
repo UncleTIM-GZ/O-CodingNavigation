@@ -46,4 +46,19 @@ describe("collectFrontendCalls", () => {
       await fs.rm(outside, { recursive: true, force: true });
     }
   });
+
+  it("records file paths relative to the PROJECT root, not the frontend root (AM-012 review #6)", async () => {
+    await fs.mkdir(join(root, "web", "src"), { recursive: true });
+    await fs.writeFile(join(root, "web", "src", "client.ts"), `fetch('/api/ping');`);
+    const result = await collectFrontendCalls(join(root, "web", "src"), { projectRoot: root });
+    const files = result.calls.map((c) => c.file);
+    expect(files).toContain("web/src/client.ts");
+    expect(files).not.toContain("client.ts");
+  });
+
+  it("returns rootExists:false (no throw) when the frontend root is absent (AM-012 review #1)", async () => {
+    const result = await collectFrontendCalls(join(root, "does-not-exist"), { projectRoot: root });
+    expect(result.rootExists).toBe(false);
+    expect(result.calls).toEqual([]);
+  });
 });

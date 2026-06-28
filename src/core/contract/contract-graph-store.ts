@@ -38,11 +38,22 @@ export function buildContractGraph(
     (a, b) => compare(a.file, b.file) || compare(a.method, b.method) || compare(a.path, b.path),
   );
 
-  const sortedViolations = [...violations].sort(
+  // Violations are derived from the raw (pre-dedupe) calls, so two byte-identical
+  // call sites yield duplicate violations — dedupe them with the same key
+  // discipline as calls, else the reported count can exceed the call count.
+  const seenV = new Set<string>();
+  const dedupedViolations: ContractViolation[] = [];
+  for (const v of violations) {
+    const key = `${v.kind} ${v.method} ${v.path} ${v.file}`;
+    if (seenV.has(key)) continue;
+    seenV.add(key);
+    dedupedViolations.push(v);
+  }
+  dedupedViolations.sort(
     (a, b) => compare(a.kind, b.kind) || compare(a.path, b.path) || compare(a.method, b.method),
   );
 
-  return { endpoints: sortedEndpoints, calls: dedupedCalls, violations: sortedViolations };
+  return { endpoints: sortedEndpoints, calls: dedupedCalls, violations: dedupedViolations };
 }
 
 export async function writeContractGraph(root: string, graph: ContractGraph): Promise<void> {

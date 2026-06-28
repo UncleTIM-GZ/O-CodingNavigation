@@ -58,6 +58,21 @@ export const ContractViolation = z.object({
 });
 export type ContractViolation = z.infer<typeof ContractViolation>;
 
+// Opt-in configuration for the Contract Backbone, read from the `contract:`
+// block of the user-owned .ocoding/config.yaml (AM-012 D5/D8). Fail-safe: an
+// absent/invalid block resolves to disabled, so the gate never activates by
+// accident. camelCase keys mirror the `automation:` block.
+export const ContractConfig = z.object({
+  enabled: z.boolean().default(false),
+  /** Markdown doc carrying the `ocn-api-contract` declaration block. */
+  declaration: z.string().default("docs/06-api-contract.md"),
+  /** Root scanned for frontend call sites (must resolve inside the project). */
+  frontendRoot: z.string().default("src"),
+  /** Optional API prefix the client prepends (axios `baseURL`). */
+  basePath: z.string().optional(),
+});
+export type ContractConfig = z.infer<typeof ContractConfig>;
+
 // The machine source of truth persisted at .ocoding/contract-graph.json: the
 // declared endpoints, the extracted calls, and the violation ledger. All three
 // arrays are canonically ordered by the projection builder so the file is

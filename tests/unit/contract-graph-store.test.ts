@@ -51,7 +51,11 @@ describe("buildContractGraph", () => {
     const graph = buildContractGraph(
       [],
       [],
-      [vio("undeclared_call", "/api/z"), vio("method_mismatch", "/api/a"), vio("undeclared_call", "/api/a")],
+      [
+        vio("undeclared_call", "/api/z"),
+        vio("method_mismatch", "/api/a"),
+        vio("undeclared_call", "/api/a"),
+      ],
     );
     expect(graph.violations.map((v) => `${v.kind} ${v.path}`)).toEqual([
       "method_mismatch /api/a",
@@ -60,9 +64,23 @@ describe("buildContractGraph", () => {
     ]);
   });
 
+  it("dedupes identical violations so the count never exceeds the calls (AM-012 review #4)", () => {
+    const graph = buildContractGraph(
+      [],
+      [call("/api/invoices", "a.tsx"), call("/api/invoices", "a.tsx")],
+      [vio("undeclared_call", "/api/invoices"), vio("undeclared_call", "/api/invoices")],
+    );
+    expect(graph.calls).toHaveLength(1);
+    expect(graph.violations).toHaveLength(1);
+  });
+
   it("is stable: building twice from the same input yields equal JSON", () => {
     const inputs = () =>
-      buildContractGraph([ep("endpoint_b"), ep("endpoint_a")], [call("/x", "b"), call("/x", "a")], []);
+      buildContractGraph(
+        [ep("endpoint_b"), ep("endpoint_a")],
+        [call("/x", "b"), call("/x", "a")],
+        [],
+      );
     expect(JSON.stringify(inputs())).toEqual(JSON.stringify(inputs()));
   });
 });

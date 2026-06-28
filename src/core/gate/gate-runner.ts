@@ -14,6 +14,7 @@ import { blocked, ok } from "../result.js";
 import { resolveProfileForProject } from "../sop/loader.js";
 import { evaluateTaskSpecs } from "../task/task-gate.js";
 import { writeTaskLedger } from "../task/task-ledger-store.js";
+import { runContractDriftStep } from "../contract/contract-gate-step.js";
 import { evaluateLogicBackbone } from "./logic-backbone-gate.js";
 import { readinessStepBlockOrNull } from "./readiness-step.js";
 import { StateInvalidError, StateNotFoundError, readState } from "../state/state-store.js";
@@ -158,11 +159,45 @@ export async function runGate(opts: RunGateOptions): Promise<CommandResult<GateR
         ),
     });
 
+  // AM-012 — Contract Backbone drift gate. Cross-cutting like readiness, but
+  // opt-in and self-limited to BUILD/VERIFY (the shared step skips otherwise).
+  // On pass it persists the projection; on a blocking drift it returns the
+  // mapped failure code. Null = skip / pass.
+  const contractDriftOrNull = async (): Promise<CommandResult<GateResult> | null> => {
+    const step = await runContractDriftStep({
+      cwd: opts.cwd,
+      stateId: state.currentStateId,
+      executeScan: opts.executeCommands ?? true,
+    });
+    if (step.kind === "skip" || step.kind === "pass") return null;
+    if (step.kind === "io_error") return blocked("ERR_IO_OR_CONFIG", step.message);
+    const result: GateResult = {
+      status: "blocked",
+      currentStateId: state.currentStateId,
+      currentStepId: state.currentStepId,
+      ...(relativeArtifactPath !== null ? { artifactPath: relativeArtifactPath } : {}),
+      missingRequiredSectionIds: [],
+      blockingReasons: [...step.blockingReasons],
+    };
+    await safeAudit(
+      opts.cwd,
+      createAuditEvent(
+        baseAudit("artifact_gate_blocked", "blocked", step.message, {
+          status: "blocked",
+          reason: step.blockingReasons[0],
+        }),
+      ),
+    );
+    return blocked(step.failureCode, step.message, result);
+  };
+
   // Step has no required artifact — readiness still applies (cross-cutting),
   // then auto-pass with not_applicable.
   if (relativeArtifactPath === null) {
     const readinessBlock = await readinessOrNull();
     if (readinessBlock !== null) return readinessBlock;
+    const contractBlock = await contractDriftOrNull();
+    if (contractBlock !== null) return contractBlock;
     const result: GateResult = {
       status: "not_applicable",
       currentStateId: state.currentStateId,
@@ -361,6 +396,10 @@ export async function runGate(opts: RunGateOptions): Promise<CommandResult<GateR
   // SOP 0.4.0 (AM-004) — readiness gate after the section / logic gates.
   const readinessBlock = await readinessOrNull();
   if (readinessBlock !== null) return readinessBlock;
+
+  // AM-012 — contract drift gate (opt-in; BUILD/VERIFY only).
+  const contractBlock = await contractDriftOrNull();
+  if (contractBlock !== null) return contractBlock;
 
   // pass (warning state currently unused; reserved for PR #5+)
   const result: GateResult = {

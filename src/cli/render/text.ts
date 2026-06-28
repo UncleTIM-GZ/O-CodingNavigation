@@ -89,6 +89,16 @@ function appendTaskSummaryBlock(out: string[], value: unknown): void {
   }
 }
 
+// AM-012 — Contract Backbone coverage line in the brief.
+function appendContractBlock(out: string[], value: unknown): void {
+  if (!isRecord(value)) return;
+  out.push("");
+  out.push("Contract Backbone｜契约主干:");
+  out.push(
+    `  endpoints ${String(value["endpoints"])} · calls ${String(value["calls"])} · undeclared ${String(value["undeclared"])} · method-mismatch ${String(value["methodMismatch"])} · unverified ${String(value["unverified"])}`,
+  );
+}
+
 // SOP 0.5.0 (AM-007) — `ocn task list` table.
 function appendTaskListBlock(out: string[], data: Record<string, unknown>): void {
   const tasks = Array.isArray(data["tasks"]) ? data["tasks"] : [];
@@ -147,6 +157,7 @@ function appendBriefBlock(out: string[], data: Record<string, unknown>): void {
   appendLogicBackboneBlock(out, data["logicBackbone"]);
   appendReadinessSummaryBlock(out, data["readiness"]);
   appendTaskSummaryBlock(out, data["tasks"]);
+  appendContractBlock(out, data["contractBackbone"]);
   if (typeof data["aiGovernanceReminder"] === "string") {
     out.push("");
     out.push("AI Governance Reminder:");

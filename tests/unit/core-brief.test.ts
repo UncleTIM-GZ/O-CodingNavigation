@@ -69,4 +69,57 @@ describe("core/brief.generateBrief", () => {
       expect(result.data?.currentBlockers).toEqual([]);
     }
   });
+
+  // AM-012 — the contract backbone summary is additive: absent until the gate
+  // has persisted a projection, then folded into the brief from that file.
+  const enableContract = async (cwd: string): Promise<void> => {
+    const configPath = join(cwd, ".ocoding", "config.yaml");
+    const existing = await fs.readFile(configPath, "utf8");
+    await fs.writeFile(configPath, existing + "\ncontract:\n  enabled: true\n", "utf8");
+  };
+
+  const writeProjection = async (cwd: string): Promise<void> => {
+    const { buildContractGraph, writeContractGraph } =
+      await import("../../src/core/contract/contract-graph-store.js");
+    const graph = buildContractGraph(
+      [{ id: "endpoint_list_users", method: "GET", path: "/api/users" }],
+      [
+        { file: "src/app.ts", method: "GET", path: "/api/users", confidence: "certain" },
+        { file: "src/app.ts", method: "GET", path: "/api/invoices", confidence: "certain" },
+      ],
+      [{ kind: "undeclared_call", method: "GET", path: "/api/invoices", file: "src/app.ts" }],
+    );
+    await writeContractGraph(cwd, graph);
+  };
+
+  it("omits the contract backbone summary until a projection exists", async () => {
+    await enableContract(project.cwd);
+    const result = await generateBrief({ cwd: project.cwd });
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.data?.contractBackbone).toBeUndefined();
+  });
+
+  it("summarizes the contract backbone (endpoints / calls / violation counts) from the projection", async () => {
+    await enableContract(project.cwd);
+    await writeProjection(project.cwd);
+
+    const result = await generateBrief({ cwd: project.cwd });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.data?.contractBackbone).toEqual({
+        endpoints: 1,
+        calls: 2,
+        undeclared: 1,
+        methodMismatch: 0,
+        unverified: 0,
+      });
+    }
+  });
+
+  it("does NOT surface a stale projection once contract is disabled (AM-012 review #3)", async () => {
+    await writeProjection(project.cwd); // projection on disk, but config stays disabled
+    const result = await generateBrief({ cwd: project.cwd });
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.data?.contractBackbone).toBeUndefined();
+  });
 });

@@ -33,6 +33,14 @@ export interface CollectResult {
   /** false when the optional `typescript` peer dep could not be loaded. */
   readonly tsAvailable: boolean;
   readonly filesScanned: number;
+  /** false when the configured frontend root does not exist on disk. A missing
+   *  root means there are no call sites to prove drift against, so the gate
+   *  skips rather than hard-blocking (fail-safe, never false-closed). */
+  readonly rootExists: boolean;
+}
+
+function isEnoent(err: unknown): boolean {
+  return err instanceof Error && (err as NodeJS.ErrnoException).code === "ENOENT";
 }
 
 export interface CollectOptions {
@@ -75,17 +83,25 @@ export async function collectFrontendCalls(
   }
 
   const ts = await loadTypescript();
-  if (ts === null) return { calls: [], tsAvailable: false, filesScanned: 0 };
+  if (ts === null) return { calls: [], tsAvailable: false, filesScanned: 0, rootExists: true };
 
   const files: string[] = [];
-  await walkSourceFiles(frontendRoot, files);
+  try {
+    await walkSourceFiles(frontendRoot, files);
+  } catch (err) {
+    if (isEnoent(err)) return { calls: [], tsAvailable: true, filesScanned: 0, rootExists: false };
+    throw err;
+  }
 
+  // Call-site paths are project-root-relative, matching every other OCN path
+  // (so a monorepo `web/src` reports `web/src/app.ts`, not a bare `app.ts`).
+  const base = opts.projectRoot ?? frontendRoot;
   const calls: FrontendCall[] = [];
   for (const full of files) {
-    const rel = relative(frontendRoot, full).split(sep).join("/");
+    const rel = relative(base, full).split(sep).join("/");
     const source = await fs.readFile(full, "utf8");
     calls.push(...extractCallsFromSource(ts, source, rel));
   }
 
-  return { calls, tsAvailable: true, filesScanned: files.length };
+  return { calls, tsAvailable: true, filesScanned: files.length, rootExists: true };
 }
