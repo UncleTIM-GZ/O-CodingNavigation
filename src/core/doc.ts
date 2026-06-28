@@ -4,6 +4,8 @@ import { blocked, ok } from "./result.js";
 import { msg } from "./i18n.js";
 import { FileExistsError, writeArtifact } from "./artifact/template-writer.js";
 import { type DocType, DOC_TYPES, getTemplate, isDocType } from "./templates/index.js";
+import { renderApiContractTemplate } from "./templates/api-contract.js";
+import { readContractConfig } from "./contract/contract-config.js";
 import { createAuditEvent, safeAudit } from "./audit/index.js";
 import { loadSopProfile } from "./sop/loader.js";
 
@@ -45,8 +47,17 @@ export async function createArtifact(
   const relativePath = loadSopProfile().artifactPathForStep(stepId) ?? entry.relativePath;
   const artifactPath = join(opts.cwd, relativePath);
 
+  // AM-012 — the api-contract artifact carries the optional `ocn-api-contract`
+  // declaration block ONLY when the project has opted in (contract.enabled).
+  // Every other doc type, and api-contract without opt-in, stays byte-identical.
+  let content = entry.template;
+  if (opts.type === "api-contract") {
+    const contractConfig = await readContractConfig(opts.cwd);
+    content = renderApiContractTemplate({ withContractBlock: contractConfig.enabled });
+  }
+
   try {
-    await writeArtifact(artifactPath, entry.template, opts.overwrite ?? false);
+    await writeArtifact(artifactPath, content, opts.overwrite ?? false);
   } catch (err) {
     if (err instanceof FileExistsError) {
       return blocked(

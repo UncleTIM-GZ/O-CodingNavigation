@@ -3394,3 +3394,42 @@ BUILD 内步进，让游标跑在了本已接通的 `/ocn-next` 任务派发循�
 把"先写收据后干活"这一受边界门容许的残余味道在更早处堵死，BUILD 收据只能描述
 已完成的活儿。代价是 BUILD 内步进现在硬依赖台账清零——但抽干本就是 BUILD 的正事，
 游标停在 implementation_log 抽干即可，无死锁。
+
+---
+
+## DEC-036｜Auto-mode 触发前的独立专家评审子代理（引擎/CLI 文本层，非 SOP bump）
+
+Date: 2026-06-15
+Implements: `docs/amendments/2026-06-15-auto-review-subagent-amendment.md`（AM-011）
+
+### Status
+
+Accepted — implemented（分支 feat/auto-review-subagent）。
+
+### Context
+
+AM-009 的 auto 模式"触发权可委托、裁决权不委托"在跨里程碑/跨步之间没有人类把关——
+被跳过的正是"人类专家看一眼改动对不对"。原治理文本对此零提示，且 `FORBIDDEN_ACTIONS`
+的"不得调用外部 LLM/网络"字面上会让诚实 agent 拒绝派子代理。结果：gate 拦得住
+缺章节/逻辑未接线/任务未完成，却拦不住"章节齐全、gate 全绿、专家眼里实现却错了"的
+改动在无人值守下被推过。
+
+### Decision（要点；全文见 AM-011）
+
+1. **触发前强制独立评审**：auto 模式下行使任何 ai_agent 触发键前（phase1=advance 前；
+   phase2=task check 前 + advance 前），派一个**独立、全新上下文**子代理，以**资深人类专家**
+   视角对照〔step 要求 + AC + diff + 契约〕给出 PASS/FAIL + 具体问题，替代被跳过的人类审查。
+2. **裁决权零变更**：评审是**建议性尽职调查**，gate + 冻结 verify 命令仍是唯一裁决。
+3. **FAIL 有界修复环**：记录→范围内修复→复审，**最多 3 次**；仍不过则把遗留问题写进
+   --rationale（并 `ocn log`）后继续。避免无界自旋，遗留留痕，gate 兜底。
+4. **红线澄清**：派 harness 内子代理（Task/Agent 工具，无外网）是本步被要求的动作，
+   不属于"外部 LLM/网络"禁令；澄清只放 auto-only loop 文本，不动 `FORBIDDEN_ACTIONS`
+   等 pin 死的共享常量。
+5. **纯文本层、非 SOP bump**（沿 AM-008/009/010 先例）；**MCP 白名单 7 工具不增不减**；
+   manual 输出与改动前逐字一致（评审字样仅 auto 模式出现）。
+
+### Consequences
+
+把 auto 模式无人值守跨步里缺失的人类专家把关，用"AI 自带独立评审尽职调查"补上，
+堵住"gate 全绿但实现错了"在无人值守下被推过这一类。代价是每次触发前多一道子代理
+评审（最多 3 次修复环），换取无人值守推进的可信度；分界（裁决权不委托）不变。

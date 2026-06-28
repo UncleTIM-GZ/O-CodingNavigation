@@ -146,6 +146,22 @@ describe("cycleNew", () => {
       expect(archivedLedger).toContain("tasks");
     });
 
+    it("moves the contract graph projection into the archive when present (AM-012 review #2)", async () => {
+      const graphPath = join(project.cwd, ".ocoding", "contract-graph.json");
+      await fs.writeFile(graphPath, '{"endpoints":[],"calls":[],"violations":[]}\n', "utf8");
+
+      const result = await cycleNew({ cwd: project.cwd });
+      expect(result.ok).toBe(true);
+
+      await expect(fs.access(graphPath)).rejects.toThrow();
+      const dirs = await listCycleDirs(project.cwd);
+      const archived = await fs.readFile(
+        join(project.cwd, ".ocoding", "cycles", dirs[0] ?? "", "contract-graph.json"),
+        "utf8",
+      );
+      expect(archived).toContain("endpoints");
+    });
+
     it("leaves docs/ artifacts untouched for next-round gate fast-forward", async () => {
       const briefPath = join(project.cwd, "docs", "00-project-brief.md");
       const before = await fs.readFile(briefPath, "utf8");

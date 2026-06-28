@@ -38,6 +38,9 @@ function archiveMoveSources(cwd: string): readonly string[] {
     Paths.readinessWaiversFile(cwd),
     Paths.readinessFrozenFile(cwd),
     Paths.taskLedgerFile(cwd),
+    // AM-012 — the contract-drift projection is per-round; archive it with the
+    // other projections so the new round's brief never shows stale coverage.
+    Paths.contractGraphFile(cwd),
     // AM-009 — circuit-breaker state is per-round: archived + reset here.
     Paths.automationRuntimeFile(cwd),
   ];

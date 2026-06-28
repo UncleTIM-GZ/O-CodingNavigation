@@ -10,6 +10,7 @@ import { parseHeadings } from "./artifact/markdown-parser.js";
 import { createAuditEvent, safeAudit } from "./audit/index.js";
 import { msg } from "./i18n.js";
 import { blocked, ok } from "./result.js";
+import { runContractDriftStep } from "./contract/contract-gate-step.js";
 import { readinessStepBlockOrNull } from "./gate/readiness-step.js";
 import { resolveProfileForProject } from "./sop/loader.js";
 import { StateInvalidError, StateNotFoundError, readState } from "./state/state-store.js";
@@ -196,6 +197,39 @@ export async function checkCurrentArtifact(opts: CheckOptions): Promise<CommandR
         ),
     });
 
+  // AM-012 — Contract Backbone drift gate, shared with runGate so `check` and
+  // `gate`/`advance` cannot drift. Cross-cutting like readiness, but opt-in and
+  // self-limited to BUILD/VERIFY (evaluateContractDrift skips otherwise). On
+  // pass it persists the projection; on a blocking drift it maps the failure
+  // code onto a CheckData block. Null = skip / pass.
+  const contractDriftOrNull = async (
+    blockedArtifactPath: string,
+  ): Promise<CommandResult<CheckData> | null> => {
+    const step = await runContractDriftStep({ cwd: opts.cwd, stateId, executeScan: true });
+    if (step.kind === "skip" || step.kind === "pass") return null;
+    if (step.kind === "io_error") return blocked("ERR_IO_OR_CONFIG", step.message);
+    await safeAudit(
+      opts.cwd,
+      createAuditEvent({
+        ...baseAuditCtx,
+        eventType: "artifact_gate_blocked",
+        result: "blocked",
+        message: step.message,
+        relatedArtifactIds: [artifactId],
+        data: {
+          artifactPath: blockedArtifactPath,
+          status: "blocked",
+          reason: step.blockingReasons[0],
+        },
+      }),
+    );
+    return blocked(step.failureCode, step.message, {
+      artifactPath: blockedArtifactPath,
+      status: "blocked",
+      missingRequiredSectionIds: [],
+    } satisfies CheckData);
+  };
+
   // Step has no required artifact (e.g. state_build / state_verify stubs in
   // v1.0). Mirror runGate: emit gate_run + gate_passed and return ok with
   // status=not_applicable rather than blocking.
@@ -221,6 +255,8 @@ export async function checkCurrentArtifact(opts: CheckOptions): Promise<CommandR
     );
     const readinessBlock = await readinessGateOrNull("");
     if (readinessBlock !== null) return readinessBlock;
+    const contractBlock = await contractDriftOrNull("");
+    if (contractBlock !== null) return contractBlock;
     await safeAudit(
       opts.cwd,
       createAuditEvent({
@@ -318,6 +354,10 @@ export async function checkCurrentArtifact(opts: CheckOptions): Promise<CommandR
   // SOP 0.4.0 (AM-004) — readiness cross-cutting gate, after the section gate.
   const readinessBlock = await readinessGateOrNull(artifactPath);
   if (readinessBlock !== null) return readinessBlock;
+
+  // AM-012 — contract drift gate (opt-in; BUILD/VERIFY only), after readiness.
+  const contractBlock = await contractDriftOrNull(artifactPath);
+  if (contractBlock !== null) return contractBlock;
 
   const message = passMessage(stepId);
   await emitGateResult(

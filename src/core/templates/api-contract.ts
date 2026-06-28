@@ -36,3 +36,38 @@ export const apiContractTemplate = `# API Contract｜接口契约
 
 <!-- Backwards-compatibility commitments, versioning strategy, deprecations. -->
 `;
+
+// AM-012 — the optional machine-checkable contract declaration. Rendered onto
+// the api-contract artifact ONLY when the project has opted in
+// (contract.enabled). The info string must be exactly "ocn-api-contract": the
+// parser selects on the tag and intentionally ignores untagged yaml/json
+// blocks (src/core/artifact/api-contract-parser.ts). The scaffold declares an
+// empty endpoint set — structurally valid, so the DESIGN block-validity gate
+// passes until the human fills it in; a frontend call against an undeclared
+// path then blocks at BUILD/VERIFY.
+export const apiContractDeclarationBlock = `## Machine Contract｜机器契约
+
+<!--
+  AM-012 Contract Backbone. Declare every public endpoint the frontend may call.
+  When contract.enabled is set, the BUILD/VERIFY drift gate cross-checks frontend
+  call sites against this list — undeclared calls and method mismatches block.
+  OCN never invents endpoints from prose: this list is the single source of truth.
+-->
+
+\`\`\`ocn-api-contract
+endpoints: []
+  # - id: endpoint_list_users      # stable string id (§4.1)
+  #   method: GET
+  #   path: /api/users             # :param segments are wildcards
+\`\`\`
+`;
+
+/**
+ * Render the api-contract artifact. Byte-identical to the base template unless
+ * `withContractBlock` is true, in which case the optional `ocn-api-contract`
+ * declaration block is appended (AM-012 opt-in).
+ */
+export function renderApiContractTemplate(opts: { readonly withContractBlock: boolean }): string {
+  if (!opts.withContractBlock) return apiContractTemplate;
+  return `${apiContractTemplate}\n${apiContractDeclarationBlock}`;
+}

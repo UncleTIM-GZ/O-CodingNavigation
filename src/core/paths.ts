@@ -23,6 +23,9 @@ export const Paths = {
   // SOP 0.5.0 (AM-007) — task backbone ledger (frozen verify commands +
   // per-task done/pending status; regenerated on every passing build-plan gate).
   taskLedgerFile: (root: string): string => join(root, ".ocoding", "task-ledger.json"),
+  // AM-012 (Contract Backbone) — declared-vs-wired API surface projection
+  // (machine source of truth; regenerated whenever the contract drift gate runs).
+  contractGraphFile: (root: string): string => join(root, ".ocoding", "contract-graph.json"),
   // AM-009 — auto-mode machine state (circuit breaker), separate from the
   // human-intent `automation:` block in config.yaml.
   automationRuntimeFile: (root: string): string =>

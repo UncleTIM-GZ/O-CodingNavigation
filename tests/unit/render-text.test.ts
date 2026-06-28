@@ -60,12 +60,34 @@ describe("renderText", () => {
     expect(out).toContain("section_scenarios");
   });
 
-  it("renders blocked result with missing sections", () => {
-    const r = blocked(
-      "ERR_ARTIFACT_INVALID",
-      msg("missing", "缺失"),
-      { artifactPath: "docs/02-prd.md", status: "blocked", missingRequiredSectionIds: ["section_scenarios"] },
+  it("renders the Contract Backbone coverage line when the brief carries a contract summary (AM-012)", () => {
+    const r = ok(msg("brief", "简报"), {
+      currentStateId: "state_build",
+      currentStepId: "step_implementation_log",
+      currentArtifactStatus: "pass",
+      currentBlockers: [],
+      aiGovernanceReminder: "stay in scope",
+      contractBackbone: {
+        endpoints: 3,
+        calls: 5,
+        undeclared: 1,
+        methodMismatch: 2,
+        unverified: 0,
+      },
+    });
+    const out = renderText(r, "en");
+    expect(out).toContain("Contract Backbone｜契约主干:");
+    expect(out).toContain(
+      "endpoints 3 · calls 5 · undeclared 1 · method-mismatch 2 · unverified 0",
     );
+  });
+
+  it("renders blocked result with missing sections", () => {
+    const r = blocked("ERR_ARTIFACT_INVALID", msg("missing", "缺失"), {
+      artifactPath: "docs/02-prd.md",
+      status: "blocked",
+      missingRequiredSectionIds: ["section_scenarios"],
+    });
     const out = renderText(r, "zh");
     expect(out).toContain("docs/02-prd.md");
     expect(out).toContain("section_scenarios");

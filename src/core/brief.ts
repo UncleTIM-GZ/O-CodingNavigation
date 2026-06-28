@@ -10,6 +10,9 @@ import { readReadinessLedger } from "./readiness/readiness-store.js";
 import type { ReadinessLedger } from "../types/readiness.js";
 import { readTaskLedger } from "./task/task-ledger-store.js";
 import type { TaskLedger } from "../types/task.js";
+import { readContractGraph } from "./contract/contract-graph-store.js";
+import { readContractConfig } from "./contract/contract-config.js";
+import { summarizeContractGraph, type ContractSummary } from "./gate/contract-drift-gate.js";
 import {
   type AutomationStatusView,
   governanceReminder,
@@ -44,6 +47,8 @@ export interface BriefData {
   readonly readiness?: ReadinessBriefSummary;
   /** Present once a task ledger has been persisted (SOP 0.5.0 / AM-007). */
   readonly tasks?: TaskBriefSummary;
+  /** Present once the contract drift gate has run (AM-012; opt-in). */
+  readonly contractBackbone?: ContractSummary;
   /** AM-009 — present only when auto mode is on (or suspended). Manual-mode
    *  briefs are byte-identical to pre-AM-009 output. */
   readonly automation?: AutomationStatusView;
@@ -157,6 +162,14 @@ export async function generateBrief(opts: BriefOptions): Promise<CommandResult<B
   const taskLedger = await readTaskLedger(opts.cwd);
   const tasks = taskLedger === null ? undefined : summarizeTasks(taskLedger);
 
+  // AM-012 — fold the contract drift coverage into the brief so the BUILD/VERIFY
+  // loop sees wired/undeclared/unverified counts. Read only when the project is
+  // still opted in, so a disabled contract never surfaces a stale projection.
+  const contractEnabled = (await readContractConfig(opts.cwd)).enabled;
+  const contractGraph = contractEnabled ? await readContractGraph(opts.cwd) : null;
+  const contractBackbone =
+    contractGraph === null ? undefined : summarizeContractGraph(contractGraph);
+
   // AM-009 — the governance reminder follows the human's automation grant;
   // manual mode renders the pre-AM-009 text byte-identically.
   const automationStatus = await loadAutomationStatus(opts.cwd);
@@ -182,6 +195,7 @@ export async function generateBrief(opts: BriefOptions): Promise<CommandResult<B
       ...(logicBackbone !== undefined ? { logicBackbone } : {}),
       ...(readiness !== undefined ? { readiness } : {}),
       ...(tasks !== undefined ? { tasks } : {}),
+      ...(contractBackbone !== undefined ? { contractBackbone } : {}),
       ...(automationActive ? { automation: automationStatus } : {}),
     },
   );

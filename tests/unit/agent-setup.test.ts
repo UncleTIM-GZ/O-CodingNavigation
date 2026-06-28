@@ -45,6 +45,7 @@ describe("setupAgentIntegration (AM-006)", () => {
       "utf8",
     );
     expect(slash).toContain("ocn next-prompt --agent claude-code");
+    expect(slash).toContain("code-reviewer 子代理");
     const claudeMd = await fs.readFile(join(project.cwd, "CLAUDE.md"), "utf8");
     expect(claudeMd).toContain("@.claude/ocn.md");
 
