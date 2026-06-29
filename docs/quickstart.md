@@ -96,6 +96,8 @@ ocn status
 
 Expected: `currentStateId: state_discovery`, `currentStepId: step_project_brief`. The first step in the SOP map is `step_project_brief`, whose artifact slot is `docs/00-project-brief.md`.
 
+Since AM-013/DEC-038, `ocn init` also wires Claude Code by default (the same four surfaces as `ocn agent setup` in §2.7, including the `/ocn-next` slash command) — reload your Claude Code session afterwards so it picks the command up. Pass `ocn init --no-agent` to write only `.ocoding/` (agent-agnostic init). Wiring is fail-open: if it can't complete, init still succeeds and tells you to run `ocn agent setup --force`.
+
 ### 2.2 Create the first artifact
 
 ```bash
@@ -162,9 +164,11 @@ Prints the current-step required sections, the AI Governance reminders, and the 
 ### 2.7 One-command Claude Code wiring (0.4.0-beta.2+)
 
 ```bash
-ocn agent setup
+ocn agent setup            # since AM-013/DEC-038, `ocn init` already runs this by default
 git add .claude CLAUDE.md && git commit   # share with the team
 ```
+
+> As of AM-013/DEC-038 this runs automatically inside `ocn init`. Run `ocn agent setup` directly only to re-wire after an upgrade, to repair a partial wiring (`--force`), or when the project was created with `ocn init --no-agent`.
 
 Generates four surfaces in one idempotent command (AM-006): Stop/PostToolUse hooks in `.claude/settings.json` (the Stop hook re-runs `ocn check` whenever the agent tries to end its turn; the PostToolUse hook streams `commands.lint`/`commands.typecheck` errors back after every edit — both guarded by `command -v ocn`, so teammates without ocn are unaffected), the `.claude/ocn.md` governance contract (loaded via a CLAUDE.md import), and the `/ocn-next` slash command. After wiring, the per-task human workflow is two actions: `/ocn-next` in Claude Code → review + `ocn advance`.
 
@@ -371,6 +375,8 @@ ocn status
 
 预期：`currentStateId: state_discovery`、`currentStepId: step_project_brief`。SOP 映射里的第一个 step 是 `step_project_brief`，对应产物路径为 `docs/00-project-brief.md`。
 
+自 AM-013/DEC-038 起，`ocn init` 默认顺带接线 Claude Code（与 §B.7 的 `ocn agent setup` 同样的四件套，含 `/ocn-next` 斜杠命令）——之后请重载 Claude Code 会话以加载该命令。如只想写 `.ocoding/`（agent 无关初始化），用 `ocn init --no-agent`。接线为失效安全：万一接线没完成，init 仍成功，并提示你执行 `ocn agent setup --force`。
+
 ### B.2 创建第一个产物
 
 ```bash
@@ -437,9 +443,11 @@ ocn brief
 ### B.7 一条命令接线 Claude Code（0.4.0-beta.2+）
 
 ```bash
-ocn agent setup
+ocn agent setup            # 自 AM-013/DEC-038 起，`ocn init` 已默认执行本步
 git add .claude CLAUDE.md && git commit   # 入库全队共享
 ```
+
+> 自 AM-013/DEC-038 起本步已并入 `ocn init` 自动执行。只在以下情况单独跑 `ocn agent setup`：升级后重新接线、修复半成品接线（`--force`）、或项目当初是用 `ocn init --no-agent` 建的。
 
 一条幂等命令生成四件套（AM-006）：`.claude/settings.json` 的 Stop/PostToolUse 钩子（Stop 钩子在 agent 想结束回合时重跑 `ocn check`；PostToolUse 钩子在每次编辑后把 `commands.lint`/`typecheck` 错误直接回灌——均带 `command -v ocn` 守卫，没装 ocn 的队友不受影响）、`.claude/ocn.md` 治理契约（经 CLAUDE.md 导入随会话加载）、`/ocn-next` 斜杠命令。接线后每个任务人只剩两个动作：Claude Code 里 `/ocn-next` → review + `ocn advance`。
 
