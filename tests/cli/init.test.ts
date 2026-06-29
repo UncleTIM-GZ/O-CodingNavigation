@@ -115,4 +115,58 @@ describe("ocn init", () => {
     expect(parsed.data.currentStateId).toBe("state_discovery");
     expect(parsed.data.currentStepId).toBe("step_project_brief");
   }, 30_000);
+
+  // AM-013 / DEC-038 — init wires Claude Code by default (`--no-agent` opts out).
+  it("wires Claude Code by default: writes .claude/commands/ocn-next.md + CLAUDE.md import + audits", async () => {
+    const result = await spawnOcn(["init", "--tier", "minimal"], { cwd: project.cwd });
+    expect(result.exitCode).toBe(0);
+
+    const command = await fs.readFile(
+      join(project.cwd, ".claude", "commands", "ocn-next.md"),
+      "utf8",
+    );
+    expect(command).toContain("ocn next-prompt");
+    await fs.access(join(project.cwd, ".claude", "settings.json"));
+    await fs.access(join(project.cwd, ".claude", "ocn.md"));
+
+    const claudeMd = await fs.readFile(join(project.cwd, "CLAUDE.md"), "utf8");
+    expect(claudeMd).toContain("@.claude/ocn.md");
+
+    const audit = await fs.readFile(
+      join(project.cwd, ".ocoding", "audit", "audit-events.jsonl"),
+      "utf8",
+    );
+    expect(audit).toContain("agent_setup_completed");
+    expect(result.stdout).toMatch(/ocn-next/);
+  }, 30_000);
+
+  it("--no-agent initializes .ocoding/ but skips all Claude Code wiring", async () => {
+    const result = await spawnOcn(["init", "--tier", "minimal", "--no-agent"], {
+      cwd: project.cwd,
+    });
+    expect(result.exitCode).toBe(0);
+    await fs.access(join(project.cwd, ".ocoding", "state.json"));
+
+    const wired = await fs
+      .access(join(project.cwd, ".claude", "commands", "ocn-next.md"))
+      .then(() => true)
+      .catch(() => false);
+    expect(wired).toBe(false);
+
+    const audit = await fs.readFile(
+      join(project.cwd, ".ocoding", "audit", "audit-events.jsonl"),
+      "utf8",
+    );
+    expect(audit).not.toContain("agent_setup_completed");
+  }, 30_000);
+
+  it("--json carries the agentSetup outcome when wiring runs by default", async () => {
+    const result = await spawnOcn(["init", "--tier", "minimal", "--json"], {
+      cwd: project.cwd,
+    });
+    expect(result.exitCode).toBe(0);
+    const parsed = JSON.parse(result.stdout);
+    expect(parsed.data.currentStateId).toBe("state_discovery");
+    expect(parsed.data.agentSetup.ok).toBe(true);
+  }, 30_000);
 });

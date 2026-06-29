@@ -3179,7 +3179,7 @@ Claude Code, then review + `ocn advance` in the terminal.
 
 - Other agents (Cursor/Codex wiring) — `agent` command group leaves room.
 - Auto-advance / autonomous looping — advance stays human-only by design.
-- `ocn init --with-agent` convenience flag — possible follow-up.
+- `ocn init --with-agent` convenience flag — possible follow-up. **Done in DEC-038** (taken as default-on + `--no-agent`, stronger than the opt-in flag envisioned here).
 
 ## DEC-032｜Task Backbone — BUILD 态的实施任务循环（SOP 0.5.0）
 
@@ -3433,3 +3433,44 @@ AM-009 的 auto 模式"触发权可委托、裁决权不委托"在跨里程碑/�
 把 auto 模式无人值守跨步里缺失的人类专家把关，用"AI 自带独立评审尽职调查"补上，
 堵住"gate 全绿但实现错了"在无人值守下被推过这一类。代价是每次触发前多一道子代理
 评审（最多 3 次修复环），换取无人值守推进的可信度；分界（裁决权不委托）不变。
+
+## DEC-038｜`ocn init` 默认接线 Claude Code（兑现 DEC-031 的 `--with-agent` 后续；引擎/CLI 特性，非 SOP bump）
+
+Date: 2026-06-30
+Implements: AM-013 (`docs/amendments/2026-06-30-init-agent-default-amendment.md`)
+
+### Status
+
+Accepted — implemented and tested.
+
+### Context
+
+DEC-031 把 Claude Code 接线产品化为 `ocn agent setup`，并在 Out of scope 里把
+`ocn init --with-agent` 列为"possible follow-up"。实践暴露的坑：用户 `ocn init` 后直接
+在 Claude Code 里敲 `/ocn-next`，得到 `Unknown command`——因为 `.claude/commands/ocn-next.md`
+是 `ocn agent setup` 写的，不是 `init` 写的，而这一步极易被忘。产品论点（纪律靠机制不靠记忆）
+同样适用于接线本身：能默认接好的，就不该留给人记。
+
+### Decision
+
+兑现 DEC-031 的后续，但取**默认开 + `--no-agent` 退出**（强于当初设想的 opt-in `--with-agent`）：
+`ocn init` 成功后默认调用 `setupAgentIntegration`（与 `ocn agent setup` 同一份核心，幂等）。
+编排放在 CLI 层（`src/cli/commands/init.ts`），core `initProject` 保持 agent 无关、不被 MCP 路径触及。
+
+### Sub-decisions
+
+1. **默认开，`--no-agent` 退出。** 用户决策（推翻"init 应保持 agent 无关"的默认建议）：
+   多数用户就是 Claude Code，默认接好消坑值得；不想要的用 `ocn init --no-agent` 只写 `.ocoding/`。
+2. **失效安全（沿 DEC-031 §1）。** init 已成功 ⇒ 接线失败绝不让 init 失败：降级为一行提示
+   "运行 `ocn agent setup --force`"，退出码仍 0。init 本身被阻（如已初始化 exit 4）时不触发接线。
+3. **单一 CommandResult 信封。** 合并结果复用 init 的 `data`（保留 `stateFile`/`currentStateId` 等，
+   text/JSON 渲染不变）并加 `data.agentSetup`（`{ ok, files }` 或 `{ ok:false, code }`）；`--json` 携带它。
+4. **CLI 层编排，不下沉 core。** 接线写 `.claude/` 与 CLAUDE.md（human-only，写配置），与 MCP 无关；
+   放 CLI 既保 core 纯净、又确保接线永不经 MCP 触发。
+5. **非 SOP bump、MCP 白名单 7 工具不变**（沿 AM-008/009/010/011 先例）。`--no-agent` 路径与改动前逐字一致。
+
+### Consequences
+
+`ocn init` 后 `/ocn-next` 开箱即用（重载会话后），堵掉最常见的"接线被忘"坑；不想要 Claude Code
+的项目一个 flag 退出。代价：默认 init 多写 `.claude/` 与 CLAUDE.md、多一条 `agent_setup_completed`
+审计事件——对非 Claude-Code 用户是已知侵入，故保留显式 `--no-agent`。
