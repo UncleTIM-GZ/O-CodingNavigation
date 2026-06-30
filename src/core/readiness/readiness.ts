@@ -59,7 +59,7 @@ export async function listReadiness(opts: {
     acc[c.verdict] = (acc[c.verdict] ?? 0) + 1;
     return acc;
   }, {});
-  const summary = `PASS ${counts["PASS"] ?? 0} / WAIVED ${counts["WAIVED"] ?? 0} / FAIL ${counts["FAIL"] ?? 0} / UNKNOWN ${counts["UNKNOWN"] ?? 0} / NA ${counts["NA"] ?? 0}`;
+  const summary = `PASS ${counts["PASS"] ?? 0} / WAIVED ${counts["WAIVED"] ?? 0} / DEFERRED ${counts["DEFERRED"] ?? 0} / FAIL ${counts["FAIL"] ?? 0} / UNKNOWN ${counts["UNKNOWN"] ?? 0} / NA ${counts["NA"] ?? 0}`;
   return ok(
     msg(
       `Readiness evaluated (tier ${outcome.ledger.tier}): ${summary}.`,

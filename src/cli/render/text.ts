@@ -133,6 +133,10 @@ function appendReadinessListBlock(out: string[], data: Record<string, unknown>):
       const hint = isRecord(raw["fixHint"]) ? raw["fixHint"] : null;
       if (hint !== null) out.push(`      → ${String(hint["zh"])}`);
     }
+    // AM-014 — show a DEFERRED check's deadline ("not due until state_X").
+    if (verdict === "DEFERRED" && typeof raw["detail"] === "string") {
+      out.push(`      → ${raw["detail"]}`);
+    }
   }
   const na = checks.filter((c) => isRecord(c) && c["verdict"] === "NA").length;
   if (na > 0) out.push(`  (+${na} not applicable at this tier)`);
