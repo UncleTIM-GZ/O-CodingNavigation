@@ -2,7 +2,7 @@
 
 > Local-first, MCP-first, state-machine-driven **AI coding workflow operating system**.
 > CLI: `ocn` · MCP: `ocn-mcp` · License: Apache-2.0
-> **Phase**: SOP 0.5.0 (Task Backbone) mainline + optional Auto Mode (AM-009) + optional Contract Backbone (AM-012) · **Status**: pre-GA beta · **Public**: on npm as `latest` and `@beta` → [`0.7.0-beta.0`](https://www.npmjs.com/package/o-coding-navigation) · GitHub pre-release: [`v0.7.0-beta.0`](https://github.com/UncleTIM-GZ/O-CodingNavigation/releases/tag/v0.7.0-beta.0)
+> **Phase**: SOP profile 0.7.0 mainline (Task Backbone + readiness precise activation, AM-014) + optional Auto Mode (AM-009) + optional Contract Backbone (AM-012) · **Status**: pre-GA beta · **Public**: on npm as `latest` and `@beta` → [`0.7.0-beta.6`](https://www.npmjs.com/package/o-coding-navigation) · GitHub pre-release: [`v0.7.0-beta.6`](https://github.com/UncleTIM-GZ/O-CodingNavigation/releases/tag/v0.7.0-beta.6)
 
 > 📑 This README has two parts:
 > **Part 1 — English** (sections 1 – 11) · **Part 2 — 中文版** (§§ A – K)
@@ -79,7 +79,7 @@ OCN treats these as the same problem: *the AI coding loop has no rigorous notion
 | Phase | **SOP 0.5.0 (Task Backbone) mainline** — Plan → Build → Verify, with the machine-verified DESIGN logic-backbone gate, a role-based cross-cutting readiness gate (55 checks) on every step, and a frozen-verify task ledger that gates BUILD exit; plan-to-verify smoke covers all 20 steps |
 | Tests | full vitest suite green on Node 20 + Node 22 |
 | Coverage | meets the publish-time gate |
-| npm | `latest` → `0.7.0-beta.0`; `beta` → `0.7.0-beta.0`; `alpha` → `0.1.0-alpha.2` (historical; preserved) |
+| npm | `latest` → `0.7.0-beta.6`; `beta` → `0.7.0-beta.6`; `alpha` → `0.1.0-alpha.2` (historical; preserved) |
 | Maturity | **pre-GA beta** — not stable, not GA, beta only (for controlled testing / dogfood) |
 | External host validation | Validated with Claude Desktop on Windows with WSL2. Cursor and Cline are not yet verified. |
 | MCP transport | stdio only (HTTP/SSE not started) |
@@ -105,7 +105,7 @@ The two stages are connected: planning artifacts (00–10) must pass their gates
 - **MCP safe tools**: 7 read/prepare/create/log tools over stdio; 4 forbidden tools never registered (full list in §7); `projectRoot` validator + threat model ([`docs/security/mcp-threat-model.md`](./docs/security/mcp-threat-model.md)).
 - **Real MCP Host validation**: Claude Desktop on Windows with WSL2 validated end-to-end ([DEC-017](./docs/20-decision-log.md), [report](./docs/reports/2026-04-30-mcp-external-host-validation-report.md)). Cursor and Cline remain unverified.
 - **Executable example**: [`examples/discovery-to-plan/`](./examples/discovery-to-plan/) walks all 10 v1.0 SOP steps end-to-end via `scripts/smoke.sh`. Bundled fixtures derived verbatim from `src/core/templates/*.ts` so they cannot drift.
-- **npm publish discipline**: published as `o-coding-navigation@0.7.0-beta.0` (npm package version decoupled from the SOP profile version, which stays at 0.5.0 — Auto Mode is an engine/CLI feature, not an SOP bump) under strict pre-publish checklists, `prepublishOnly` gate, and `files` allowlist. `latest` and `beta` both point to `0.7.0-beta.0`; `alpha` is preserved at `0.1.0-alpha.2` for historical use. Annotated git tag `v0.7.0-beta.0` and matching GitHub pre-release published.
+- **npm publish discipline**: published as `o-coding-navigation@0.7.0-beta.6` (per DEC-039 the npm package version and the SOP profile version are unified and move in lockstep — both 0.7.0) under strict pre-publish checklists, `prepublishOnly` gate, and `files` allowlist. `latest` and `beta` both point to `0.7.0-beta.6`; `alpha` is preserved at `0.1.0-alpha.2` for historical use. Annotated git tags and matching GitHub pre-releases published per beta.
 
 **Not implemented (deliberately deferred — see §10)**
 
@@ -123,12 +123,12 @@ The two stages are connected: planning artifacts (00–10) must pass their gates
 npm install -g o-coding-navigation
 ```
 
-As of v0.7.0-beta.0, npm latest and beta both point to the SOP 0.5.0 (Task Backbone) release plus optional Auto Mode (AM-009). Note: from this release the npm package version (0.7.0) is decoupled from the SOP profile version (still 0.5.0) — the package version tracks software capability, the SOP version tracks the workflow spec.
+As of v0.7.0-beta.6, npm latest and beta both point to the SOP profile 0.7.0 release (Task Backbone + readiness precise activation, AM-014/DEC-040) plus optional Auto Mode (AM-009) and optional Contract Backbone (AM-012). Note: per DEC-039 the npm package version and the SOP profile version are now unified and move in lockstep (both 0.7.0); SOP profile 0.7.0 is content-equal to 0.5.0, and older profiles stay frozen + importable.
 
 Verify:
 
 ```bash
-ocn --version       # 0.7.0-beta.0
+ocn --version       # 0.7.0-beta.6
 ocn --help
 ocn-mcp             # starts the MCP stdio server; press Ctrl+C to exit
 ```
@@ -145,8 +145,8 @@ To uninstall: `npm uninstall -g o-coding-navigation`.
 
 | Channel | Version | npm tag | Notes |
 |---|---|---|---|
-| `latest` (recommended) | `0.7.0-beta.0` | `latest` | SOP 0.5.0 (Task Backbone) mainline + optional Auto Mode (AM-009). |
-| Beta (explicit prerelease pin) | `0.7.0-beta.0` | `beta` | Same artifact as `latest`; use `@beta` when you want to pin the prerelease channel explicitly. |
+| `latest` (recommended) | `0.7.0-beta.6` | `latest` | SOP profile 0.7.0 mainline (Task Backbone + readiness precise activation) + optional Auto Mode (AM-009). |
+| Beta (explicit prerelease pin) | `0.7.0-beta.6` | `beta` | Same artifact as `latest`; use `@beta` when you want to pin the prerelease channel explicitly. |
 | Alpha (still available) | `0.1.0-alpha.2` | `alpha` | Prior pre-GA channel; preserved for historical use only. |
 
 Package home: https://www.npmjs.com/package/o-coding-navigation
@@ -827,7 +827,7 @@ npm install -g o-coding-navigation
 安装后验证：
 
 ```bash
-ocn --version       # 0.7.0-beta.0
+ocn --version       # 0.7.0-beta.6
 ocn --help
 ocn-mcp             # 启动 MCP stdio server；按 Ctrl+C 退出
 ```
