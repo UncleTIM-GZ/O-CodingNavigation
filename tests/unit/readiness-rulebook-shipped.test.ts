@@ -26,18 +26,31 @@ describe("shipped readiness rulebook (SOP 0.4.0)", () => {
     }
   });
 
-  it("ships on the 0.4.0+ profiles only (0.5.0/0.7.0 re-export the 0.4.0 rulebook)", () => {
+  it("ships on the 0.4.0+ profiles (0.4.0/0.5.0 frozen; 0.7.0 adds precise_activation — AM-014)", () => {
     expect(loadSopProfileByVersion("0.4.0").readinessYaml).toBe(readinessYaml);
     expect(loadSopProfileByVersion("0.5.0").readinessYaml).toBe(readinessYaml);
-    expect(loadSopProfileByVersion("0.7.0").readinessYaml).toBe(readinessYaml);
     expect(loadSopProfileByVersion("0.3.0").readinessYaml).toBeUndefined();
     expect(loadSopProfileByVersion("0.2.0").readinessYaml).toBeUndefined();
+    // AM-014 — 0.7.0 = the frozen 0.4.0 rulebook + the precise_activation flag.
+    const y070 = loadSopProfileByVersion("0.7.0").readinessYaml ?? "";
+    expect(y070).toContain("precise_activation: true");
+    expect(y070).toContain(readinessYaml);
+    expect(y070).not.toBe(readinessYaml);
+  });
+
+  it("0.7.0 rulebook parses + lints clean with the precise_activation flag (AM-014)", () => {
+    const y070 = loadSopProfileByVersion("0.7.0").readinessYaml ?? "";
+    const parsed = parseReadinessRulebook(y070);
+    expect(parsed.errors).toEqual([]);
+    expect(parsed.rulebook?.precise_activation).toBe(true);
+    expect(parsed.rulebook?.checks.length).toBe(55);
+    expect(lintReadinessRulebook(parsed.rulebook!)).toEqual([]);
   });
 
   it("runtime default IS 0.7.0 and carries the readiness rulebook (DEC-039 cutover)", async () => {
     const { DEFAULT_SOP_PROFILE_VERSION, loadSopProfile } =
       await import("../../src/core/sop/loader.js");
     expect(DEFAULT_SOP_PROFILE_VERSION).toBe("0.7.0");
-    expect(loadSopProfile().readinessYaml).toBe(readinessYaml);
+    expect(loadSopProfile().readinessYaml).toContain(readinessYaml);
   });
 });

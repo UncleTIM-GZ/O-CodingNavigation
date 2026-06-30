@@ -1,6 +1,6 @@
 # Proposal — Precise Per-Gate Readiness Activation（就绪门"准时激活"：不提前且不缺失）
 
-> Status: **Draft — awaiting acceptance** (becomes DEC-040 / AM-014 on accept).
+> Status: **Accepted & implemented** — DEC-040 / AM-014 (shipped in profile 0.7.0, 0.7.0-beta.3). See `docs/amendments/2026-06-30-readiness-timing-amendment.md`.
 > Date: 2026-06-30 · Author: dogfood finding
 > Scope: engine refinement + a readiness-rulebook revision in the **0.7.0** profile (the runtime default after DEC-039). Engine half is backward-compatible; an untagged rulebook (0.4.0/0.5.0) behaves identically. **Not** a SOP bump beyond the DEC-039 number unification (precedent: AM-008 Rewind, AM-009 Auto — engine/CLI features).
 > Supersedes nothing; refines the Readiness Backbone (AM-004 / DEC-028). Vehicle retargeted from "in-place 0.5.0" to profile 0.7.0 after DEC-039 (npm/SOP lockstep).

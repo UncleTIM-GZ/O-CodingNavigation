@@ -3513,3 +3513,41 @@ npm 包版本与 SOP profile 版本此前刻意解耦（npm 0.7.x、SOP profile 
 一个版本号贯穿 npm / state.json / config.yaml / sop.yaml / MCP detect_sop_version：
 全是 0.7.0。代价：profile 版本号会随 npm minor 走（即便 SOP 内容没变），靠 re-export 把
 代价降为"多一个内容等价的 profile 目录"。引擎/CLI 切换，非 SOP 内容变更；MCP 白名单 7 工具不变。
+
+## DEC-040｜就绪门准时激活（DEFERRED + dueState 派生，profile 0.7.0）
+
+Date: 2026-06-30
+Implements: AM-014 (`docs/amendments/2026-06-30-readiness-timing-amendment.md`); 全文 `docs/readiness-timing-proposal.md`
+
+### Status
+
+Accepted — implemented and tested.
+
+### Context
+
+就绪门（AM-004）与状态无关，导致 minimal 档干净 init 在第一步就被 8 条下游检查拦死；
+且全部 e2e 钉 0.3.0 绕开就绪门，悬崖从未被走过。用户要求："每一关都要准确拦截——不提前且不缺失"。
+
+### Decision
+
+每条 block 检查的生效状态 `dueState(rule)` = 其输入里最晚到期的 SOP 状态（artifact→产出 step 的状态；
+repo-probe→策略表）。`currentState < dueState` 判 `DEFERRED`（不阻断、前瞻显示）；`≥` 起每关持续强制。
+任一依赖不可解析 → 不延迟（失效安全）。开关 `precise_activation` 控制；0.7.0 开、0.4.0/0.5.0 不开。
+
+### Sub-decisions
+
+1. **派生而非手工标签**：`dueState` 从规则 `requires` + SOP step 图机械算出，不需逐条手标；
+   可选 `enforced_from` 留作显式覆盖。比手工标签更不易漂移。
+2. **引擎向后兼容**：未带 `precise_activation` 的规则手册（0.4.0/0.5.0）行为逐字不变；
+   阻断过滤 `block && (FAIL||UNKNOWN)` 不动，`DEFERRED` 天然非阻断。
+3. **就地打在 0.7.0**（DEC-039 锁步后）：0.7.0 断开 readiness re-export，自带开关；0.4.0/0.5.0 冻结。
+4. **可见性**：`DEFERRED` 在 `ocn brief`（Forthcoming｜将到期）与 `ocn readiness list`（[DEFERRED]）
+   前瞻显示——不静默隐藏，守住"不缺失"的知情面。
+5. **失效安全优先**：不可解析的截止状态 → 从第一关强制（改前行为），宁可早判不漏判。
+6. 非 SOP bump（沿 AM-008/009）；MCP 白名单 7 工具不变。
+
+### Consequences
+
+第一步悬崖消失（不提前），且每条 block 检查在其正确关卡准时复活阻断（不缺失），项目带未满足项到不了 VERIFY。
+代价：新增一个 DEFERRED 判定 + dueState 解析器 + 0.7.0 规则手册多一行开关。补上了"从默认版本从零走就绪门"
+的 e2e（`readiness-precision-walkthrough.test.ts`），堵住 dogfood 盲区。

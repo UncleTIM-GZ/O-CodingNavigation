@@ -74,6 +74,10 @@ function appendReadinessSummaryBlock(out: string[], value: unknown): void {
     out.push(`  Waived (ratio ${String(summary["waivedRatio"] ?? "")}):`);
     for (const item of summary["waivedItems"]) out.push(`    - ${item}`);
   }
+  if (isStringArray(summary["forthcoming"]) && summary["forthcoming"].length > 0) {
+    out.push("  Forthcoming｜将到期 (not yet due, non-blocking):");
+    for (const item of summary["forthcoming"]) out.push(`    - ${item}`);
+  }
 }
 
 // SOP 0.5.0 (AM-007) — renders the brief's task-ledger summary when present.
