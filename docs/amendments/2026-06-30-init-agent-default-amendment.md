@@ -46,3 +46,11 @@ Claude Code 敲 `/ocn-next` → `Unknown command`，因为斜杠命令文件从�
 - `ocn init --no-agent` → 有 `.ocoding/state.json`，无 `.claude/commands/ocn-next.md`，审计无 `agent_setup_completed`。
 - `ocn init --json` → `data.currentStateId` 仍在，`data.agentSetup.ok === true`。
 - 全量 1293 测试 + lint + typecheck 绿。
+
+## 后续｜Follow-up（0.7.0-beta.5）
+
+默认接线注入 `env.OCN_ACTOR=ai_agent`（AM-009 治理签名），副作用是**人类在 AI 会话里用 `!` 跑
+`ocn advance` 也被判成 ai_agent → 手动模式下被拒**。为此 `ocn advance` 新增 `-H` / `--human`
+（= `--actor user`，覆盖 env），并把"未委托"拒绝提示改为可照抄：`ocn advance --human`（或普通终端
+`ocn advance`，或 `ocn auto on --phase 1|2|all`）。actor 仍是治理签名非安全边界（`actor.ts`），故
+该便捷标志不削弱任何边界。`tests/cli/advance.test.ts` 钉死 `-H` 覆盖 ai_agent env 且审计记 user。
