@@ -466,10 +466,10 @@ describe("SOP 0.2.0 gate runner — all 19 generated templates pass", () => {
   });
 });
 
-describe("SOP gate runner — runtime default IS 0.5.0 (DEC-032)", () => {
-  it("loadSopProfile() returns 0.5.0", () => {
+describe("SOP gate runner — runtime default IS 0.7.0 (DEC-039)", () => {
+  it("loadSopProfile() returns 0.7.0", () => {
     const def = loadSopProfile();
-    expect(def.version).toBe("0.5.0");
+    expect(def.version).toBe("0.7.0");
     expect(def.id).toBe("default-ai-coding-sop");
   });
 

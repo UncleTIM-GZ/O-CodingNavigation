@@ -14,6 +14,7 @@ const KNOWN_SOP_VERSIONS: readonly SopProfileVersion[] = [
   "0.3.0",
   "0.4.0",
   "0.5.0",
+  "0.7.0",
 ];
 
 function isKnownSopVersion(v: string): v is SopProfileVersion {
