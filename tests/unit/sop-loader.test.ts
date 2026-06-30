@@ -144,14 +144,12 @@ describe("sop/loader.loadSopProfile", () => {
     expect(def.artifactsYaml).toBe(v070.artifactsYaml);
   });
 
-  it("0.7.0 is content-equal to 0.5.0 — only the version string differs (DEC-039)", () => {
+  it("0.7.0 state-machine content equals 0.5.0; readiness adds precise_activation (DEC-039 + AM-014)", () => {
     const v050 = loadSopProfileByVersion("0.5.0");
     const v070 = loadSopProfileByVersion("0.7.0");
-    // Version-free surfaces are byte-identical.
+    // State-machine surfaces are byte-identical (the version unification).
     expect(v070.gatesYaml).toBe(v050.gatesYaml);
     expect(v070.artifactsYaml).toBe(v050.artifactsYaml);
-    expect(v070.readinessYaml).toBe(v050.readinessYaml);
-    // The only sop.yaml / config.yaml delta is the version number.
     expect(v070.sopYaml.replace(/version: 0\.7\.0/, "version: 0.5.0")).toBe(v050.sopYaml);
     expect(v070.defaultConfigYaml.replace(/version: 0\.7\.0/, "version: 0.5.0")).toBe(
       v050.defaultConfigYaml,
@@ -159,6 +157,11 @@ describe("sop/loader.loadSopProfile", () => {
     expect(v070.requiredSectionsForStep("step_build_plan").map((r) => r.id)).toEqual(
       v050.requiredSectionsForStep("step_build_plan").map((r) => r.id),
     );
+    // AM-014 — the one readiness delta: 0.7.0 prepends precise_activation to
+    // the otherwise-frozen 0.5.0 (=0.4.0) rulebook.
+    expect(v070.readinessYaml).toContain("precise_activation: true");
+    expect(v070.readinessYaml).toContain(v050.readinessYaml ?? "");
+    expect(v070.readinessYaml).not.toBe(v050.readinessYaml);
   });
 
   it("0.5.0 delta vs 0.4.0 is exactly the build-plan Task Specs section (DEC-032)", () => {

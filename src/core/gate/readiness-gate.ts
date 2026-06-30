@@ -5,6 +5,7 @@ import type { ReadinessCheckOutcome, ReadinessLedger } from "../../types/readine
 import { msg } from "../i18n.js";
 import { createAuditEvent, safeAudit } from "../audit/index.js";
 import { evaluateReadiness } from "../readiness/evaluator.js";
+import { computeEnforcedFromMap } from "../readiness/due-state.js";
 import { checkConfigDrift, commitConfigSnapshot } from "../readiness/freeze-check.js";
 import { readProjectCommands } from "../readiness/project-config.js";
 import { parseReadinessRulebook } from "../readiness/rulebook-loader.js";
@@ -102,6 +103,10 @@ export async function runReadinessGate(opts: {
   }
 
   const waivers = await readWaivers(opts.cwd);
+  // AM-014 — precise activation: derive each block rule's enforced-from state
+  // from the SOP dependency graph (needs the profile; the evaluator stays
+  // profile-free). Empty map when the rulebook hasn't opted in.
+  const enforcedFromByRule = computeEnforcedFromMap(parsed.rulebook, opts.profile);
   const ledger = await evaluateReadiness({
     root: opts.cwd,
     rulebook: parsed.rulebook,
@@ -110,6 +115,8 @@ export async function runReadinessGate(opts: {
     waivers,
     currentStateId: opts.state.currentStateId,
     executeCommands: opts.executeCommands ?? true,
+    enforcedFromByRule,
+    stateOrder: opts.profile.stateOrder,
   });
   try {
     await writeReadinessLedger(opts.cwd, ledger);

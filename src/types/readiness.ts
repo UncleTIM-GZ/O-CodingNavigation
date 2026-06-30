@@ -31,8 +31,10 @@ export type ReadinessLayer = z.infer<typeof ReadinessLayer>;
 export const ReadinessSeverity = z.enum(["block", "warn"]);
 export type ReadinessSeverity = z.infer<typeof ReadinessSeverity>;
 
-/** Per-check verdicts. Open world: the default is UNKNOWN, never PASS. */
-export const ReadinessVerdict = z.enum(["PASS", "FAIL", "UNKNOWN", "WAIVED", "NA"]);
+/** Per-check verdicts. Open world: the default is UNKNOWN, never PASS.
+ *  AM-014 — DEFERRED: a block check whose inputs are not yet due in the SOP
+ *  order. Non-blocking (≠ FAIL/UNKNOWN); surfaced as forthcoming. */
+export const ReadinessVerdict = z.enum(["PASS", "FAIL", "UNKNOWN", "WAIVED", "NA", "DEFERRED"]);
 export type ReadinessVerdict = z.infer<typeof ReadinessVerdict>;
 
 /**
@@ -88,6 +90,13 @@ export const ReadinessRule = z
     /** Declared anchor (e.g. verify_xref) — informational until P3+. */
     anchor: z.string().optional(),
     fail_code: z.string().optional(),
+    /** AM-014 — explicit per-rule enforcement deadline (overrides the derived
+     *  `dueState`). Only honored when the rulebook sets `precise_activation`.
+     *  Lint cross-checks it against the dependency-derived value. */
+    enforced_from: z
+      .string()
+      .regex(/^state_[a-z0-9_]+$/)
+      .optional(),
   })
   .strict();
 export type ReadinessRule = z.infer<typeof ReadinessRule>;
@@ -158,6 +167,10 @@ export const ReadinessRulebook = z
     tier: ReadinessTier.optional(),
     source: z.string().optional(),
     fail_code_default: z.string().optional(),
+    /** AM-014 — opt into just-in-time activation: a block check is enforced
+     *  only from its dependency-derived deadline state onward (DEFERRED before
+     *  that). Absent/false → today's always-enforced behavior (0.4.0/0.5.0). */
+    precise_activation: z.boolean().optional(),
     artifact_aliases: z.record(z.string().regex(/^artifact_[a-z0-9_]+$/), z.array(z.string())),
     repo_probes: z.record(z.string().regex(/^[a-z0-9_]+$/), RepoProbe),
     checks: z.array(ReadinessRule).min(1),

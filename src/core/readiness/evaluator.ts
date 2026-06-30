@@ -37,6 +37,12 @@ export interface EvaluateReadinessOptions {
   /** W1 — when false (MCP / read-only callers) command + test_list probes
    *  are NOT executed; they report UNKNOWN. Defaults to true. */
   readonly executeCommands?: boolean;
+  /** AM-014 — ruleId → enforced-from state (precise activation). A block rule
+   *  whose enforced-from state is strictly after `currentStateId` is DEFERRED.
+   *  Empty/absent → no deferral (today's always-enforced behavior). */
+  readonly enforcedFromByRule?: ReadonlyMap<string, string>;
+  /** AM-014 — the profile's state order, for comparing current vs enforced. */
+  readonly stateOrder?: readonly string[];
   readonly now?: () => Date;
 }
 
@@ -213,6 +219,21 @@ async function evaluateRule(
   };
   if (!rule.tier_required.includes(ctx.tier)) {
     return { ...base, verdict: "NA", detail: `not required at tier ${ctx.tier}` };
+  }
+  // AM-014 — precise activation: defer a block check whose inputs are not yet
+  // due in the SOP order (不提前). Runs after the tier gate, before any field
+  // evaluation — a not-yet-due check is not even meaningfully evaluable.
+  const enforcedFrom = opts.enforcedFromByRule?.get(rule.id);
+  if (
+    enforcedFrom !== undefined &&
+    opts.stateOrder !== undefined &&
+    opts.currentStateId !== undefined
+  ) {
+    const cur = opts.stateOrder.indexOf(opts.currentStateId);
+    const due = opts.stateOrder.indexOf(enforcedFrom);
+    if (cur >= 0 && due >= 0 && cur < due) {
+      return { ...base, verdict: "DEFERRED", detail: `not due until ${enforcedFrom}` };
+    }
   }
   const repoFacts = new Set(
     rule.requires.filter((r) => r.startsWith("repo.")).map((r) => r.slice("repo.".length)),
