@@ -175,13 +175,13 @@ describe("sop 0.2.0 — canonical YAML emission", () => {
   });
 });
 
-describe("sop 0.2.0 — runtime cutover guard (now 0.5.0, DEC-032)", () => {
-  // DEC-032 — the runtime default is now 0.5.0. These guards pin that
+describe("sop 0.2.0 — runtime cutover guard (now 0.7.0, DEC-039)", () => {
+  // DEC-039 — the runtime default is now 0.7.0. These guards pin that
   // behavior; reverting the loader to an older default would break them.
-  it("loadSopProfile() returns 0.5.0 by default (DEC-032)", () => {
+  it("loadSopProfile() returns 0.7.0 by default (DEC-039)", () => {
     const profile = loadSopProfile();
     expect(profile.id).toBe("default-ai-coding-sop");
-    expect(profile.version).toBe("0.5.0");
+    expect(profile.version).toBe("0.7.0");
   });
 
   it("loaded profile YAML is the 0.2.0 rendering with all 19 wired steps", () => {

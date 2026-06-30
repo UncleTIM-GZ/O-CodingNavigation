@@ -3474,3 +3474,42 @@ DEC-031 把 Claude Code 接线产品化为 `ocn agent setup`，并在 Out of sco
 `ocn init` 后 `/ocn-next` 开箱即用（重载会话后），堵掉最常见的"接线被忘"坑；不想要 Claude Code
 的项目一个 flag 退出。代价：默认 init 多写 `.claude/` 与 CLAUDE.md、多一条 `agent_setup_completed`
 审计事件——对非 Claude-Code 用户是已知侵入，故保留显式 `--no-agent`。
+
+## DEC-039｜npm 与 SOP profile 版本统一 + 锁步（SOP 0.7.0 运行时切换）
+
+Date: 2026-06-30
+
+### Status
+
+Accepted — implemented and tested.
+
+### Context
+
+npm 包版本与 SOP profile 版本此前刻意解耦（npm 0.7.x、SOP profile 0.5.0）。理由是
+"profile 是项目 pin 的工作流内容版本，CLI 升级不该悄改已 pin 项目"。但两套号长期不同步
+造成认知负担（"现在到底是什么版本"反复要解释）。用户决定：**按 npm 统一全部版本号，今后锁步**。
+
+### Decision
+
+新增 SOP profile **0.7.0**，与 npm 包号对齐（**跳过 0.6.0** 以直接对齐数字），设为运行时默认。
+
+### Sub-decisions
+
+1. **内容等价、仅版本号变。** 0.7.0 的 states/steps/artifact 路径/required sections/gates/
+   readiness 规则手册全部继承自 0.5.0（`src/sops/default-ai-coding-sop/0.7.0/data.ts` re-export
+   0.5.0；readiness re-export 0.5.0→0.4.0），唯一差异是 `version` 字符串 0.7.0。
+   `sop-loader.test.ts` 钉死"0.7.0 与 0.5.0 仅版本号不同"。
+2. **pin 稳定不破。** 0.5.0、0.4.0 等旧 profile 逐字冻结、仍可 `ocn init --sop-version <v>` 导入；
+   已 pin 项目运行时行为不变，直到人工 `ocn sop upgrade`（默认 target = 运行时默认 0.7.0）。
+3. **锁步策略（今后）。** npm 与 SOP profile 同号推进；**SOP 内容未变时，新 profile 版本
+   re-export 旧内容**（如本次），既统一数字又保 pin 稳定。`DEFAULT_SOP_PROFILE_VERSION` 与
+   `package.json` version 的 major.minor 对齐。
+4. **就绪门"准时激活"改动（AM-014）改投 0.7.0。** 原提案是"就地改 0.5.0"；版本统一后，
+   该改动落在 profile 0.7.0 的 readiness 规则手册（届时断开 0.7.0 对 0.5.0 的 readiness re-export）。
+   见 `docs/readiness-timing-proposal.md`。
+
+### Consequences
+
+一个版本号贯穿 npm / state.json / config.yaml / sop.yaml / MCP detect_sop_version：
+全是 0.7.0。代价：profile 版本号会随 npm minor 走（即便 SOP 内容没变），靠 re-export 把
+代价降为"多一个内容等价的 profile 目录"。引擎/CLI 切换，非 SOP 内容变更；MCP 白名单 7 工具不变。

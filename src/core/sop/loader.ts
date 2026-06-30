@@ -61,6 +61,18 @@ import {
 import { gatesYaml as gatesYaml050 } from "../../sops/default-ai-coding-sop/0.5.0/gates.js";
 import { readinessYaml as readinessYaml050 } from "../../sops/default-ai-coding-sop/0.5.0/readiness.js";
 import { sopYaml as sopYaml050 } from "../../sops/default-ai-coding-sop/0.5.0/sop.js";
+import { artifactsYaml as artifactsYaml070 } from "../../sops/default-ai-coding-sop/0.7.0/artifacts.js";
+import { defaultConfigYaml as defaultConfigYaml070 } from "../../sops/default-ai-coding-sop/0.7.0/config.js";
+import {
+  PROFILE_ID as PROFILE_ID_070,
+  PROFILE_VERSION as PROFILE_VERSION_070,
+  REQUIRED_SECTIONS_BY_STEP as REQUIRED_SECTIONS_BY_STEP_070,
+  STATE_ORDER as STATE_ORDER_070,
+  STEPS_BY_STATE as STEPS_BY_STATE_070,
+} from "../../sops/default-ai-coding-sop/0.7.0/data.js";
+import { gatesYaml as gatesYaml070 } from "../../sops/default-ai-coding-sop/0.7.0/gates.js";
+import { readinessYaml as readinessYaml070 } from "../../sops/default-ai-coding-sop/0.7.0/readiness.js";
+import { sopYaml as sopYaml070 } from "../../sops/default-ai-coding-sop/0.7.0/sop.js";
 
 // P1-003 — the runtime profile and the persisted .ocoding/sop.yaml share a
 // single source of truth (data.ts). The loader is a thin adapter that wires
@@ -80,9 +92,9 @@ import { sopYaml as sopYaml050 } from "../../sops/default-ai-coding-sop/0.5.0/so
 // the runtime constant. Always reflects the default profile. (0.5.0 keeps the
 // same 8 states and 20 steps as 0.3.0/0.4.0; only the build-plan section
 // gate + task ledger are new.)
-export const STATE_ORDER: readonly StateId[] = STATE_ORDER_050;
+export const STATE_ORDER: readonly StateId[] = STATE_ORDER_070;
 
-export type SopProfileVersion = "0.1.0" | "0.2.0" | "0.3.0" | "0.4.0" | "0.5.0";
+export type SopProfileVersion = "0.1.0" | "0.2.0" | "0.3.0" | "0.4.0" | "0.5.0" | "0.7.0";
 
 interface ProfileSource {
   readonly id: string;
@@ -147,7 +159,7 @@ const PROFILE_SOURCES: Readonly<Record<SopProfileVersion, ProfileSource>> = {
     stepsByState: STEPS_BY_STATE_040,
     requiredSectionsByStep: REQUIRED_SECTIONS_BY_STEP_040,
   },
-  // SOP 0.5.0 — 0.4.0 + task backbone (AM-007 / DEC-032). The runtime default.
+  // SOP 0.5.0 — 0.4.0 + task backbone (AM-007 / DEC-032). Frozen + importable.
   "0.5.0": {
     id: PROFILE_ID_050,
     version: PROFILE_VERSION_050 as SopProfileVersion,
@@ -159,6 +171,20 @@ const PROFILE_SOURCES: Readonly<Record<SopProfileVersion, ProfileSource>> = {
     stateOrder: STATE_ORDER_050,
     stepsByState: STEPS_BY_STATE_050,
     requiredSectionsByStep: REQUIRED_SECTIONS_BY_STEP_050,
+  },
+  // SOP 0.7.0 — content-equal to 0.5.0; version bumped to track npm (DEC-039,
+  // npm/SOP lockstep; 0.6.0 skipped to align the numbers). The runtime default.
+  "0.7.0": {
+    id: PROFILE_ID_070,
+    version: PROFILE_VERSION_070 as SopProfileVersion,
+    sopYaml: sopYaml070,
+    gatesYaml: gatesYaml070,
+    artifactsYaml: artifactsYaml070,
+    defaultConfigYaml: defaultConfigYaml070,
+    readinessYaml: readinessYaml070,
+    stateOrder: STATE_ORDER_070,
+    stepsByState: STEPS_BY_STATE_070,
+    requiredSectionsByStep: REQUIRED_SECTIONS_BY_STEP_070,
   },
 };
 
@@ -235,13 +261,13 @@ export function isKnownSopProfileVersion(version: string): version is SopProfile
 }
 
 /**
- * Default runtime profile — flipped to 0.5.0 (DEC-032); prior defaults were
+ * Default runtime profile — flipped to 0.7.0 (DEC-039, npm/SOP version
+ * unification; content-equal to 0.5.0). Prior defaults were 0.5.0 (DEC-032),
  * 0.4.0 (DEC-030), 0.3.0 (AM-003 / DEC-025) and 0.2.0 (DEC-023). Every
  * runtime path (init, status, brief, check, gate, advance, MCP) reads this
- * loader by default and therefore sees 0.5.0 (= 0.4.0 + task backbone) from
- * this commit forward.
+ * loader by default and therefore sees 0.7.0 from this commit forward.
  */
-export const DEFAULT_SOP_PROFILE_VERSION: SopProfileVersion = "0.5.0";
+export const DEFAULT_SOP_PROFILE_VERSION: SopProfileVersion = "0.7.0";
 
 export function loadSopProfile(): SopProfile {
   return getProfile(DEFAULT_SOP_PROFILE_VERSION);

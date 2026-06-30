@@ -1,7 +1,7 @@
 # O'CodingNavigator (OCN) — Claude Code Working Contract
 
 > Generated: 2026-04-28 · Updated: 2026-06-12
-> SOP Profile: `default-ai-coding-sop@0.5.0` (runtime default since DEC-032; 0.1.0 / 0.2.0 / 0.3.0 / 0.4.0 frozen + importable)
+> SOP Profile: `default-ai-coding-sop@0.7.0` (runtime default since DEC-039 — npm/SOP version lockstep, content-equal to 0.5.0, 0.6.0 skipped; 0.1.0 / 0.2.0 / 0.3.0 / 0.4.0 / 0.5.0 frozen + importable)
 > Current State: shipped — Planning Gatekeeper + Execution Navigator + Logic Backbone + Readiness Backbone + **Task Backbone** (incl. `ocn sop upgrade`) + **Rewind & Cycle** (DEC-033/AM-008) + **Auto Mode** (DEC-034/AM-009).
 > Published: `o-coding-navigation@0.5.0-beta.0` (pre-GA beta).
 > Skeleton Spike (Phase 0) is **complete**; the sections below that describe it are kept as historical context.
@@ -219,11 +219,11 @@ DISCOVERY → SPEC → DESIGN → PLAN → BUILD → VERIFY → SHIP → REFLECT
 ## 6. Current Project Position｜本项目当前位置
 
 ```
-SOP Profile  : default-ai-coding-sop@0.5.0 (runtime default — DEC-032)
-Published    : o-coding-navigation@0.5.0-beta.0 (npm latest + beta; alpha preserved at 0.1.0-alpha.2)
+SOP Profile  : default-ai-coding-sop@0.7.0 (runtime default — DEC-039; npm/SOP lockstep, content-equal to 0.5.0)
+Published    : o-coding-navigation@0.7.0-beta.x (npm latest + beta; alpha preserved at 0.1.0-alpha.2)
 Surface      : Planning Gatekeeper (00–19) + Execution Navigator + readiness (list/waive) + task (list/check) + sop upgrade + rewind/cycle + MCP (7 tools)
 State machine: 20 wired steps across DISCOVERY → SPEC → DESIGN → PLAN → BUILD → VERIFY (SHIP/REFLECT stubs)
-Status       : pre-GA beta, dogfooded; Skeleton Spike + 0.2.0/0.3.0/0.4.0/0.5.0 cutovers + logic, readiness & task backbones shipped
+Status       : pre-GA beta, dogfooded; Skeleton Spike + 0.2.0/0.3.0/0.4.0/0.5.0/0.7.0 cutovers + logic, readiness & task backbones shipped
 ```
 
 ### What shipped (high level)
