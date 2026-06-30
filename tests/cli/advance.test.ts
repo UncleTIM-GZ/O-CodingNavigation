@@ -101,4 +101,28 @@ describe("ocn advance (pinned 0.3.0)", () => {
       await fresh.cleanup();
     }
   }, 30_000);
+
+  // AM-013 side-effect ergonomics — in an agent session `OCN_ACTOR=ai_agent`
+  // is set, so a human's `! ocn advance` is mis-tagged ai_agent and refused.
+  // `-H` / `--human` (= --actor user) lets the human advance from the session.
+  it("`-H` overrides OCN_ACTOR=ai_agent so the human can advance from an agent session", async () => {
+    await spawnOcn(["doc", "create", "project-brief"], { cwd: project.cwd });
+    const aiEnv = { OCN_ACTOR: "ai_agent" };
+
+    // Plain advance as ai_agent in manual mode → refused; cursor must not move.
+    const refused = await spawnOcn(["advance"], { cwd: project.cwd, env: aiEnv });
+    expect(refused.exitCode).not.toBe(0);
+    expect((await readState(project.cwd)).currentStepId).toBe("step_project_brief");
+
+    // `-H` runs as the human operator → advance succeeds despite the env.
+    const advanced = await spawnOcn(["advance", "-H"], { cwd: project.cwd, env: aiEnv });
+    expect(advanced.exitCode).toBe(0);
+    expect((await readState(project.cwd)).currentStepId).toBe("step_scope");
+
+    // Audit attributes it to the human, not ai_agent.
+    const adv = (await readEvents(project.cwd))
+      .filter((e) => e.eventType === "advance_succeeded")
+      .pop();
+    expect(adv?.actor).toBe("user");
+  }, 60_000);
 });

@@ -90,8 +90,8 @@ export function authorizeAiAdvance(
     if (phase === null || !phaseEnabled(ctx.config, phase)) {
       return notEnabled(
         msg(
-          `Advance into ${targetStateId} is not delegated to the AI agent — a human must run \`ocn advance\` (enable with \`ocn auto on --phase ...\`).`,
-          `推进到 ${targetStateId} 未委托给 AI——需人工执行 \`ocn advance\`（可用 \`ocn auto on --phase ...\` 开启委托）。`,
+          `Advance into ${targetStateId} is not delegated to the AI agent — a human must run \`ocn advance --human\` (or \`ocn advance\` in a plain terminal; or delegate with \`ocn auto on --phase 1|2|all\`).`,
+          `推进到 ${targetStateId} 未委托给 AI——请人工执行 \`ocn advance --human\`（或在普通终端跑 \`ocn advance\`；或用 \`ocn auto on --phase 1|2|all\` 开启委托）。`,
         ),
       );
     }

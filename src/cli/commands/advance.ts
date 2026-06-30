@@ -9,6 +9,7 @@ import { outputResult } from "../output.js";
 
 interface AdvanceCliOptions {
   readonly actor?: string;
+  readonly human?: boolean;
   readonly rationale?: string;
   readonly json: boolean;
 }
@@ -18,10 +19,19 @@ export function registerAdvanceCommand(program: Command): void {
     .command("advance")
     .description("Run gate, then advance the project to the next step on pass")
     .option("--actor <actor>", "Caller identity override (user|ai_agent)")
-    .option("--rationale <text>", "AI decision trace: background / evidence / action (mandatory for ai_agent)")
+    .option(
+      "-H, --human",
+      "Run as the human operator (shorthand for --actor user); overrides OCN_ACTOR=ai_agent in an agent session",
+    )
+    .option(
+      "--rationale <text>",
+      "AI decision trace: background / evidence / action (mandatory for ai_agent)",
+    )
     .option("--json", "Emit machine-readable JSON CommandResult", false)
     .action(async (rawOpts: AdvanceCliOptions) => {
-      const actor = resolveActorOrExit(rawOpts.actor, rawOpts.json);
+      // --human is sugar for `--actor user`; an explicit --actor still wins.
+      const actorFlag = rawOpts.actor ?? (rawOpts.human === true ? "user" : undefined);
+      const actor = resolveActorOrExit(actorFlag, rawOpts.json);
       const result = await advanceState({
         cwd: process.cwd(),
         actor,
