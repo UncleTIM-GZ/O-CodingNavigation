@@ -5,7 +5,7 @@ import type { ReadinessCheckOutcome, ReadinessLedger } from "../../types/readine
 import { msg } from "../i18n.js";
 import { createAuditEvent, safeAudit } from "../audit/index.js";
 import { evaluateReadiness } from "../readiness/evaluator.js";
-import { computeEnforcedFromMap } from "../readiness/due-state.js";
+import { computeEnforcedFromMap, globalStepOrder } from "../readiness/due-state.js";
 import { checkConfigDrift, commitConfigSnapshot } from "../readiness/freeze-check.js";
 import { readProjectCommands } from "../readiness/project-config.js";
 import { parseReadinessRulebook } from "../readiness/rulebook-loader.js";
@@ -116,7 +116,8 @@ export async function runReadinessGate(opts: {
     currentStateId: opts.state.currentStateId,
     executeCommands: opts.executeCommands ?? true,
     enforcedFromByRule,
-    stateOrder: opts.profile.stateOrder,
+    stepOrder: globalStepOrder(opts.profile),
+    currentStepId: opts.state.currentStepId,
   });
   try {
     await writeReadinessLedger(opts.cwd, ledger);

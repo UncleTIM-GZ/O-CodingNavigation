@@ -90,12 +90,12 @@ export const ReadinessRule = z
     /** Declared anchor (e.g. verify_xref) — informational until P3+. */
     anchor: z.string().optional(),
     fail_code: z.string().optional(),
-    /** AM-014 — explicit per-rule enforcement deadline (overrides the derived
-     *  `dueState`). Only honored when the rulebook sets `precise_activation`.
-     *  Lint cross-checks it against the dependency-derived value. */
+    /** AM-014 — explicit per-rule enforcement deadline (a STEP id; overrides
+     *  the derived `dueStep`). Only honored when the rulebook sets
+     *  `precise_activation`. */
     enforced_from: z
       .string()
-      .regex(/^state_[a-z0-9_]+$/)
+      .regex(/^step_[a-z0-9_]+$/)
       .optional(),
   })
   .strict();
