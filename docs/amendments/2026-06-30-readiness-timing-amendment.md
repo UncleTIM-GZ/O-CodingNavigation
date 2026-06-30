@@ -55,3 +55,16 @@ mvp-plan 阶段、CI、每条 AC 的测试、README…），全落在 SPEC/PLAN/
 - 实测：干净 `ocn init` → `ocn advance` 直接跨 DISCOVERY→SPEC；`ocn brief` 列出 8 条 Forthcoming。
 
 非 SOP bump（沿 AM-008/009 引擎/CLI 先例）；MCP 白名单 7 工具不变。
+
+## 后续修正｜Follow-up（0.7.0-beta.6）—— 步级粒度（dueState → dueStep）
+
+dogfood（BV 项目）暴露：原实现把生效点算到**州/阶段**粒度（`dueState`），但一个州内有多步。
+`rdy_ciso`/`rdy_ba` 依赖 PRD（产出于 `step_prd`），其 `dueState=state_spec`，于是项目还在
+`step_scope`（SPEC 第一步、PRD 未到）时它们就提前来要 PRD 内容——**步级别的"不提前"被破坏**，还诱导
+会话 AI 越界提前写 `docs/02-prd.md`。
+
+改为**步级粒度**：`dueStep(rule)` = 规则各输入在**全局步序**里最晚的产出步；`currentStep < dueStep`
+才 DEFERRED。结果：`step_scope` 处只有 `rdy_cio_cto`（要 scope 停止条件，本步产物）生效，
+`rdy_ciso`/`rdy_ba` 延到 `step_prd`。repo-probe 映射到其策略州的**第一步**。`enforced_from` 显式覆盖
+字段改为 step id（`^step_`）。`readiness-due-state.test.ts` 钉死 8 条规则的 dueStep；
+e2e 钉死"step_scope 处 ciso/ba 仍 DEFERRED、仅 cio_cto 复活"。

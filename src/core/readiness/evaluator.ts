@@ -37,12 +37,14 @@ export interface EvaluateReadinessOptions {
   /** W1 — when false (MCP / read-only callers) command + test_list probes
    *  are NOT executed; they report UNKNOWN. Defaults to true. */
   readonly executeCommands?: boolean;
-  /** AM-014 — ruleId → enforced-from state (precise activation). A block rule
-   *  whose enforced-from state is strictly after `currentStateId` is DEFERRED.
-   *  Empty/absent → no deferral (today's always-enforced behavior). */
+  /** AM-014 — ruleId → enforced-from STEP (precise activation). A block rule
+   *  whose enforced-from step is strictly after `currentStepId` in the global
+   *  step order is DEFERRED. Empty/absent → no deferral (today's behavior). */
   readonly enforcedFromByRule?: ReadonlyMap<string, string>;
-  /** AM-014 — the profile's state order, for comparing current vs enforced. */
-  readonly stateOrder?: readonly string[];
+  /** AM-014 — the profile's global step order, for comparing current vs due. */
+  readonly stepOrder?: readonly string[];
+  /** AM-014 — the current step id (the deferral cursor). */
+  readonly currentStepId?: string;
   readonly now?: () => Date;
 }
 
@@ -221,16 +223,18 @@ async function evaluateRule(
     return { ...base, verdict: "NA", detail: `not required at tier ${ctx.tier}` };
   }
   // AM-014 — precise activation: defer a block check whose inputs are not yet
-  // due in the SOP order (不提前). Runs after the tier gate, before any field
-  // evaluation — a not-yet-due check is not even meaningfully evaluable.
+  // due in the SOP STEP order (不提前). Runs after the tier gate, before any
+  // field evaluation — a not-yet-due check is not even meaningfully evaluable.
+  // Step (not state) granularity: a PRD-keyed check stays deferred at
+  // step_scope even though both steps live in state_spec.
   const enforcedFrom = opts.enforcedFromByRule?.get(rule.id);
   if (
     enforcedFrom !== undefined &&
-    opts.stateOrder !== undefined &&
-    opts.currentStateId !== undefined
+    opts.stepOrder !== undefined &&
+    opts.currentStepId !== undefined
   ) {
-    const cur = opts.stateOrder.indexOf(opts.currentStateId);
-    const due = opts.stateOrder.indexOf(enforcedFrom);
+    const cur = opts.stepOrder.indexOf(opts.currentStepId);
+    const due = opts.stepOrder.indexOf(enforcedFrom);
     if (cur >= 0 && due >= 0 && cur < due) {
       return { ...base, verdict: "DEFERRED", detail: `not due until ${enforcedFrom}` };
     }

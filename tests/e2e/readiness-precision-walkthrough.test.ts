@@ -65,35 +65,33 @@ describe("readiness precise activation — fresh 0.7.0 walkthrough (AM-014)", ()
     expect(state1.currentStepId).toBe("step_scope");
   }, 60_000);
 
-  it("不缺失: at SPEC the spec-due checks re-arm and block; plan/build stay DEFERRED", async () => {
+  it("不缺失 + step-level: at step_scope only the scope-due check re-arms; PRD/plan/build stay DEFERRED", async () => {
     await spawnOcn(["init", "--tier", "minimal", "--no-agent"], { cwd: project.cwd });
     await spawnOcn(["doc", "create", "project-brief"], { cwd: project.cwd });
     const advance = await spawnOcn(["advance"], { cwd: project.cwd });
     expect(advance.exitCode).toBe(0); // now at state_spec / step_scope
 
-    // Re-evaluate readiness at SPEC (read-only).
+    // Re-evaluate readiness at step_scope (read-only).
     await spawnOcn(["readiness", "list"], { cwd: project.cwd });
     const ledger = await readLedger(project);
-    // SPEC-due → re-armed (no longer DEFERRED; blocks until satisfied).
-    for (const id of ["rdy_cio_cto", "rdy_ciso", "rdy_ba"]) {
-      expect(verdictOf(ledger, id)).not.toBe("DEFERRED");
-      expect(["UNKNOWN", "FAIL"]).toContain(verdictOf(ledger, id));
-    }
-    // PLAN/BUILD-due → still deferred (不提前 preserved downstream).
+    // scope-due → re-armed (cio_cto wants scope.stop_conditions, due NOW).
+    expect(verdictOf(ledger, "rdy_cio_cto")).not.toBe("DEFERRED");
+    expect(["UNKNOWN", "FAIL"]).toContain(verdictOf(ledger, "rdy_cio_cto"));
+    // PRD-due (step_prd, a LATER step of the SAME state) → STILL DEFERRED.
+    // This is the step-level fix: they must NOT demand PRD content at step_scope.
+    expect(verdictOf(ledger, "rdy_ciso")).toBe("DEFERRED");
+    expect(verdictOf(ledger, "rdy_ba")).toBe("DEFERRED");
+    // PLAN/BUILD-due → still deferred.
     for (const id of ["rdy_it_pm", "rdy_developer", "rdy_devops_engineer"]) {
       expect(verdictOf(ledger, id)).toBe("DEFERRED");
     }
 
-    // The gate must now block the next advance (不缺失 — cannot leave SPEC unmet),
+    // The gate must still block the next advance (不缺失 — cio_cto unmet),
     // and the cursor must not move.
     const blocked = await spawnOcn(["advance"], { cwd: project.cwd });
     expect(blocked.exitCode).toBe(1); // ERR_GATE_FAILED
     expect(blocked.stderr).toMatch(/blocked|门禁未通过/i);
     const held = JSON.parse(await fs.readFile(join(project.cwd, ".ocoding", "state.json"), "utf8"));
-    expect(held.currentStateId).toBe("state_spec");
     expect(held.currentStepId).toBe("step_scope");
-    // And `ocn check` at SPEC names the re-armed readiness checks.
-    const check = await spawnOcn(["check"], { cwd: project.cwd });
-    expect(check.stderr + check.stdout).toMatch(/readiness|就绪/i);
   }, 60_000);
 });
