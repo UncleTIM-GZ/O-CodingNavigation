@@ -80,6 +80,14 @@ function appendReadinessSummaryBlock(out: string[], value: unknown): void {
   }
 }
 
+// SOP 0.8.0 (AM-015) — renders the brief's acceptance-projection summary.
+function appendAcceptanceSummaryBlock(out: string[], value: unknown): void {
+  if (!isRecord(value)) return;
+  out.push("");
+  out.push("Acceptance｜验收规格:");
+  out.push(`  ${String(value["total"])} spec(s) frozen`);
+}
+
 // SOP 0.5.0 (AM-007) — renders the brief's task-ledger summary when present.
 function appendTaskSummaryBlock(out: string[], value: unknown): void {
   if (!isRecord(value)) return;
@@ -165,6 +173,7 @@ function appendBriefBlock(out: string[], data: Record<string, unknown>): void {
   appendLogicBackboneBlock(out, data["logicBackbone"]);
   appendReadinessSummaryBlock(out, data["readiness"]);
   appendTaskSummaryBlock(out, data["tasks"]);
+  appendAcceptanceSummaryBlock(out, data["acceptance"]);
   appendContractBlock(out, data["contractBackbone"]);
   if (typeof data["aiGovernanceReminder"] === "string") {
     out.push("");

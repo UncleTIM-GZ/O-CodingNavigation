@@ -10,6 +10,8 @@ import { readReadinessLedger } from "./readiness/readiness-store.js";
 import type { ReadinessLedger } from "../types/readiness.js";
 import { readTaskLedger } from "./task/task-ledger-store.js";
 import type { TaskLedger } from "../types/task.js";
+import { readAcceptanceSpecs } from "./acceptance/acceptance-spec-store.js";
+import type { AcceptanceProjection } from "../types/acceptance-spec.js";
 import { readContractGraph } from "./contract/contract-graph-store.js";
 import { readContractConfig } from "./contract/contract-config.js";
 import { summarizeContractGraph, type ContractSummary } from "./gate/contract-drift-gate.js";
@@ -47,6 +49,8 @@ export interface BriefData {
   readonly readiness?: ReadinessBriefSummary;
   /** Present once a task ledger has been persisted (SOP 0.5.0 / AM-007). */
   readonly tasks?: TaskBriefSummary;
+  /** Present once the acceptance projection has been frozen (SOP 0.8.0 / AM-015). */
+  readonly acceptance?: AcceptanceBriefSummary;
   /** Present once the contract drift gate has run (AM-012; opt-in). */
   readonly contractBackbone?: ContractSummary;
   /** AM-009 — present only when auto mode is on (or suspended). Manual-mode
@@ -162,6 +166,12 @@ export async function generateBrief(opts: BriefOptions): Promise<CommandResult<B
   const taskLedger = await readTaskLedger(opts.cwd);
   const tasks = taskLedger === null ? undefined : summarizeTasks(taskLedger);
 
+  // SOP 0.8.0 (AM-015) — fold the acceptance projection count into the brief.
+  // Absent until the acceptance gate freezes the projection under 0.8.0+.
+  const acceptanceProjection = await readAcceptanceSpecs(opts.cwd);
+  const acceptance =
+    acceptanceProjection === null ? undefined : summarizeAcceptance(acceptanceProjection);
+
   // AM-012 — fold the contract drift coverage into the brief so the BUILD/VERIFY
   // loop sees wired/undeclared/unverified counts. Read only when the project is
   // still opted in, so a disabled contract never surfaces a stale projection.
@@ -195,6 +205,7 @@ export async function generateBrief(opts: BriefOptions): Promise<CommandResult<B
       ...(logicBackbone !== undefined ? { logicBackbone } : {}),
       ...(readiness !== undefined ? { readiness } : {}),
       ...(tasks !== undefined ? { tasks } : {}),
+      ...(acceptance !== undefined ? { acceptance } : {}),
       ...(contractBackbone !== undefined ? { contractBackbone } : {}),
       ...(automationActive ? { automation: automationStatus } : {}),
     },
@@ -220,6 +231,15 @@ function summarizeTasks(ledger: TaskLedger): TaskBriefSummary {
     pending: pending.length,
     nextTaskId: next?.id ?? null,
   };
+}
+
+/** Compact acceptance-projection summary for the brief (SOP 0.8.0 / AM-015). */
+export interface AcceptanceBriefSummary {
+  readonly total: number;
+}
+
+function summarizeAcceptance(projection: AcceptanceProjection): AcceptanceBriefSummary {
+  return { total: projection.items.length };
 }
 
 /** Compact readiness summary for the brief: counts + open items with hints. */
