@@ -131,6 +131,31 @@ describe("upgradeSopProfile (DEC-029)", () => {
     expect(data["toVersion"]).toBe("0.4.0");
   });
 
+  it("upgrades 0.7.0 → 0.8.0 (acceptance backbone): pin moved, section added, cursor + config preserved", async () => {
+    await initProject({ cwd: project.cwd, sopVersion: "0.7.0" });
+    // Cursor is already PAST step_acceptance_criteria — the new required
+    // section lands on an already-passed SPEC step, so the upgrade is clean.
+    await seedState(project.cwd, {
+      currentStateId: "state_build",
+      currentStepId: "step_implementation_log",
+    });
+    const configFile = join(project.cwd, ".ocoding", "config.yaml");
+    const userConfig = "commands:\n  build: npm run build\n";
+    await fs.writeFile(configFile, userConfig, "utf8");
+
+    const result = await upgradeSopProfile({ cwd: project.cwd, targetVersion: "0.8.0" });
+    expect(result.ok).toBe(true);
+
+    const state = await readStateJson(project.cwd);
+    expect(projectOf(state)["sopProfileVersion"]).toBe("0.8.0");
+    expect(state["currentStateId"]).toBe("state_build");
+    expect(state["currentStepId"]).toBe("step_implementation_log");
+    expect(await fs.readFile(configFile, "utf8")).toBe(userConfig);
+    // The 0.8.0 delta is visible in the rewritten gates snapshot.
+    const gates = await fs.readFile(join(project.cwd, ".ocoding", "gates.yaml"), "utf8");
+    expect(gates).toContain("section_acceptance_specs");
+  });
+
   it("heals snapshot drift: a tampered sop.yaml is restored to canonical content", async () => {
     // Start at 0.3.0 — upgrading an already-0.4.0 pin would be a no-op and
     // never rewrite the tampered snapshot.

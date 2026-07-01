@@ -14,6 +14,8 @@ import { blocked, ok } from "../result.js";
 import { resolveProfileForProject } from "../sop/loader.js";
 import { evaluateTaskSpecs } from "../task/task-gate.js";
 import { writeTaskLedger } from "../task/task-ledger-store.js";
+import { evaluateAcceptanceSpecs } from "../acceptance/acceptance-gate.js";
+import { writeAcceptanceSpecs } from "../acceptance/acceptance-spec-store.js";
 import { runContractDriftStep } from "../contract/contract-gate-step.js";
 import { evaluateLogicBackbone } from "./logic-backbone-gate.js";
 import { readinessStepBlockOrNull } from "./readiness-step.js";
@@ -281,6 +283,61 @@ export async function runGate(opts: RunGateOptions): Promise<CommandResult<GateR
       ),
     );
     return blocked("ERR_GATE_FAILED", message, result);
+  }
+
+  // SOP 0.8.0 (AM-015 / DEC-041) — acceptance backbone gate on docs/03. Runs
+  // only after the required-section gate passes AND only for profiles that
+  // require section_acceptance_specs (0.8.0+); validates the Acceptance Spec
+  // blocks (structural defects) and, on pass, freezes the projection as the
+  // machine source of AC ids for build-plan traces.
+  if (
+    state.currentStepId === "step_acceptance_criteria" &&
+    required.some((r) => r.id === "section_acceptance_specs")
+  ) {
+    const outcome = evaluateAcceptanceSpecs(content);
+    if (!outcome.ok) {
+      const acResult: GateResult = {
+        status: "blocked",
+        currentStateId: state.currentStateId,
+        currentStepId: state.currentStepId,
+        artifactPath: relativeArtifactPath,
+        missingRequiredSectionIds: [],
+        ...(outcome.blockingReasons !== undefined
+          ? { blockingReasons: outcome.blockingReasons }
+          : {}),
+      };
+      await safeAudit(
+        opts.cwd,
+        createAuditEvent(
+          baseAudit("artifact_gate_blocked", "blocked", outcome.message, {
+            status: "blocked",
+            reason: outcome.blockingReasons?.[0],
+            issues: outcome.issues,
+          }),
+        ),
+      );
+      return blocked("ERR_ARTIFACT_INVALID", outcome.message, acResult);
+    }
+    if (outcome.projection !== undefined) {
+      try {
+        await writeAcceptanceSpecs(opts.cwd, outcome.projection);
+      } catch (err) {
+        const ioMessage = msg(
+          `Failed to persist acceptance specs projection: ${(err as Error).message}`,
+          `验收规格投影写入失败：${(err as Error).message}`,
+        );
+        await safeAudit(
+          opts.cwd,
+          createAuditEvent(
+            baseAudit("artifact_gate_blocked", "blocked", ioMessage, {
+              status: "blocked",
+              reason: "acceptance_specs_write_failed",
+            }),
+          ),
+        );
+        return blocked("ERR_IO_OR_CONFIG", ioMessage);
+      }
+    }
   }
 
   // SOP 0.3.0 — structural gate for the logic backbone. Runs only after the
