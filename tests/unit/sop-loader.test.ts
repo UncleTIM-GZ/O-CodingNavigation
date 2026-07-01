@@ -11,24 +11,25 @@ import {
 // frozen profile, but no default runtime path goes through them any more.
 
 describe("sop/loader.loadSopProfile", () => {
-  it("returns the default profile pinned to 0.7.0 (DEC-039)", () => {
+  it("returns the default profile pinned to 0.8.0 (AM-015 / DEC-041)", () => {
     const profile = loadSopProfile();
     expect(profile.id).toBe("default-ai-coding-sop");
-    expect(profile.version).toBe("0.7.0");
-    expect(DEFAULT_SOP_PROFILE_VERSION).toBe("0.7.0");
+    expect(profile.version).toBe("0.8.0");
+    expect(DEFAULT_SOP_PROFILE_VERSION).toBe("0.8.0");
   });
 
   it("provides yaml strings for sop / gates / artifacts / config", () => {
     const profile = loadSopProfile();
     expect(profile.sopYaml).toMatch(/profile: default-ai-coding-sop/);
-    expect(profile.sopYaml).toMatch(/version: 0\.7\.0/);
+    expect(profile.sopYaml).toMatch(/version: 0\.8\.0/);
     expect(profile.gatesYaml).toMatch(/section_product_form/);
     expect(profile.gatesYaml).toMatch(/section_task_specs/);
+    expect(profile.gatesYaml).toMatch(/section_acceptance_specs/);
     expect(profile.artifactsYaml).toMatch(/02-prd\.md/);
     expect(profile.artifactsYaml).toMatch(/19-final-build-verdict\.md/);
     expect(profile.artifactsYaml).toMatch(/07-logic-backbone\.md/);
     expect(profile.defaultConfigYaml).toMatch(/tier: minimal/);
-    expect(profile.defaultConfigYaml).toMatch(/version: 0\.7\.0/);
+    expect(profile.defaultConfigYaml).toMatch(/version: 0\.8\.0/);
   });
 
   // Ensures runtime profile + persisted snapshot share the same (0.2.0) shape.
@@ -135,13 +136,13 @@ describe("sop/loader.loadSopProfile", () => {
     expect(total).toBe(10);
   });
 
-  it("loadSopProfileByVersion('0.7.0') is identical to the default (DEC-039)", () => {
+  it("loadSopProfileByVersion('0.8.0') is identical to the default (AM-015)", () => {
     const def = loadSopProfile();
-    const v070 = loadSopProfileByVersion("0.7.0");
-    expect(def.version).toBe(v070.version);
-    expect(def.sopYaml).toBe(v070.sopYaml);
-    expect(def.gatesYaml).toBe(v070.gatesYaml);
-    expect(def.artifactsYaml).toBe(v070.artifactsYaml);
+    const v080 = loadSopProfileByVersion("0.8.0");
+    expect(def.version).toBe(v080.version);
+    expect(def.sopYaml).toBe(v080.sopYaml);
+    expect(def.gatesYaml).toBe(v080.gatesYaml);
+    expect(def.artifactsYaml).toBe(v080.artifactsYaml);
   });
 
   it("0.7.0 state-machine content equals 0.5.0; readiness adds precise_activation (DEC-039 + AM-014)", () => {

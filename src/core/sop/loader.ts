@@ -104,7 +104,7 @@ import { sopYaml as sopYaml080 } from "../../sops/default-ai-coding-sop/0.8.0/so
 // the runtime constant. Always reflects the default profile. (0.5.0 keeps the
 // same 8 states and 20 steps as 0.3.0/0.4.0; only the build-plan section
 // gate + task ledger are new.)
-export const STATE_ORDER: readonly StateId[] = STATE_ORDER_070;
+export const STATE_ORDER: readonly StateId[] = STATE_ORDER_080;
 
 export type SopProfileVersion = "0.1.0" | "0.2.0" | "0.3.0" | "0.4.0" | "0.5.0" | "0.7.0" | "0.8.0";
 
@@ -288,13 +288,16 @@ export function isKnownSopProfileVersion(version: string): version is SopProfile
 }
 
 /**
- * Default runtime profile — flipped to 0.7.0 (DEC-039, npm/SOP version
- * unification; content-equal to 0.5.0). Prior defaults were 0.5.0 (DEC-032),
- * 0.4.0 (DEC-030), 0.3.0 (AM-003 / DEC-025) and 0.2.0 (DEC-023). Every
- * runtime path (init, status, brief, check, gate, advance, MCP) reads this
- * loader by default and therefore sees 0.7.0 from this commit forward.
+ * Default runtime profile — flipped to 0.8.0 (AM-015 / DEC-041, Acceptance
+ * Backbone). Prior defaults were 0.7.0 (DEC-039), 0.5.0 (DEC-032), 0.4.0
+ * (DEC-030), 0.3.0 (AM-003 / DEC-025) and 0.2.0 (DEC-023). Every runtime path
+ * (init, status, brief, check, gate, advance, MCP) reads this loader by
+ * default and therefore sees 0.8.0 from this commit forward — a fresh
+ * `ocn init` requires a valid `## Acceptance Specs` block at
+ * step_acceptance_criteria. Older pins keep their behavior via
+ * `resolveProfileForProject` and migrate with `ocn sop upgrade`.
  */
-export const DEFAULT_SOP_PROFILE_VERSION: SopProfileVersion = "0.7.0";
+export const DEFAULT_SOP_PROFILE_VERSION: SopProfileVersion = "0.8.0";
 
 export function loadSopProfile(): SopProfile {
   return getProfile(DEFAULT_SOP_PROFILE_VERSION);
