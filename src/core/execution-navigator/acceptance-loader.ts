@@ -16,11 +16,10 @@
 
 import { promises as fs } from "node:fs";
 import { join, relative } from "node:path";
-import {
-  emptyAcceptanceParseResult,
-  parseAcceptanceCriteria,
-} from "./acceptance-parser.js";
-import type { AcceptanceParseResult } from "./types.js";
+import type { AcceptanceProjection, AcceptanceSpec } from "../../types/acceptance-spec.js";
+import { readAcceptanceSpecs } from "../acceptance/acceptance-spec-store.js";
+import { emptyAcceptanceParseResult, parseAcceptanceCriteria } from "./acceptance-parser.js";
+import type { AcceptanceCriterion, AcceptanceParseResult } from "./types.js";
 
 export const ACCEPTANCE_RELATIVE_PATH = "docs/03-acceptance-criteria.md";
 
@@ -36,10 +35,44 @@ export interface AcceptanceLoadResult {
 //   the OS error code (e.g. `EACCES`, `ELOOP`, `EISDIR`).
 // - File present → parsed result with whatever warnings the parser emitted.
 //
+// SOP 0.8.0 (AM-015) — fold a validated structured spec into the legacy
+// AcceptanceCriterion shape so every Path A consumer (evidence-map,
+// verify-status, next-prompt, verdict, render) keeps working unchanged. desc
+// carries the free-text signal; Given/When/Then are appended so the text
+// heuristics see them too. Authored ids are non-null (addressable for traces).
+function criterionText(spec: AcceptanceSpec): string {
+  return [spec.desc, spec.given, spec.when, spec.then]
+    .filter((s): s is string => typeof s === "string" && s.length > 0)
+    .join(" ");
+}
+
+function projectionToParseResult(projection: AcceptanceProjection): AcceptanceParseResult {
+  const criteria: readonly AcceptanceCriterion[] = projection.items.map((spec, i) => ({
+    id: spec.id,
+    originalId: spec.id,
+    text: criterionText(spec),
+    sourceLine: i + 1,
+    generatedId: false,
+  }));
+  return {
+    path: ACCEPTANCE_RELATIVE_PATH,
+    found: true,
+    criteriaCount: criteria.length,
+    criteria,
+    warnings: [],
+  };
+}
+
 // Never throws.
-export async function loadAcceptanceFromProject(
-  cwd: string,
-): Promise<AcceptanceLoadResult> {
+export async function loadAcceptanceFromProject(cwd: string): Promise<AcceptanceLoadResult> {
+  // Projection-first (SOP 0.8.0+): once the acceptance gate has frozen
+  // `.ocoding/acceptance-specs.json`, it is the canonical machine source of AC
+  // criteria. Absent (pre-0.8.0 pins, or gate not yet passed) → markdown fallback.
+  const projection = await readAcceptanceSpecs(cwd);
+  if (projection !== null) {
+    return { result: projectionToParseResult(projection), warnings: [] };
+  }
+
   const absPath = join(cwd, ACCEPTANCE_RELATIVE_PATH);
   let raw: string;
   try {

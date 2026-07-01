@@ -4,6 +4,7 @@ import type { BilingualMessage } from "../../types/i18n.js";
 import type { SopProfile } from "../../types/sop.js";
 import type { TaskLedger, TaskSpec } from "../../types/task.js";
 import { parseAcceptanceCriteria } from "../execution-navigator/acceptance-parser.js";
+import { readAcceptanceSpecs } from "../acceptance/acceptance-spec-store.js";
 import { msg } from "../i18n.js";
 import { readLogicGraphProjection } from "../logic/logic-graph-store.js";
 import { buildLedger, readTaskLedger, sha256Hex, verifyHashOf } from "./task-ledger-store.js";
@@ -35,10 +36,13 @@ export interface EvaluateTaskSpecsOptions {
 
 /** Canonical AC ids from docs/03 (only criteria with explicit, non-generated
  *  ids count as addressable), or null when the file is absent/unlocatable. */
-async function readAcIds(
-  cwd: string,
-  profile: SopProfile,
-): Promise<ReadonlySet<string> | null> {
+async function readAcIds(cwd: string, profile: SopProfile): Promise<ReadonlySet<string> | null> {
+  // Projection-first (SOP 0.8.0+): the frozen acceptance-specs projection is
+  // the canonical, unambiguous machine source of addressable AC ids. Absent
+  // (pre-0.8.0 pins, or acceptance gate not yet passed) → markdown fallback.
+  const projection = await readAcceptanceSpecs(cwd);
+  if (projection !== null) return new Set(projection.items.map((s) => s.id));
+
   const rel = profile.artifactPathForStep("step_acceptance_criteria");
   if (rel === null) return null;
   let content: string;
@@ -64,10 +68,7 @@ function composeBlockedMessage(defects: readonly TaskDefect[]): BilingualMessage
   const zh = shown.map((d) => describeTaskDefect(d).zh).join("；");
   const moreEn = more > 0 ? ` (+${more} more)` : "";
   const moreZh = more > 0 ? `（另有 ${more} 项）` : "";
-  return msg(
-    `Task Specs have defects: ${en}${moreEn}`,
-    `任务规格存在缺陷：${zh}${moreZh}`,
-  );
+  return msg(`Task Specs have defects: ${en}${moreEn}`, `任务规格存在缺陷：${zh}${moreZh}`);
 }
 
 function toTaskSpec(task: ParsedTask): TaskSpec {
@@ -85,9 +86,7 @@ function toTaskSpec(task: ParsedTask): TaskSpec {
   };
 }
 
-export async function evaluateTaskSpecs(
-  opts: EvaluateTaskSpecsOptions,
-): Promise<TaskGateOutcome> {
+export async function evaluateTaskSpecs(opts: EvaluateTaskSpecsOptions): Promise<TaskGateOutcome> {
   const parsed = parseTaskSpecs(opts.buildPlanContent);
   const [acIds, logicNodeIds] = await Promise.all([
     readAcIds(opts.cwd, opts.profile),
