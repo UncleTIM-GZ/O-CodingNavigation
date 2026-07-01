@@ -1,0 +1,32 @@
+import { describe, expect, it } from "vitest";
+import { describeAcceptanceDefect } from "../../src/core/acceptance/acceptance-validator.js";
+import type { AcceptanceDefect } from "../../src/core/acceptance/acceptance-spec-parser.js";
+
+// SOP 0.8.0 (AM-015) — every acceptance defect code renders a bilingual message
+// with the offending id/field interpolated.
+
+const CASES: readonly AcceptanceDefect[] = [
+  { code: "no_specs" },
+  { code: "duplicate_id", specId: "AC-PR-001" },
+  { code: "invalid_id", specId: "Nope" },
+  { code: "missing_field", specId: "AC-002", field: "desc" },
+];
+
+describe("describeAcceptanceDefect", () => {
+  it("renders a non-empty en+zh message for every code", () => {
+    for (const defect of CASES) {
+      const m = describeAcceptanceDefect(defect);
+      expect(m.en.length).toBeGreaterThan(0);
+      expect(m.zh.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("interpolates the offending id and field", () => {
+    expect(describeAcceptanceDefect({ code: "duplicate_id", specId: "AC-PR-001" }).en).toContain(
+      "AC-PR-001",
+    );
+    const missing = describeAcceptanceDefect({ code: "missing_field", specId: "AC-002", field: "desc" });
+    expect(missing.zh).toContain("AC-002");
+    expect(missing.en).toContain("desc");
+  });
+});
