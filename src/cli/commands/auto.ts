@@ -18,6 +18,7 @@ import { outputResult } from "../output.js";
 interface AutoCliOptions {
   readonly phase?: string;
   readonly actor?: string;
+  readonly human?: boolean;
   readonly json: boolean;
 }
 
@@ -44,9 +45,14 @@ async function runSwitch(action: AutoSwitchAction, rawOpts: AutoCliOptions): Pro
     );
     return;
   }
+  // --human is sugar for `--actor user`; an explicit --actor still wins. Lets a
+  // human flip the switch from an agent session where OCN_ACTOR=ai_agent is set
+  // (mirrors `ocn advance -H`). This is a governance signature, not a boundary
+  // (see actor.ts) — the AI remains contractually barred from using it.
+  const actorFlag = rawOpts.actor ?? (rawOpts.human === true ? "user" : undefined);
   let actor;
   try {
-    actor = resolveActor(rawOpts.actor);
+    actor = resolveActor(actorFlag);
   } catch (err) {
     if (err instanceof InvalidActorError) {
       outputResult(
@@ -76,6 +82,10 @@ export function registerAutoCommand(program: Command): void {
     .description("Enable auto mode for a phase (human-only; --phase is mandatory)")
     .option("--phase <phase>", "1 = DISCOVERY→PLAN, 2 = BUILD→VERIFY, all = both")
     .option("--actor <actor>", "Caller identity override (user|ai_agent)")
+    .option(
+      "-H, --human",
+      "Run as the human operator (shorthand for --actor user); overrides OCN_ACTOR=ai_agent in an agent session",
+    )
     .option("--json", "Emit machine-readable JSON CommandResult", false)
     .action(async (rawOpts: AutoCliOptions) => runSwitch("on", rawOpts));
 
@@ -84,6 +94,10 @@ export function registerAutoCommand(program: Command): void {
     .description("Disable auto mode (default: both phases)")
     .option("--phase <phase>", "1, 2 or all (default all)")
     .option("--actor <actor>", "Caller identity override (user|ai_agent)")
+    .option(
+      "-H, --human",
+      "Run as the human operator (shorthand for --actor user); overrides OCN_ACTOR=ai_agent in an agent session",
+    )
     .option("--json", "Emit machine-readable JSON CommandResult", false)
     .action(async (rawOpts: AutoCliOptions) => runSwitch("off", rawOpts));
 
@@ -91,6 +105,10 @@ export function registerAutoCommand(program: Command): void {
     .command("resume")
     .description("Clear a circuit-breaker suspension and resume auto mode (human-only)")
     .option("--actor <actor>", "Caller identity override (user|ai_agent)")
+    .option(
+      "-H, --human",
+      "Run as the human operator (shorthand for --actor user); overrides OCN_ACTOR=ai_agent in an agent session",
+    )
     .option("--json", "Emit machine-readable JSON CommandResult", false)
     .action(async (rawOpts: AutoCliOptions) => runSwitch("resume", rawOpts));
 
