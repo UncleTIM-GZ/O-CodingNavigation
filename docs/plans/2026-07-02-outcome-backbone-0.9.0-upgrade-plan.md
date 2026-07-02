@@ -7,6 +7,29 @@
 
 ---
 
+## 0. Deepen 增强摘要｜Enhancement Summary
+
+> Deepened on 2026-07-02 · 6 个并行评审子代理（architecture / data-integrity / typescript / security / spec-flow / simplicity）· 全部针对本计划 + proposal + 实际被镜像的模块（task 主干、contract-gate-step、state-store、authorization）落地验证。详见 §12。
+
+**必须在动工前修正的设计洞（CRITICAL，改变实现契约）：**
+
+1. **完整性锚点是 audit JSONL 交叉核对，不是命令哈希/自校验和**（data-integrity）。台账不是任何可重新推导的源的投影，冻结命令哈希只覆盖命令字段；verdict/value/history 都可伪造。self-checksum 在无信任根下可被重算。真正的"伪造必留痕"来自：每次 `outcome_measured` 审计事件记录 value + 证据快照哈希，gate 用永不归档的 audit 台账反查 ledger。§3.3 的 AC-9 承诺据此重写。
+2. **投影 writer 目前 pin-blind，无条件出 v2 会破坏 0.8.0 逐字节不变承诺**（architecture C1）。`buildAcceptanceProjection`/`evaluateAcceptanceSpecs` 不带 profile 版本参数。必须二选一并写进 P1：(a) 把 pin 版本贯穿到 writer，<0.9.0 出 v1；或 (b) 把"逐字节不变"重定义为仅覆盖 markdown/gate 行为，显式豁免投影 JSON。
+3. **SHIP 状态门必须走 cross-cutting 接线（照 `contract-gate-step.ts`），不能走 inline（照 acceptance）**（architecture C2）。`step_release` 无 required artifact → runGate 命中 null-artifact 提前返回分支，在所有 inline 门之前 auto-pass `not_applicable`。只有 `contractDriftOrNull` 在两个分支都跑。SHIP 门若做成 inline 块会静默放行零 outcome 强制。
+4. **`cycle new` 必须把 live verdict 重置为 UNMEASURED**（spec-flow Q2 + architecture M3）。当前"带台账快照进下一轮" + `verdict=取最新` 自相矛盾：第一轮 MEASURED_PASS 会让第二轮改动过的系统在 SHIP 门拿旧绿灯发布——恰是本主干要杀的第六类假完成跨轮泄漏。归档到 `.ocoding/cycles/<n>/`，冻结契约保留，live verdict 归零。
+5. **`--dec` 引用必须机器校验，否则复刻 `dangling_trace` 类**（spec-flow Q3/Q4）。豁免与 FAIL→SHIP 覆盖当前只存一个 DEC id、从不校验其存在 / 是否指向该 ac-id。创建时 + 每次 gate 都要校验（照 readiness waive-with-probe 复验）；FAIL 覆盖需结构化引用 ac-id + 实测值（ledger 内 per-AC 确认），不是"存在某条 DEC"。
+6. **outcome-only 项目与 Task 主干 `zero_tasks` 硬缺陷冲突**（spec-flow Q7）。纯测量/研究型项目（只有 outcome AC、无 build task）过不了 build-plan 门 → 永远到不了判 outcome 的 SHIP 边界。必须裁决：outcome AC 计作满足 task，或 ≥1 到期 outcome AC 时放宽 zero_tasks，或声明 out of scope。
+7. **probe 数值必须强制有限**（security）。`JSON.parse('{"value":1e400}')` = `Infinity`，`Infinity >= 1` → 假 MEASURED_PASS。`z.number()` 不拒 ±Infinity。用 `z.number().finite()` + 显式 `Number.isFinite` 守卫，比较器前拒绝。
+8. **"伪造必留痕"覆盖不到 probe 程序本身**（security + data-integrity）。证据快照只哈希 `measure.source` 数据文件；改 `scripts/probe.js` 直接 `console.log` 假值不留痕。修：freeze 时同时冻结+快照 probe 入口文件的内容哈希，或收窄 §3.7/PASS 文案为"仅检测声明证据源的篡改，不含 probe 程序"。
+
+**建议采纳的关键设计（HIGH，见 §12.2–12.7）**：`kind` 用判别联合（非可选字段）+ 解析前归一化 `kind=build`；threshold 解析成 `{op,value}` + `never` 守卫穷尽比较器；probe tri-state 归一到闭合 `ProbeOutcome` 联合（exit 0 但 JSON 解析失败 = exec_error，非静默 PASS）；ledger 走 `state-store` 真 `withLock`+`.bak`（task/acceptance store 其实是无锁 temp+rename）；dual-write 定序（audit 先于 ledger rename）；probe-runner 进程组 kill + 符号链接跳过 + 有界解析；派发优先序落在 assembler 且 BUILD 期避免 livelock；runner 用判别 step fn + 派发注册表收敛已 6× 重复的 evaluate→block→persist。
+
+**两处触及产品负责人既定裁决、需确认的范围决定（见 §12.8）**：
+- **建议采纳**：删掉 `ocn outcome freeze` 命令——Task 主干无 `task freeze`，冻结是验收门通过的副作用；两条冻结路径合一更忠于所镜像的先例。影响 §3.4 与 AC-3/AC-10 文案。
+- **建议保留（不采纳 simplicity 的"推迟"）**：REFLECT 引用核对门是 proposal §13 对 FFF 根因"方法论零实证"的直接回应，属主干闭合核心，保留在 0.9.0；但可把 verdict 由四态存储改为**三存一算**（UNMEASURED 由缺行计算），顺带消解 proposal §10 裁决 3（三态+UNMEASURED）与 §5（四态）的文档矛盾。
+
+---
+
 ## 1. Goal｜目标
 
 **Upgrade OCN from a process controller into an outcome controller.**
@@ -200,3 +223,117 @@ state_verify（现有终点 step_final_build_verdict 之后）
 1. **状态机首次扩到 20 步之外**：`sop upgrade` 对"已到 VERIFY 末端的老项目"的游标语义必须在迁移测试里钉死（老 pin 终点仍是 `step_final_build_verdict`）。
 2. **派发优先序改动波及 `/ocn-next` 模板**：AM-011 自动审查文案需同步更新，否则 auto mode 的审查子代理拿到过期指令。
 3. **证据伪造是已声明边界而非已解决问题**：靠快照留痕 + human-only 冻结缓解；不得在文案中夸大担保范围。
+
+## 11. Implementation map｜实现映射（2026-07-02 codebase 已验证）
+
+> 由代码勘察确认，计划引用的路径全部命中现状；本节把"改哪个文件、复用哪个模式、注意哪条硬约束"钉死，供 `/workflows:work` 直接消费。
+
+### 11.1 复用锚点（已存在，勿重造）
+
+| 计划所需能力 | 现状实现（复用） | 路径 |
+|---|---|---|
+| 冻结命令哈希（R4） | `verifyHashOf(command)` = sha256(trimmed command) | `src/core/task/task-ledger-store.ts` |
+| probe 式执行器范式 | `executeVerify` — `/bin/sh -c`、exit-0-only、honest null on timeout、`durationMs` | `src/core/task/task-verify-exec.ts` |
+| 台账原子写范式 | `writeTaskLedger`/`buildLedger`（temp+rename，id/hash 不变才保留历史） | `src/core/task/task-ledger-store.ts` |
+| 到期精确激活（AM-014） | `resolveAcceptanceSpecs` staleness + dueState 语义 | `src/core/acceptance/acceptance-source.ts` |
+| 投影 store 范式 | `buildAcceptanceProjection`/`writeAcceptanceSpecs`（原子；projection v1） | `src/core/acceptance/acceptance-spec-store.ts` |
+| 门运行器接入点 | 验收门 block 在 `gate-runner.ts:288-341`（step_acceptance_criteria） | `src/core/gate/gate-runner.ts` |
+| 0.9.0 profile 继承种子 | `0.8.0/data.ts` 继承 0.7.0 全量、仅加 `section_acceptance_specs` | `src/sops/default-ai-coding-sop/0.8.0/data.ts` |
+| 审计事件工厂 | `createAuditEvent`（ULID）+ `AuditEventType` zod enum | `src/core/audit/audit-event.ts` · `src/types/audit.ts` |
+| auto 授权/断路器 | `authorizeAiTaskCheck`/`phaseOfState`/circuit-breaker | `src/core/automation/*` |
+
+### 11.2 P1–P4 精确落点（覆盖计划 §5 的文件列）
+
+- **P1 类型/解析**：`src/types/acceptance-spec.ts`(49行) 加 `kind`+`measure.*` 可选字段并把 `AcceptanceProjection.version` 从 `literal(1)` 升到可辨识联合（v1 读兼容）；`acceptance-spec-parser.ts`(194行) 加 measure 字段解析 + 六算符校验；`acceptance-validator.ts`(32行) 加三个缺陷码文案；`acceptance-spec-store.ts`(61行) 加 v2 投影构造。均有充足行数余量。
+- **P2 台账/命令组**：新建 `src/core/outcome/{outcome-ledger-store.ts, probe-runner.ts}` + `src/types/outcome-ledger.ts`（照 task 三件套镜像）；新建 `src/cli/commands/outcome.ts`（check/list/freeze/waive 四子命令，参照 `task.ts`55行 与 `verdict.ts`86行 结构）；冻结逻辑挂在验收门通过分支。
+- **P3 门禁/驱动**：BUILD 任务派发改造走 `src/core/execution-navigator/next-prompt-task-dispatch.ts`(64行) 与 `next-prompt.ts`(161行)；advance 阻塞逻辑走 `src/core/advance/advance-state.ts`(208行) + 新增一个 `outcome-ledger-guard.ts`（照 `task-ledger-guard.ts`58行 范式，勿把逻辑塞进 advance-state）。
+- **P4 profile/发布**：新建 `src/sops/default-ai-coding-sop/0.9.0/`（照 0.8.0/ 的 data/sop/gates/readiness/artifacts/config/render 七件套），loader 注册 + 默认翻 0.9.0；SHIP/REFLECT 各加 1 步。
+
+### 11.3 硬约束警报（CLAUDE.md §8：文件 ≤300 行）
+
+- 🔴 `src/core/gate/gate-runner.ts` **已 482 行（超限）**：outcome 冻结/校验**不得**再往里加 block，必须抽出 `src/core/outcome/outcome-gate.ts`（照 `acceptance-gate.ts`56行 的 PURE outcome 模式），runner 只做一行调用 + 持久化。
+- 🔴 `src/core/brief.ts` **283 行**：新增"现实接触指标"会破 300，必须把 outcome 摘要抽成独立 `brief-outcome-section.ts` 再组合。
+- 🟡 near-limit 需留意：`task-check.ts`(273)、`next-prompt-sections.ts`(251)、`task-spec-parser.ts`(224)、`advance-state.ts`(208)——涉及处优先新建同级文件，勿就地膨胀。
+
+### 11.4 审计/接口增量确认
+
+- 新 push 事件加入 `src/types/audit.ts` 的 `AuditEventType` enum：`outcome_measured` / `outcome_contract_frozen` / `outcome_waived`（单 type + result 语义，沿 rewind/cycle 先例）。验收门当前复用 `artifact_gate_*`——outcome 走**专属**事件，勿复用。
+- 投影/台账路径登记进 `src/core/paths.ts`（现 `Paths.acceptanceSpecsFile` 在 line 28 旁）：新增 `Paths.outcomeLedgerFile = .ocoding/outcome-ledger.json`。
+- **AM-011 现状**：源码中**无** `AM-011` 具名模块，自动审查子代理是文本层约定（governance-text + `/ocn-next` 模板）。派发优先序改动后，必须同步 `src/core/automation/governance-text.ts`(98行) 与 next-prompt 模板文案（计划 §10 风险 2 已列）。
+- MCP 白名单：`outcome check` 与 `task check` 同级（状态改变类，仅 CLI）——**不进** 7 工具白名单，保留测试钉死断言。
+
+## 12. Deepen 评审综合｜Review synthesis（2026-07-02，6 子代理）
+
+> 本节把六路评审的可执行结论按主题固化，每条标注来源与目标文件。CRITICAL 已进 §0；此处给实现细节。
+
+### 12.1 完整性模型重写（data-integrity CRITICAL / security M）
+
+- **锚点=审计台账，非自校验和**：新 `outcome_measured` 事件必须携带 `value` + `evidenceSnapshotHash` + `commandHash`。每次 gate 运行 `outcome-ledger-guard` 反查：ledger 最新条目的 value/verdict 必须与最后一条对应 `outcome_measured` 审计事件一致。分歧即拒绝（AC-9 重定义为"ledger 与 audit 台账不符 → refuse"）。伪造需同时改 ledger 与永不归档的 audit JSONL。
+- **dual-write 定序**：`ocn outcome check` 先 append 审计事件，再 rename ledger。反查容忍"ledger 落后 audit 一步"（可恢复方向），把"ledger 领先 audit"判为篡改。崩溃恢复语义写进 store 单测。
+- **真锁 + 备份**：ledger 走 `src/core/state/state-store.ts` 的 `withLock`（5s 超时）+ `.bak`，**不要**照抄无锁的 `task-ledger-store`/`acceptance-spec-store`（二者只有 temp+rename）。理由：`outcome check` 是 phase2 可委托 → 并发/快速连调真实存在 → lost-update 风险高于 task/acceptance。
+- **append-only 是不变量不是愿望**：每写校验 `history.length` 单调不减 + 每条链入前条哈希（prev-entry hash chain），截断即可检测；再与 audit 事件计数交叉核对。
+- **latest 取数组末元素，不取 `max(timestamp)`**：防未来日期条目插队。
+
+### 12.2 类型设计（typescript review，全部建议采纳）
+
+- `AcceptanceSpec` 改为 `z.discriminatedUnion("kind", [BuildSpec, OutcomeSpec])`；`OutcomeSpec` 必带 `measure: MeasureContract`。解析器在 `.parse()` **前**把缺 `kind` 的块归一化为 `kind:"build"`（判别量不可靠地 default），逐字节不变由此成为解析器职责、单测可证。`measure.*` 用 `min(1)` 让 `missing_measure_field` 从 ZodError 落出。
+- Threshold：`ThresholdOp = z.enum([">=","<=",">","<","==","!="])` + `{op, value:number}`；比较器 `switch` 带 `const _e: never = op` 穷尽守卫；**解析器按最长算符优先**匹配（`>=`/`<=`/`==`/`!=` 先于 `>`/`<`），否则 `">= 1"` 会误解析成 `>` + `"= 1"`。`==` 保持精确浮点相等（契约如此，勿加 epsilon——那是被禁的内容判断），加一行注释。
+- 投影 `version` 判别联合（v1 literal 1 / v2 literal 2）；**v1 schema 冻结不得就地加宽**（0.8.0 盘上文件必须 v2 binary 下仍 v1 解析）；`acceptance-loader` 适配器 `switch(version)` 带 `never` 守卫。
+- Probe 归一到闭合 `ProbeOutcome = measured{metric,value} | no_evidence | exec_error{detail}`：**exit 0 但末行 JSON 解析失败 = exec_error，不得静默当 measured**（否则就是它要杀的假完成）；`exec_error` 不写 verdict、返回 `ERR_IO_OR_CONFIG`(4)。`20` 必须 `=== 20`。`verdictFor` 只产 后三态。
+- `UNMEASURED` 是"无 ledger 行"的计算态，不作存储 enum 值（存 `{NO_EVIDENCE, MEASURED_PASS, MEASURED_FAIL}`）——同时消解 三态/四态 文档矛盾（simplicity #4）。
+- 唯一 `any` 危险点=probe stdout：`ProbeReading = z.object({metric:z.string().min(1), value:z.number().finite()}).strict()`，**禁用 `z.coerce`**（字符串数字必须判 exec_error）；`JSON.parse` try/catch，失败→exec_error 不抛。ledger/acceptance 读盘的完整性校验就是 zod parse 本身，勿旁挂 `as` 松校验。
+
+### 12.3 probe-runner 加固（security，新文件 `src/core/outcome/probe-runner.ts`）
+
+- **进程组 kill**：`spawn(..., {detached:true})`，超时 `process.kill(-child.pid, 'SIGKILL')`，SIGTERM→SIGKILL 有宽限窗（Node 不自动升级）。probe 跑"现实"负载易留孤儿进程树。
+- **符号链接 + 越界**：快照前对每个匹配文件 `lstat` 跳过 symlink（或用 `project-root.ts` 的 `assertResolvedPathInsideRoot` 校验 realpath 仍在 root 内），每文件哈希前设大小上限。防读/哈希 root 外文件（`-> ~/.ssh/id_rsa` / `-> /dev/zero` DoS）。
+- **有界解析**：`maxBuffer` 显式设 1MB（照 `task-verify-exec.ts`，勿依赖平台默认）；末行长度上限（如 >64KB 拒绝）再 `JSON.parse`。
+- **原型污染安全**：只显式读 `metric`/`value`，绝不 `{...parsed}` 展开进 ledger；zod 对象无 passthrough。
+- **timeout 上限**：`measure.timeout` 校验为正有限整数且 ≤600s。
+- **env 说明**：probe 继承 `process.env`（含本仓 `.env` 的 `NPM_token`）；因 `outcome check` 可 AI 委托，在 amendment 显式记录，考虑文档化/可选清洗敏感变量。
+- 保持 probe-runner 为**纯执行器**；threshold 比较器与证据快照各自独立小文件（≤300 行）。
+
+### 12.4 状态机 & 迁移（architecture H1/M2/M3，spec-flow Q1）
+
+- **升级态终点移动测试**（区别于冻结 pin）：`nextStep(step_final_build_verdict)` 由 null→`step_release`。停在旧终点的项目升级后 `ocn advance` 会续进 SHIP。加迁移测试：0.8.0 停 `step_final_build_verdict` → upgrade → advance 进 `step_release`，且 SPEC 级 outcome 要求按 AM-014 `dueState` **精确激活**不追溯炸已过 SPEC。比 AM-015 加节先例重（是跨终点的状态扩展）。
+- **due-already-passed 规则**：`dueState(rule) < currentState` 于升级后首次激活时 **clamp 到下一可达边界**（下关强制，不追溯 explode），一次性迁移提示；进迁移测试矩阵。
+- **phaseOfState 天然把 SHIP/REFLECT 锁成 human-only**（`PHASE2_STATES={build,verify}`）——是真实缓解，写明。推论：outcome 必须在 **VERIFY 内测量**，VERIFY→SHIP 边界门强制；SHIP 相位不可委托测量。P2 需**新** `authorizeAiOutcomeCheck`（平行 `authorizeAiTaskCheck`，非复用）。
+- **硬编码终点文案迁移**：`advance-state.ts:143-146` 的 `no_next_step` 拒绝文案与 cycle/rewind signpost 钉死在旧终点，须移动；相关"终点在 VERIFY"断言的测试同步改。
+
+### 12.5 门运行器分解（architecture H2，硬约束）
+
+- `gate-runner.ts` 已 482 行且含 3 份近同 evaluate→block→persist（acceptance/logic/task）；outcome 再加最多 3 个门点（SPEC 存在-或-豁免 / SHIP 状态 / REFLECT 引用核对）。单抽 `outcome-gate.ts` 不够。
+- 每个 outcome 门做成**判别-kind step fn**（`{kind: skip|pass|io_error|blocked}`，照 `runContractDriftStep`），runner 真正一调一行；并引入小型 **step-gate 派发表/注册表**把 6× 重复迁上去——收缩 runner 而非长出第 5/6 份拷贝。
+- SHIP 门走 §0-C2 的 cross-cutting 接线（null-artifact 分支内也要调用）。
+
+### 12.6 派发与驱动（architecture M1，spec-flow Q6）
+
+- outcome 派发优先序落在 `next-prompt-assemble.ts`/`next-prompt-sections.ts`（后者 251 行，近上限）**之上新增独立 sibling 模块**，勿塞进 `next-prompt-task-dispatch.ts`（其 `state_build` 短路，而 outcome 从 VERIFY 起可测、非 BUILD 限定）。
+- **BUILD 期防 livelock**（早 `due` 场景）：outcome AC 仅在 build ledger 清空时 / BUILD 之外 才盖过 build task；`NO_EVIDENCE` 的 outcome 在其 trace 闭包内降到 pending build task 之下。扁平优先序需 BUILD 相位 carve-out。
+- 同步 `governance-text.ts`(98) + `/ocn-next` 模板（§10 风险 2）。
+
+### 12.7 流程边界补全（spec-flow HIGH/MEDIUM）
+
+- **REFLECT 多历史条目**：规范"canonical = 当前轮最新条目"；引用值须标注 measurement/round 并匹配该具体条目，拒绝引用当前轮 history 之外的值（防用旧 PASS 洗当前 FAIL）。AC-8 据此细化。
+- **永久 NO_EVIDENCE 的 per-AC 逃生**：证据永不出现的单条 outcome（pivot 作废）需 per-AC human-only 降级/waive（带 `--dec`，复用 §0-5 的 DEC 校验），不必弃整个 outcome 门；否则部分复刻 0.95 死结。
+- **waiver × outcome 共存**：声明互斥；两者同现时 gate 以双语消息 block。
+- **post-SPEC 注入 outcome AC**：`acceptance-specs.json` 于 SPEC 门冻结；升级项目在 VERIFY→SHIP 边界被要求"加 ≥1 outcome AC 或豁免"时须 `rewind --to step_acceptance_criteria` 重投影，或定义显式 re-projection 触发；否则新 AC 对冻结投影不可见。
+- **零匹配 glob**：`measure.source` 匹配 0 文件而 probe exit 0 → 引擎强制 coerce 为 `NO_EVIDENCE`（或 contract-invalid），绝不空快照 PASS。
+- **re-freeze × history**：re-freeze 开启**新 history 段**（标注新命令哈希）；REFLECT 匹配器与 cycle carry 只看当前哈希段，防跨不兼容 probe 版本比对。
+
+### 12.8 范围决定（simplicity，触及既定裁决 → 见 §0 末）
+
+- **采纳：删 `ocn outcome freeze`**。冻结改为验收门通过的副作用（命令哈希入台账，R4），契约变更=改 `docs/03` + 重跑验收门 + 漂移拒绝，完全对齐 Task 主干（无 `task freeze`）。删掉 1 子命令 + `outcome_contract_frozen` 事件 + 1 人类硬区 + 相应测试面，零能力损失。AC-3/AC-10 相应改为"改 command → 哈希漂移 → 验收门重跑时人类重新确认"。命令组降为 `check/list/waive` 三命令。
+- **保留：REFLECT 引用核对门**（不采纳"推迟到 1.0"）——它是对 FFF 根因"方法论零实证/防编造复盘"的直接机制回应，属主干闭合核心。
+- **采纳：verdict 三存一算**（§12.2）+ **证据快照收成单内容哈希、去掉 size/mtime**（mtime 唯一消费者是已推迟到 1.0 的 freshness，且 `git checkout`/`clone` 会误翻，data-integrity 亦主张去除）+ **brief 仪表只显 verdict 计数、去掉"距上次测量天数"**（同属推迟到 1.0 的 freshness 信号）。
+- 明确**不动**（load-bearing，勿因简化误删）：SPEC 级"≥1 outcome AC 或豁免"、`waive` 命令、NO_EVIDENCE 与 MEASURED_FAIL 的严格区分、独立 `outcome-ledger.json`。
+
+### 12.9 验收标准增量（并入 §6）
+
+- AC-9 重写为"ledger 与 audit 台账不符 → refuse"（非"self-checksum 失败"）。
+- 新 AC：probe 输出 `Infinity`/`NaN`/`1e400` → exec_error（不写 verdict、非 PASS）。
+- 新 AC：exit 0 但末行非 `{metric,value}` JSON → exec_error（非静默 PASS）。
+- 新 AC：`cycle new` 后第二轮 outcome AC 起始 verdict = UNMEASURED（不带旧绿灯）。
+- 新 AC：`--dec` 指向不存在/后被删的 DEC → gate 时豁免失效并 block。
+- 新 AC：outcome-only（零 build task）项目能走到 SHIP（zero_tasks 冲突已裁决）。
+- 新 AC：0.8.0 pin 项目在 0.9.0 binary 下重跑验收门 → 投影仍 v1、逐字节不变。
