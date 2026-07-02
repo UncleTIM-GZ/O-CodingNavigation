@@ -15,6 +15,7 @@ const CASES: readonly AcceptanceDefect[] = [
   { code: "missing_measure_field", specId: "AC-003", field: "measure.command" },
   { code: "invalid_threshold", specId: "AC-004", field: "bad" },
   { code: "invalid_due", specId: "AC-004", field: "SHIP" },
+  { code: "invalid_timeout", specId: "AC-007", field: "999999" },
 ];
 
 describe("describeAcceptanceDefect", () => {

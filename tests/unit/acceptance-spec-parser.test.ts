@@ -179,6 +179,27 @@ describe("parseAcceptanceSpecs", () => {
     expect(r.defects.some((d) => d.code === "invalid_due" && d.specId === "AC-004")).toBe(true);
   });
 
+  it("flags an invalid measure.timeout (non-integer / out of range) and drops the contract", () => {
+    const md = SECTION(
+      [
+        "### AC-007",
+        "- desc: d",
+        "- kind: outcome",
+        "- measure.command: c",
+        "- measure.threshold: >= 1",
+        "- measure.source: s",
+        "- measure.timeout: 999999",
+      ].join("\n"),
+    );
+    const r = parseAcceptanceSpecs(md);
+    expect(r.defects).toContainEqual({
+      code: "invalid_timeout",
+      specId: "AC-007",
+      field: "999999",
+    });
+    expect(r.specs[0]?.measure).toBeUndefined();
+  });
+
   it("flags an unknown kind", () => {
     const md = SECTION(["### AC-005", "- desc: d", "- kind: outome"].join("\n"));
     const r = parseAcceptanceSpecs(md);

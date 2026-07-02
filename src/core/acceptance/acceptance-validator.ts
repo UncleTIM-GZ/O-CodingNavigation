@@ -45,8 +45,13 @@ export function describeAcceptanceDefect(defect: AcceptanceDefect): BilingualMes
       );
     case "invalid_due":
       return msg(
-        `outcome acceptance ${id} has an invalid measure.due/timeout: ${defect.field ?? ""}`,
-        `效果型验收 ${id} 的 measure.due/timeout 非法：${defect.field ?? ""}`,
+        `outcome acceptance ${id} has an invalid measure.due (must be a state id): ${defect.field ?? ""}`,
+        `效果型验收 ${id} 的 measure.due 非法（必须是状态 id）：${defect.field ?? ""}`,
+      );
+    case "invalid_timeout":
+      return msg(
+        `outcome acceptance ${id} has an invalid measure.timeout (integer 1–600): ${defect.field ?? ""}`,
+        `效果型验收 ${id} 的 measure.timeout 非法（1–600 的整数）：${defect.field ?? ""}`,
       );
   }
 }

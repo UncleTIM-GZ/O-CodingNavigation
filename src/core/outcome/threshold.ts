@@ -1,4 +1,4 @@
-import { Threshold, type ThresholdOp } from "../../types/outcome.js";
+import type { Threshold, ThresholdOp } from "../../types/outcome.js";
 
 // SOP 0.9.0 (AM-016 / DEC-042) — the threshold mini-language, in ONE module so
 // parse-time validation (invalid_threshold defect) and runtime comparison can
@@ -28,11 +28,8 @@ export function parseThreshold(raw: string): ThresholdParseResult {
     if (!Number.isFinite(value)) {
       return { ok: false, reason: `threshold value is not a finite number: "${rest}"` };
     }
-    const parsed = Threshold.safeParse({ op, value });
-    if (!parsed.success) {
-      return { ok: false, reason: `threshold failed validation: "${trimmed}"` };
-    }
-    return { ok: true, threshold: parsed.data };
+    // op ∈ enum and value is finite → the schema can't reject; build directly.
+    return { ok: true, threshold: { op, value } };
   }
   return { ok: false, reason: `threshold must start with one of: ${OPERATORS.join(" ")}` };
 }

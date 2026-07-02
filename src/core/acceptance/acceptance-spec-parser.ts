@@ -6,7 +6,7 @@ import {
 } from "../execution-navigator/acceptance-parser-helpers.js";
 import { ACCEPTANCE_ID_RE } from "../../types/acceptance-spec.js";
 import type { AcceptanceKind, MeasureContract } from "../../types/outcome.js";
-import { parseThreshold } from "../outcome/threshold.js";
+import { buildMeasure, hasAnyMeasureField, resolveKind } from "./measure-parser.js";
 
 // SOP 0.8.0 (AM-015 / DEC-041) — Acceptance Spec Block parser. PURE: markdown
 // in, structured specs + structural defects out; never throws, no IO. Mirrors
@@ -24,7 +24,8 @@ export type AcceptanceDefectCode =
   | "invalid_kind"
   | "missing_measure_field"
   | "invalid_threshold"
-  | "invalid_due";
+  | "invalid_due"
+  | "invalid_timeout";
 
 export interface AcceptanceDefect {
   readonly code: AcceptanceDefectCode;
@@ -78,12 +79,6 @@ const KNOWN_KEYS: ReadonlySet<string> = new Set([
 // Keys may contain dots (measure.command) and digits; the value is everything
 // after the first `:`/`：`.
 const BULLET_FIELD_RE = /^\s*[-*]\s+([A-Za-z_][A-Za-z0-9_.]*)\s*[:：]\s*(.*)$/;
-const STATE_ID_RE = /^state_[a-z0-9_]+$/;
-const MEASURE_REQUIRED: readonly string[] = [
-  "measure.command",
-  "measure.threshold",
-  "measure.source",
-];
 
 // Lists split on ASCII or CJK comma; entries trimmed, empties dropped.
 function splitList(value: string): readonly string[] {
@@ -159,84 +154,6 @@ function collectBlocks(sectionText: string, warnings: string[]): MutableSpec[] {
   return blocks;
 }
 
-function hasAnyMeasureField(block: MutableSpec): boolean {
-  for (const key of block.fields.keys()) {
-    if (key.startsWith("measure.")) return true;
-  }
-  return false;
-}
-
-// `kind` defaults to build; an unrecognised value is a blocking defect (guarding
-// the discriminant) rather than a silent downgrade that would drop the contract.
-function resolveKind(
-  block: MutableSpec,
-  displayId: string,
-  defects: AcceptanceDefect[],
-): AcceptanceKind {
-  const raw = (block.fields.get("kind") ?? "").trim().toLowerCase();
-  if (raw.length === 0 || raw === "build") return "build";
-  if (raw === "outcome") return "outcome";
-  defects.push({ code: "invalid_kind", specId: displayId, field: raw });
-  return "build";
-}
-
-// Builds the measurement contract for an outcome AC, emitting one defect per
-// structural problem. Returns undefined when any measure defect fired (the gate
-// blocks on any defect, so a partial contract is never surfaced downstream).
-function buildMeasure(
-  block: MutableSpec,
-  displayId: string,
-  defects: AcceptanceDefect[],
-): MeasureContract | undefined {
-  const get = (key: string): string => (block.fields.get(key) ?? "").trim();
-  const before = defects.length;
-
-  for (const field of MEASURE_REQUIRED) {
-    if (get(field).length === 0) {
-      defects.push({ code: "missing_measure_field", specId: displayId, field });
-    }
-  }
-
-  const thresholdRaw = get("measure.threshold");
-  const parsedThreshold = thresholdRaw.length > 0 ? parseThreshold(thresholdRaw) : undefined;
-  if (parsedThreshold !== undefined && !parsedThreshold.ok) {
-    defects.push({
-      code: "invalid_threshold",
-      specId: displayId,
-      field: parsedThreshold.reason ?? "invalid threshold",
-    });
-  }
-
-  const due = get("measure.due");
-  if (due.length > 0 && !STATE_ID_RE.test(due)) {
-    defects.push({ code: "invalid_due", specId: displayId, field: due });
-  }
-
-  const timeoutRaw = get("measure.timeout");
-  const timeoutValue = timeoutRaw.length > 0 ? Number(timeoutRaw) : undefined;
-  if (
-    timeoutValue !== undefined &&
-    (!Number.isInteger(timeoutValue) || timeoutValue <= 0 || timeoutValue > 600)
-  ) {
-    defects.push({
-      code: "invalid_due",
-      specId: displayId,
-      field: `measure.timeout=${timeoutRaw}`,
-    });
-  }
-
-  if (defects.length !== before || parsedThreshold === undefined || !parsedThreshold.ok) {
-    return undefined;
-  }
-  return {
-    command: get("measure.command"),
-    threshold: parsedThreshold.threshold!,
-    source: get("measure.source"),
-    due: due.length > 0 ? due : "state_ship",
-    timeoutSeconds: timeoutValue ?? 60,
-  };
-}
-
 function toParsedAcceptance(
   block: MutableSpec,
   defects: AcceptanceDefect[],
@@ -247,13 +164,13 @@ function toParsedAcceptance(
   if (get("desc").length === 0) {
     defects.push({ code: "missing_field", specId: displayId, field: "desc" });
   }
-  const kind = resolveKind(block, displayId, defects);
-  if (kind === "build" && hasAnyMeasureField(block)) {
+  const kind = resolveKind(block.fields, displayId, defects);
+  if (kind === "build" && hasAnyMeasureField(block.fields)) {
     warnings.push(
       `acceptance ${displayId}: measure.* fields ignored on a build spec (missing kind: outcome?)`,
     );
   }
-  const measure = kind === "outcome" ? buildMeasure(block, displayId, defects) : undefined;
+  const measure = kind === "outcome" ? buildMeasure(block.fields, displayId, defects) : undefined;
   const given = get("given");
   const when = get("when");
   const then = get("then");

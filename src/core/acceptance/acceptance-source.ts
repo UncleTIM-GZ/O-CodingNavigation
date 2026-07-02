@@ -1,8 +1,14 @@
 import { promises as fs } from "node:fs";
 import { join } from "node:path";
-import type { AcceptanceSpec } from "../../types/acceptance-spec.js";
+import type { AcceptanceProjection, AcceptanceSpecV2 } from "../../types/acceptance-spec.js";
 import { parseAcceptanceSpecs, type ParsedAcceptance } from "./acceptance-spec-parser.js";
 import { readAcceptanceSpecs, sha256Hex } from "./acceptance-spec-store.js";
+
+/** Read a frozen projection's items as v2 (a v1 projection's items are build). */
+function projectionItemsAsV2(projection: AcceptanceProjection): readonly AcceptanceSpecV2[] {
+  if (projection.version === 2) return projection.items;
+  return projection.items.map((s) => ({ kind: "build" as const, ...s }));
+}
 
 // SOP 0.8.0 (AM-015, review follow-up) — the single, staleness-safe source of
 // acceptance specs for every read path (build-plan traces + evidence-map).
@@ -18,9 +24,13 @@ import { readAcceptanceSpecs, sha256Hex } from "./acceptance-spec-store.js";
 
 export const ACCEPTANCE_ARTIFACT_PATH = "docs/03-acceptance-criteria.md";
 
-/** ParsedAcceptance → AcceptanceSpec (shared by the gate freeze + live reads). */
-export function parsedAcceptanceToSpec(p: ParsedAcceptance): AcceptanceSpec {
-  return {
+/** ParsedAcceptance → AcceptanceSpecV2 (shared by the gate freeze + live reads).
+ *  Carries kind + measure through so a frozen outcome AC keeps its contract; a
+ *  kind:"outcome" without a well-formed measure (only reachable on the live parse
+ *  path — the gate blocks it) degrades to build rather than constructing an
+ *  invalid discriminated member. */
+export function parsedAcceptanceToSpec(p: ParsedAcceptance): AcceptanceSpecV2 {
+  const base = {
     id: p.id,
     desc: p.desc,
     trace: [...p.trace],
@@ -29,19 +39,23 @@ export function parsedAcceptanceToSpec(p: ParsedAcceptance): AcceptanceSpec {
     ...(p.then !== undefined ? { then: p.then } : {}),
     ...(p.priority !== undefined ? { priority: p.priority } : {}),
   };
+  if (p.kind === "outcome" && p.measure !== undefined) {
+    return { kind: "outcome", measure: p.measure, ...base };
+  }
+  return { kind: "build", ...base };
 }
 
 export async function resolveAcceptanceSpecs(
   cwd: string,
   artifactPath: string = ACCEPTANCE_ARTIFACT_PATH,
-): Promise<readonly AcceptanceSpec[] | null> {
+): Promise<readonly AcceptanceSpecV2[] | null> {
   let content: string;
   try {
     content = await fs.readFile(join(cwd, artifactPath), "utf8");
   } catch {
     // docs/03 unreadable — best effort: whatever the projection froze, if any.
     const projection = await readAcceptanceSpecs(cwd);
-    return projection?.items ?? null;
+    return projection !== null ? projectionItemsAsV2(projection) : null;
   }
 
   const parsed = parseAcceptanceSpecs(content);
@@ -49,7 +63,7 @@ export async function resolveAcceptanceSpecs(
 
   const projection = await readAcceptanceSpecs(cwd);
   if (projection !== null && sha256Hex(parsed.sectionText ?? "") === projection.specsHash) {
-    return projection.items; // unchanged since the gate → the validated snapshot
+    return projectionItemsAsV2(projection); // unchanged since the gate → the validated snapshot
   }
   return parsed.specs.map(parsedAcceptanceToSpec); // changed / never frozen → current
 }
