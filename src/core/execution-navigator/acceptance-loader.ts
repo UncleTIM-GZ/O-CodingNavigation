@@ -16,8 +16,8 @@
 
 import { promises as fs } from "node:fs";
 import { join, relative } from "node:path";
-import type { AcceptanceProjection, AcceptanceSpec } from "../../types/acceptance-spec.js";
-import { readAcceptanceSpecs } from "../acceptance/acceptance-spec-store.js";
+import type { AcceptanceSpec } from "../../types/acceptance-spec.js";
+import { resolveAcceptanceSpecs } from "../acceptance/acceptance-source.js";
 import { emptyAcceptanceParseResult, parseAcceptanceCriteria } from "./acceptance-parser.js";
 import type { AcceptanceCriterion, AcceptanceParseResult } from "./types.js";
 
@@ -46,8 +46,8 @@ function criterionText(spec: AcceptanceSpec): string {
     .join(" ");
 }
 
-function projectionToParseResult(projection: AcceptanceProjection): AcceptanceParseResult {
-  const criteria: readonly AcceptanceCriterion[] = projection.items.map((spec, i) => ({
+function specsToParseResult(specs: readonly AcceptanceSpec[]): AcceptanceParseResult {
+  const criteria: readonly AcceptanceCriterion[] = specs.map((spec, i) => ({
     id: spec.id,
     originalId: spec.id,
     text: criterionText(spec),
@@ -65,12 +65,13 @@ function projectionToParseResult(projection: AcceptanceProjection): AcceptancePa
 
 // Never throws.
 export async function loadAcceptanceFromProject(cwd: string): Promise<AcceptanceLoadResult> {
-  // Projection-first (SOP 0.8.0+): once the acceptance gate has frozen
-  // `.ocoding/acceptance-specs.json`, it is the canonical machine source of AC
-  // criteria. Absent (pre-0.8.0 pins, or gate not yet passed) → markdown fallback.
-  const projection = await readAcceptanceSpecs(cwd);
-  if (projection !== null) {
-    return { result: projectionToParseResult(projection), warnings: [] };
+  // Staleness-safe structured source (SOP 0.8.0+): the frozen projection while
+  // docs/03 is unchanged since the gate, else the current structured parse (so
+  // post-gate edits aren't silently invisible). Null → legacy markdown fallback
+  // for pre-0.8.0 docs with no structured Acceptance Specs section.
+  const specs = await resolveAcceptanceSpecs(cwd);
+  if (specs !== null) {
+    return { result: specsToParseResult(specs), warnings: [] };
   }
 
   const absPath = join(cwd, ACCEPTANCE_RELATIVE_PATH);

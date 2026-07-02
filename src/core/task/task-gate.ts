@@ -4,7 +4,7 @@ import type { BilingualMessage } from "../../types/i18n.js";
 import type { SopProfile } from "../../types/sop.js";
 import type { TaskLedger, TaskSpec } from "../../types/task.js";
 import { parseAcceptanceCriteria } from "../execution-navigator/acceptance-parser.js";
-import { readAcceptanceSpecs } from "../acceptance/acceptance-spec-store.js";
+import { resolveAcceptanceSpecs } from "../acceptance/acceptance-source.js";
 import { msg } from "../i18n.js";
 import { readLogicGraphProjection } from "../logic/logic-graph-store.js";
 import { buildLedger, readTaskLedger, sha256Hex, verifyHashOf } from "./task-ledger-store.js";
@@ -37,14 +37,17 @@ export interface EvaluateTaskSpecsOptions {
 /** Canonical AC ids from docs/03 (only criteria with explicit, non-generated
  *  ids count as addressable), or null when the file is absent/unlocatable. */
 async function readAcIds(cwd: string, profile: SopProfile): Promise<ReadonlySet<string> | null> {
-  // Projection-first (SOP 0.8.0+): the frozen acceptance-specs projection is
-  // the canonical, unambiguous machine source of addressable AC ids. Absent
-  // (pre-0.8.0 pins, or acceptance gate not yet passed) → markdown fallback.
-  const projection = await readAcceptanceSpecs(cwd);
-  if (projection !== null) return new Set(projection.items.map((s) => s.id));
-
   const rel = profile.artifactPathForStep("step_acceptance_criteria");
   if (rel === null) return null;
+
+  // Staleness-safe (SOP 0.8.0+): the frozen projection while docs/03 is
+  // unchanged since the gate, else the current structured parse — so a trace to
+  // a post-gate-added AC is not falsely dangling, and (critically) a trace to a
+  // post-gate-DELETED AC is not falsely green. Null → legacy markdown fallback
+  // (pre-0.8.0 docs with no structured Acceptance Specs section).
+  const specs = await resolveAcceptanceSpecs(cwd, rel);
+  if (specs !== null) return new Set(specs.map((s) => s.id));
+
   let content: string;
   try {
     content = await fs.readFile(join(cwd, rel), "utf8");

@@ -1,11 +1,8 @@
-import type { AcceptanceProjection, AcceptanceSpec } from "../../types/acceptance-spec.js";
+import type { AcceptanceProjection } from "../../types/acceptance-spec.js";
 import type { BilingualMessage } from "../../types/i18n.js";
 import { msg } from "../i18n.js";
-import {
-  parseAcceptanceSpecs,
-  type AcceptanceDefect,
-  type ParsedAcceptance,
-} from "./acceptance-spec-parser.js";
+import { parseAcceptanceSpecs, type AcceptanceDefect } from "./acceptance-spec-parser.js";
+import { parsedAcceptanceToSpec } from "./acceptance-source.js";
 import { buildAcceptanceProjection, sha256Hex } from "./acceptance-spec-store.js";
 import { describeAcceptanceDefect } from "./acceptance-validator.js";
 
@@ -33,22 +30,7 @@ function composeBlockedMessage(defects: readonly AcceptanceDefect[]): BilingualM
   const zh = shown.map((d) => describeAcceptanceDefect(d).zh).join("；");
   const moreEn = more > 0 ? ` (+${more} more)` : "";
   const moreZh = more > 0 ? `（另有 ${more} 项）` : "";
-  return msg(
-    `Acceptance Specs have defects: ${en}${moreEn}`,
-    `验收规格存在缺陷：${zh}${moreZh}`,
-  );
-}
-
-function toAcceptanceSpec(p: ParsedAcceptance): AcceptanceSpec {
-  return {
-    id: p.id,
-    desc: p.desc,
-    trace: [...p.trace],
-    ...(p.given !== undefined ? { given: p.given } : {}),
-    ...(p.when !== undefined ? { when: p.when } : {}),
-    ...(p.then !== undefined ? { then: p.then } : {}),
-    ...(p.priority !== undefined ? { priority: p.priority } : {}),
-  };
+  return msg(`Acceptance Specs have defects: ${en}${moreEn}`, `验收规格存在缺陷：${zh}${moreZh}`);
 }
 
 export function evaluateAcceptanceSpecs(content: string): AcceptanceGateOutcome {
@@ -61,7 +43,7 @@ export function evaluateAcceptanceSpecs(content: string): AcceptanceGateOutcome 
       issues: parsed.defects,
     };
   }
-  const specs = parsed.specs.map(toAcceptanceSpec);
+  const specs = parsed.specs.map(parsedAcceptanceToSpec);
   const projection = buildAcceptanceProjection(specs, sha256Hex(parsed.sectionText ?? ""));
   return {
     ok: true,
