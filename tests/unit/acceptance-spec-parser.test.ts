@@ -50,16 +50,16 @@ describe("parseAcceptanceSpecs", () => {
   });
 
   it("flags a duplicate id (after normalisation)", () => {
-    const md = SECTION(
-      ["### AC-PR-01", "- desc: a", "", "### AC-PR-001", "- desc: b"].join("\n"),
-    );
+    const md = SECTION(["### AC-PR-01", "- desc: a", "", "### AC-PR-001", "- desc: b"].join("\n"));
     const r = parseAcceptanceSpecs(md);
     expect(r.defects).toContainEqual({ code: "duplicate_id", specId: "AC-PR-001" });
     expect(r.specs).toHaveLength(1); // first kept
   });
 
   it("flags an invalid id and a missing desc", () => {
-    const md = SECTION(["### Not-An-Ac", "- desc: x", "", "### AC-002", "- priority: P1"].join("\n"));
+    const md = SECTION(
+      ["### Not-An-Ac", "- desc: x", "", "### AC-002", "- priority: P1"].join("\n"),
+    );
     const r = parseAcceptanceSpecs(md);
     expect(r.defects).toContainEqual({ code: "invalid_id", specId: "Not-An-Ac" });
     expect(r.defects).toContainEqual({ code: "missing_field", specId: "AC-002", field: "desc" });
@@ -82,6 +82,18 @@ describe("parseAcceptanceSpecs", () => {
     );
     const r = parseAcceptanceSpecs(md);
     expect(r.specs.map((s) => s.id)).toEqual(["AC-003"]);
+  });
+
+  it("classifies a long uppercase heading as invalid_id without catastrophic backtracking (ReDoS guard)", () => {
+    // A `### ` heading that starts AC, is a long uppercase run, and has no
+    // trailing digit is the ReDoS trigger for the old nested-quantifier regex.
+    // With the linear regex this returns promptly; a hang would time the test out.
+    const md = SECTION(["### ACCEPTANCECRITERIAVALIDATIONSECTIONNODIGIT", "- desc: x"].join("\n"));
+    const r = parseAcceptanceSpecs(md);
+    expect(r.defects).toContainEqual({
+      code: "invalid_id",
+      specId: "ACCEPTANCECRITERIAVALIDATIONSECTIONNODIGIT",
+    });
   });
 
   it("warns on unknown keys without failing", () => {

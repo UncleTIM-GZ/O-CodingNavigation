@@ -41,6 +41,10 @@ function archiveMoveSources(cwd: string): readonly string[] {
     // AM-012 — the contract-drift projection is per-round; archive it with the
     // other projections so the new round's brief never shows stale coverage.
     Paths.contractGraphFile(cwd),
+    // AM-015 — the acceptance-specs projection is per-round; archive it with the
+    // other projections so the new round's traces/brief never bind to the prior
+    // round's frozen AC ids (acceptance-loader + readAcIds are projection-first).
+    Paths.acceptanceSpecsFile(cwd),
     // AM-009 — circuit-breaker state is per-round: archived + reset here.
     Paths.automationRuntimeFile(cwd),
   ];

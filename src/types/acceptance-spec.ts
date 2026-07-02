@@ -9,9 +9,13 @@ import { z } from "zod";
 // which becomes the canonical machine source for build-plan `traces` binding
 // and evidence-map input. See docs/acceptance-backbone-proposal.md.
 
-// Full-match form of AC_ID_RE (acceptance-parser-helpers.ts): AC-<DOMAIN?>-<n>.
-// Accepts AC-001 / AC1 / AC-INIT-001 / AC.001 (normalised to AC-…-NNN downstream).
-export const ACCEPTANCE_ID_RE = /^AC[-.]?(?:[A-Z][A-Z0-9]*[-.]?)*\d+$/;
+// Full-match id check: starts "AC", then any run of [A-Z0-9.-], ending in a
+// digit. Accepts AC-001 / AC1 / AC-INIT-001 / AC.001 (normalised downstream).
+// Deliberately a SINGLE-STAR char class (no nested quantifier) so it is linear:
+// this regex runs via `.test()` on every `### ` heading id in docs/03, and the
+// earlier structured form `AC[-.]?(?:[A-Z][A-Z0-9]*[-.]?)*\d+$` backtracked
+// catastrophically on a long uppercase heading with no trailing digit (ReDoS).
+export const ACCEPTANCE_ID_RE = /^AC[A-Z0-9.-]*[0-9]$/;
 
 export const AcceptanceSpec = z
   .object({

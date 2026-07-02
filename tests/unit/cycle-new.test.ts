@@ -99,6 +99,20 @@ describe("cycleNew", () => {
       expect(archived.currentStepId).toBe("step_scope");
     });
 
+    it("archives the acceptance-specs projection into the round dir (AM-015)", async () => {
+      // Projection-first reads (acceptance-loader / readAcIds) must not bind the
+      // new round to the prior round's frozen AC ids — the projection is per-round.
+      const specsFile = join(project.cwd, ".ocoding", "acceptance-specs.json");
+      await fs.writeFile(specsFile, JSON.stringify({ version: 1, items: [] }), "utf8");
+      const result = await cycleNew({ cwd: project.cwd });
+      expect(result.ok).toBe(true);
+      await expect(fs.stat(specsFile)).rejects.toThrow(); // moved out of live .ocoding/
+      const dirs = await listCycleDirs(project.cwd);
+      await expect(
+        fs.stat(join(project.cwd, ".ocoding", "cycles", dirs[0] ?? "", "acceptance-specs.json")),
+      ).resolves.toBeDefined();
+    });
+
     it("keeps the audit log live and continuous: old events + cycle_started in one JSONL", async () => {
       const before = await readEvents(project.cwd);
       expect(before.some((e) => e.eventType === "state_transitioned")).toBe(true);
