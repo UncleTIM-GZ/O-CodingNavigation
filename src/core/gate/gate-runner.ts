@@ -16,6 +16,11 @@ import { evaluateTaskSpecs } from "../task/task-gate.js";
 import { writeTaskLedger } from "../task/task-ledger-store.js";
 import { evaluateAcceptanceSpecs } from "../acceptance/acceptance-gate.js";
 import { writeAcceptanceSpecs } from "../acceptance/acceptance-spec-store.js";
+import {
+  readOutcomeLedger,
+  reconcileFrozenContracts,
+  writeOutcomeLedger,
+} from "../outcome/outcome-ledger-store.js";
 import { runContractDriftStep } from "../contract/contract-gate-step.js";
 import { evaluateLogicBackbone } from "./logic-backbone-gate.js";
 import { readinessStepBlockOrNull } from "./readiness-step.js";
@@ -321,6 +326,15 @@ export async function runGate(opts: RunGateOptions): Promise<CommandResult<GateR
     if (outcome.projection !== undefined) {
       try {
         await writeAcceptanceSpecs(opts.cwd, outcome.projection);
+        // SOP 0.9.0 (AM-016) — freeze outcome contracts as a side-effect of the
+        // acceptance gate passing (no `ocn outcome freeze` command, invariant §8).
+        // A v2 projection carries kind:outcome specs; seed/refresh the ledger so
+        // `ocn outcome check` has a frozen command hash to run + drift-check.
+        if (outcome.projection.version === 2) {
+          const prevLedger = await readOutcomeLedger(opts.cwd);
+          const nextLedger = reconcileFrozenContracts(outcome.projection.items, prevLedger);
+          if (nextLedger !== null) await writeOutcomeLedger(opts.cwd, nextLedger);
+        }
       } catch (err) {
         const ioMessage = msg(
           `Failed to persist acceptance specs projection: ${(err as Error).message}`,
