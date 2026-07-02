@@ -95,18 +95,18 @@ Reuse anchors confirmed present with the exact line counts the spec assumes:
 **Branch** `feat/outcome-backbone-p2-ledger`. Make "measurement" executable, registerable, forgery-evident.
 No gates / no dispatch yet.
 
-- [ ] `src/types/outcome-ledger.ts` — zod single source (`OutcomeVerdict`, `EvidenceFile.strict()` no mtime, `OutcomeMeasurement.strict()`, `OutcomeWaiver`, `OutcomeLedgerEntry`, `OutcomeLedger` v1). (spec §2.1)
-- [ ] `src/core/paths.ts` — add `outcomeLedgerFile = .ocoding/outcome-ledger.json`.
-- [ ] `src/core/outcome/outcome-verdict.ts` — `latestVerdict(entry)` computed helper.
-- [ ] `src/core/outcome/probe-runner.ts` — `runProbe(cwd, measure)`; spawn `/bin/sh -c <frozen cmd>` verbatim, `detached`, timeout; exit map `0`→parse / `===20`→no_evidence / else→exec_error; last-line JSON `maxBuffer` 1MB, >64KB→error, `ProbeReading.strict()` no coerce, read only `metric`/`value`; process-group SIGKILL on timeout; `verdictFor` exhaustive `never`. (spec §2.2)
-- [ ] `src/core/outcome/evidence-snapshot.ts` — `measure.source` glob (reuse `readiness/repo-prober` globToRegExp); lstat skip symlink / assert-inside-root; size-cap per file; `{path,sha256,bytes}` no mtime; **zero-hit → forced NO_EVIDENCE**; `probeEntryHash` from first local file arg of command.
-- [ ] `src/core/outcome/outcome-ledger-store.ts` — `readOutcomeLedger` (safeParse, no `as`), `writeOutcomeLedger` (withLock+bak+rename), `appendMeasurement` (read-modify-write inside lock; prevEntryHash chain; monotonic length). Freeze `contractHash` as **acceptance-gate side-effect**, not here.
-- [ ] `src/core/outcome/outcome-integrity.ts` — `reconcileLedgerWithAudit(root)`: last `outcome_measured` per acId vs ledger last history (measurementId/value/verdict/evidenceHash); ledger-ahead→breach, audit-ahead-by-1→recoverable; contractHash drift vs v2 projection→breach.
-- [ ] `src/types/audit.ts` — add `outcome_measured` (result pass|fail|no_evidence) + `outcome_waived`.
-- [ ] `src/core/automation/` — `authorizeAiOutcomeCheck` (phase2, BUILD/VERIFY only; SHIP/REFLECT naturally human-only); `waive` → human-only hard zone, ai_agent technical refusal.
-- [ ] `src/cli/commands/outcome.ts` (+ render) — `check <ac-id>` (push, reconcile+drift first→exit2, runProbe, exec_error→exit4 no-write, else appendMeasurement + audit-first), `list` (pull, no audit), `waive <ac-id> --dec --reason` / `waive --no-outcome --dec --reason` (push, human-only). Wire into `src/cli/index.ts`.
-- [ ] Extend acceptance gate to freeze each outcome AC's `verifyHashOf(measure.command)` into ledger `contractHash` on pass.
-- [ ] **Tests (P2):** compareThreshold per-op; probe tri-state (exit0+bad-JSON→exec_error, exit20→no_evidence, timeout→exec_error); ProbeReading rejects NaN/Infinity/"1"; >64KB reject; snapshot symlink-skip + zero-hit→NO_EVIDENCE + probeEntryHash; append prevEntryHash chain + monotonic; reconcile consistent/tampered/recoverable; **concurrent** double-check no lost update; CLI drift→exit2, exec_error→exit4 no-write, ai_agent waive refused, audit-before-rename crash point.
+- [x] `src/types/outcome-ledger.ts` — zod single source (`OutcomeVerdict`, `EvidenceFile.strict()` no mtime, `OutcomeMeasurement.strict()`, `OutcomeWaiver`, `OutcomeLedgerEntry`, `OutcomeLedger` v1). (spec §2.1)
+- [x] `src/core/paths.ts` — add `outcomeLedgerFile = .ocoding/outcome-ledger.json`.
+- [x] `src/core/outcome/outcome-verdict.ts` — `latestVerdict(entry)` computed helper.
+- [x] `src/core/outcome/probe-runner.ts` — `runProbe(cwd, measure)`; spawn `/bin/sh -c <frozen cmd>` verbatim, `detached`, timeout; exit map `0`→parse / `===20`→no_evidence / else→exec_error; last-line JSON `maxBuffer` 1MB, >64KB→error, `ProbeReading.strict()` no coerce, read only `metric`/`value`; process-group SIGKILL on timeout; `verdictFor` exhaustive `never`. (spec §2.2)
+- [x] `src/core/outcome/evidence-snapshot.ts` — `measure.source` glob (reuse `readiness/repo-prober` globToRegExp); lstat skip symlink / assert-inside-root; size-cap per file; `{path,sha256,bytes}` no mtime; **zero-hit → forced NO_EVIDENCE**; `probeEntryHash` from first local file arg of command.
+- [x] `src/core/outcome/outcome-ledger-store.ts` — `readOutcomeLedger` (safeParse, no `as`), `writeOutcomeLedger` (withLock+bak+rename), `appendMeasurement` (read-modify-write inside lock; prevEntryHash chain; monotonic length). Freeze `contractHash` as **acceptance-gate side-effect**, not here.
+- [x] `src/core/outcome/outcome-integrity.ts` — `reconcileLedgerWithAudit(root)`: last `outcome_measured` per acId vs ledger last history (measurementId/value/verdict/evidenceHash); ledger-ahead→breach, audit-ahead-by-1→recoverable; contractHash drift vs v2 projection→breach.
+- [x] `src/types/audit.ts` — add `outcome_measured` (result pass|fail|no_evidence) + `outcome_waived`.
+- [x] `src/core/automation/` — `authorizeAiOutcomeCheck` (phase2, BUILD/VERIFY only; SHIP/REFLECT naturally human-only); `waive` → human-only hard zone, ai_agent technical refusal.
+- [x] `src/cli/commands/outcome.ts` (+ render) — `check <ac-id>` (push, reconcile+drift first→exit2, runProbe, exec_error→exit4 no-write, else appendMeasurement + audit-first), `list` (pull, no audit), `waive <ac-id> --dec --reason` / `waive --no-outcome --dec --reason` (push, human-only). Wire into `src/cli/index.ts`.
+- [x] Extend acceptance gate to freeze each outcome AC's `verifyHashOf(measure.command)` into ledger `contractHash` on pass.
+- [x] **Tests (P2):** compareThreshold per-op; probe tri-state (exit0+bad-JSON→exec_error, exit20→no_evidence, timeout→exec_error); ProbeReading rejects NaN/Infinity/"1"; >64KB reject; snapshot symlink-skip + zero-hit→NO_EVIDENCE + probeEntryHash; append prevEntryHash chain + monotonic; reconcile consistent/tampered/recoverable; **concurrent** double-check no lost update; CLI drift→exit2, exec_error→exit4 no-write, ai_agent waive refused, audit-before-rename crash point.
 
 **Exit gate P2:** ACs 1–6 (spec §5) pass; `lint && typecheck && test` green; ≤500-line diff.
 
