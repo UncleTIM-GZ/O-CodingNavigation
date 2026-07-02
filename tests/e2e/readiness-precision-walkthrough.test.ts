@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { spawnOcn } from "../helpers/spawn-ocn.js";
 import { createTempProject, type TempProject } from "../helpers/temp-project.js";
 
-// AM-014 / DEC-040 — the first from-scratch, DEFAULT-version (0.7.0, readiness
+// AM-014 / DEC-040 — the first from-scratch, DEFAULT-version (0.8.0, readiness
 // ON), minimal-tier walkthrough that actually advances. Every other e2e pins
 // 0.3.0 (readiness OFF), so the readiness gate's per-step timing was never
 // dogfooded. This test pins the precise-activation invariant end to end:
@@ -20,7 +20,7 @@ const verdictOf = (
   id: string,
 ): string | undefined => l.checks.find((c) => c.id === id)?.verdict;
 
-describe("readiness precise activation — fresh 0.7.0 walkthrough (AM-014)", () => {
+describe("readiness precise activation — fresh 0.8.0 walkthrough (AM-014)", () => {
   let project: TempProject;
   beforeEach(async () => {
     project = await createTempProject("ocn-readiness-precision-");
@@ -32,11 +32,11 @@ describe("readiness precise activation — fresh 0.7.0 walkthrough (AM-014)", ()
   it("不提前: DISCOVERY advances to SPEC with the 8 downstream checks DEFERRED", async () => {
     const init = await spawnOcn(["init", "--tier", "minimal", "--no-agent"], { cwd: project.cwd });
     expect(init.exitCode).toBe(0);
-    // Default profile must be the readiness-ON 0.7.0 (no --sop-version pin).
+    // Default profile must be the readiness-ON 0.8.0 (no --sop-version pin).
     const state0 = JSON.parse(
       await fs.readFile(join(project.cwd, ".ocoding", "state.json"), "utf8"),
     );
-    expect(state0.project.sopProfileVersion).toBe("0.7.0");
+    expect(state0.project.sopProfileVersion).toBe("0.8.0");
 
     await spawnOcn(["doc", "create", "project-brief"], { cwd: project.cwd });
     const check = await spawnOcn(["check"], { cwd: project.cwd });
