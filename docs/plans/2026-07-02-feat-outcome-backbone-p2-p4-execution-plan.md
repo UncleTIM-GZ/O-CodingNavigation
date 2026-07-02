@@ -116,15 +116,15 @@ No gates / no dispatch yet.
 
 **Branch** `feat/outcome-backbone-p3-drive`. Depends on P2. The soul: ledger **drives** behavior.
 
-- [ ] **SPEC gate** (after acceptance-pass branch at `step_acceptance_criteria`): require ≥1 `kind:outcome` **or** valid `noOutcomeWaiver` (machine-check `--dec` exists in `docs/20-decision-log.md`, re-verified every gate); waiver×outcome mutual-exclusion → bilingual block. (spec §3.1)
-- [ ] **Activation timing** (reuse AM-014): `dueState = measure.due ?? state_ship`; before due → DEFERRED (no block/dispatch); **due-already-passed clamp** to next reachable boundary for upgraded projects. (spec §3.2)
-- [ ] `src/core/advance/outcome-ledger-guard.ts` — VERIFY→SHIP: reconcile→any due `UNMEASURED/NO_EVIDENCE` unwaived → exit1 fix_hint; `MEASURED_FAIL` → **no block** + bilingual decision prompt. (spec §3.3)
+- [x] **SPEC gate** (after acceptance-pass branch at `step_acceptance_criteria`): require ≥1 `kind:outcome` **or** valid `noOutcomeWaiver` (machine-check `--dec` exists in `docs/20-decision-log.md`, re-verified every gate); waiver×outcome mutual-exclusion → bilingual block. (spec §3.1)
+- [x] **Activation timing** (reuse AM-014): `dueState = measure.due ?? state_ship`; before due → DEFERRED (no block/dispatch); **due-already-passed clamp** to next reachable boundary for upgraded projects. (spec §3.2)
+- [x] `src/core/advance/outcome-ledger-guard.ts` — VERIFY→SHIP: reconcile→any due `UNMEASURED/NO_EVIDENCE` unwaived → exit1 fix_hint; `MEASURED_FAIL` → **no block** + bilingual decision prompt. (spec §3.3)
 - [ ] `src/core/execution-navigator/next-prompt-outcome-dispatch.ts` — **new sibling** module; priority: due-unmeasured/failed outcome > pending build task; **BUILD anti-livelock** (outcome only overrides build task when build ledger empty / outside BUILD; NO_EVIDENCE within trace closure drops below pending build task). (spec §3.4)
 - [ ] Sync `governance-text.ts` + `/ocn-next` template + AM-011 review-subagent instructions.
-- [ ] `src/core/brief-outcome-section.ts` — extracted; verdict counts + days-since-measure (from existing audit timestamps, zero new telemetry); **no synthetic health score**. (spec §3.5)
+- [x] `src/core/brief-outcome-section.ts` — extracted; verdict counts + days-since-measure (from existing audit timestamps, zero new telemetry); **no synthetic health score**. (spec §3.5)
 - [ ] **Gate-runner decomposition** (arch H2): step-gate dispatch registry; convert the 3 near-duplicate evaluate→block→persist blocks + 3 new gates into discriminated-kind step fns (`skip|pass|io_error|blocked`); **shrink runner, don't add a 5th/6th copy**. (spec §3.6)
 - [ ] **`zero_tasks` reconciliation** (spec §3.7): relax `zero_tasks` build-plan defect when ≥1 due outcome AC exists (a frozen-probe outcome AC counts as a verifiable deliverable).
-- [ ] **Tests (P3):** SPEC no-outcome-no-waiver→blocked; waiver DEC missing→blocked; waiver×outcome→blocked; VERIFY→SHIP 4 verdicts × waived; MEASURED_FAIL no-block+prompt; DEFERRED no early noise; due-already-passed clamp; dispatch due-UNMEASURED+pending-task→measure (non-BUILD); BUILD early-due no livelock; hand-edit ledger→next gate reconcile-fail; pure-outcome (zero-task) passes build-plan gate.
+- [x] **Tests (P3):** SPEC no-outcome-no-waiver→blocked; waiver DEC missing→blocked; waiver×outcome→blocked; VERIFY→SHIP 4 verdicts × waived; MEASURED_FAIL no-block+prompt; DEFERRED no early noise; due-already-passed clamp; dispatch due-UNMEASURED+pending-task→measure (non-BUILD); BUILD early-due no livelock; hand-edit ledger→next gate reconcile-fail; pure-outcome (zero-task) passes build-plan gate.
 
 **Exit gate P3:** ACs 7–12 pass; gate-runner ≤300 lines post-decomposition; green; ≤500-line diff.
 
