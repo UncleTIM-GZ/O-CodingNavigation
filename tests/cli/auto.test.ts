@@ -133,6 +133,25 @@ describe("ocn auto (AM-009)", () => {
     expect(JSON.parse(status.stdout).data.config.phase1).toBe(false);
   }, 30_000);
 
+  // Ergonomics (mirrors `ocn advance -H`): in an agent session OCN_ACTOR=ai_agent
+  // is inherited, so a human's `! ocn auto on` is mis-tagged and refused. `-H`
+  // runs as the human operator so the human can flip the switch from the session.
+  it("`-H` overrides OCN_ACTOR=ai_agent so the human can flip the switch, audited as user", async () => {
+    const aiEnv = { OCN_ACTOR: "ai_agent" };
+    const on = await spawnOcn(["auto", "on", "--phase", "all", "-H", "--json"], {
+      cwd: project.cwd,
+      env: aiEnv,
+    });
+    expect(on.exitCode).toBe(0);
+    const parsed = JSON.parse(on.stdout);
+    expect(parsed.ok).toBe(true);
+    expect(parsed.data.config.phase1).toBe(true);
+    expect(parsed.data.config.phase2).toBe(true);
+
+    const changed = (await autoModeEvents(project.cwd)).pop();
+    expect(changed?.["actor"]).toBe("user");
+  }, 30_000);
+
   it("resume clears a suspended runtime and audits action=resume", async () => {
     await spawnOcn(["auto", "on", "--phase", "1", "--json"], { cwd: project.cwd });
     const runtimeFile = join(project.cwd, ".ocoding", "automation-runtime.json");
