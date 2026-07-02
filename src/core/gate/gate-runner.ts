@@ -21,6 +21,7 @@ import {
   reconcileFrozenContracts,
   writeOutcomeLedger,
 } from "../outcome/outcome-ledger-store.js";
+import { outcomeSpecGateBlockOrNull } from "../outcome/outcome-spec-gate.js";
 import { runContractDriftStep } from "../contract/contract-gate-step.js";
 import { evaluateLogicBackbone } from "./logic-backbone-gate.js";
 import { readinessStepBlockOrNull } from "./readiness-step.js";
@@ -350,6 +351,33 @@ export async function runGate(opts: RunGateOptions): Promise<CommandResult<GateR
           ),
         );
         return blocked("ERR_IO_OR_CONFIG", ioMessage);
+      }
+      // SOP 0.9.0 (AM-016) P3 §3.1 — SPEC outcome requirement (dormant <0.9.0):
+      // a passing acceptance projection must declare >=1 outcome AC or a valid
+      // no-outcome waiver. Runs after the freeze so the ledger's waiver is current.
+      const specBlock = await outcomeSpecGateBlockOrNull(
+        opts.cwd,
+        profile.version,
+        outcome.projection,
+      );
+      if (specBlock !== null) {
+        await safeAudit(
+          opts.cwd,
+          createAuditEvent(
+            baseAudit("artifact_gate_blocked", "blocked", specBlock.message, {
+              status: "blocked",
+              reason: specBlock.reason,
+            }),
+          ),
+        );
+        return blocked("ERR_GATE_FAILED", specBlock.message, {
+          status: "blocked",
+          currentStateId: state.currentStateId,
+          currentStepId: state.currentStepId,
+          artifactPath: relativeArtifactPath,
+          missingRequiredSectionIds: [],
+          blockingReasons: [specBlock.reason],
+        });
       }
     }
   }

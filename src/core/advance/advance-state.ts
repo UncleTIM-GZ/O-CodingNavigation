@@ -8,7 +8,8 @@ import type { AutomationSurface } from "../automation/ai-guard.js";
 import { runGate } from "../gate/gate-runner.js";
 import { msg } from "../i18n.js";
 import { blocked, ok } from "../result.js";
-import { loadSopProfile } from "../sop/loader.js";
+import { loadSopProfile, resolveProfileForProject } from "../sop/loader.js";
+import { outcomeLedgerGuardOrNull } from "./outcome-ledger-guard.js";
 import { StateInvalidError, StateNotFoundError, readState } from "../state/state-store.js";
 import {
   type AdvanceAutomationContext,
@@ -169,6 +170,29 @@ export async function advanceState(opts: AdvanceOptions): Promise<CommandResult<
       ),
     );
     return blocked("ERR_GATE_FAILED", ledgerBlock.message, { from, correlationId });
+  }
+
+  // 3d. SOP 0.9.0 (AM-016) P3 §3.3 — outcome guard on the VERIFY→SHIP boundary
+  // (dormant <0.9.0: requiresOutcome is false, so byte-identical). Blocks a
+  // forward move to a state at/after a due outcome AC's due-state while that AC
+  // is unmeasured/no-evidence (unwaived). MEASURED_FAIL never blocks.
+  const outcomeBlock = await outcomeLedgerGuardOrNull(
+    opts.cwd,
+    resolveProfileForProject(state.project.sopProfileVersion),
+    next.stateId,
+  );
+  if (outcomeBlock !== null) {
+    await safeAudit(
+      opts.cwd,
+      createAuditEvent(
+        buildEvent("advance_failed", "failed", outcomeBlock.message, {
+          from,
+          reason: "outcome_unmeasured",
+          outcomeAcIds: outcomeBlock.acIds,
+        }),
+      ),
+    );
+    return blocked("ERR_GATE_FAILED", outcomeBlock.message, { from, correlationId });
   }
 
   // 4. Lock-protected state mutation (stale-check inside).
