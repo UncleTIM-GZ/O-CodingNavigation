@@ -68,16 +68,19 @@ function runShell(cwd: string, command: string, timeoutMs: number): Promise<RawR
     let overflowed = false;
     let timedOut = false;
     let settled = false;
+    let killTimer: NodeJS.Timeout | undefined;
     const finish = (r: RawRun): void => {
       if (settled) return;
       settled = true;
       clearTimeout(timer);
+      if (killTimer !== undefined) clearTimeout(killTimer); // don't hold the loop / kill a dead pid
       resolve(r);
     };
     const timer = setTimeout(() => {
       timedOut = true;
       killGroup(child.pid, "SIGTERM");
-      setTimeout(() => killGroup(child.pid, "SIGKILL"), SIGKILL_GRACE_MS);
+      // Escalate to SIGKILL after a grace window; cleared by finish on natural exit.
+      killTimer = setTimeout(() => killGroup(child.pid, "SIGKILL"), SIGKILL_GRACE_MS);
     }, timeoutMs);
     child.stdout.on("data", (buf: Buffer) => {
       if (overflowed) return;
@@ -124,7 +127,8 @@ function mapRun(run: RawRun): ProbeOutcome {
     return { status: "exec_error", detail: "probe last line is not JSON" };
   }
   const reading = ProbeReading.safeParse(parsed);
-  if (!reading.success) return { status: "exec_error", detail: "probe last line is not {metric,value}" };
+  if (!reading.success)
+    return { status: "exec_error", detail: "probe last line is not {metric,value}" };
   // Read ONLY the two validated keys — never spread `parsed` (prototype pollution).
   return { status: "measured", metric: reading.data.metric, value: reading.data.value };
 }
