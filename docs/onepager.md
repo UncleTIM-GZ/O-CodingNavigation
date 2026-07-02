@@ -1,6 +1,6 @@
 # O'CodingNavigator (OCN) — 一页纸介绍 + 操作手册
 
-> 版本：`0.5.0-beta.2` · 适用范围：tester / 内部使用 · 状态：beta，非 GA
+> 版本：`0.8.0-beta.0` · 适用范围：tester / 内部使用 · 状态：beta，非 GA
 
 ---
 
@@ -8,7 +8,7 @@
 
 本地优先、MCP-first、状态机驱动的 AI Coding 工作流操作系统。CLI `ocn` + MCP 服务 `ocn-mcp`。所有数据落本地文件（Markdown + JSON + JSONL + YAML），无云、无数据库、不调 LLM。Apache-2.0。
 
-当前版本：`0.5.0-beta.2`（npm `latest` 与 `beta` 同指此版）。仅在 Claude Desktop on Windows + WSL2 验证。Cursor / Cline 未验证。仍是 beta，不是 GA。
+当前版本：`0.8.0-beta.0`（npm `latest` 与 `beta` 同指此版）。仅在 Claude Desktop on Windows + WSL2 验证。Cursor / Cline 未验证。仍是 beta，不是 GA。
 
 ---
 
@@ -31,6 +31,8 @@ Logic Backbone（SOP 0.3.0 新增）：DESIGN 阶段把系统的计算/决策图
 Claude Code 自动接线（0.4.0-beta.2 新增）：`ocn agent setup` 一条命令生成钩子 + 治理契约 + `/ocn-next` 斜杠命令——agent 结束回合自动过门禁、每次编辑自动跑 lint/typecheck 反馈；入库后全队克隆即生效，人只剩 `/ocn-next` 与 `ocn advance` 两个动作。
 
 任务主干（Task Backbone，SOP 0.5.0 新增）：build plan 携带机器可解析的任务规格块，门禁校验六类硬缺陷（id 重复/非法、字段缺失、traces/touches/depends 悬空或成环、零任务）并把每个任务的验收命令哈希冻结进台账——任务只有 `ocn task check` 重跑冻结命令通过才算完成，台账不清不准出 BUILD，封堵"只有回执的假完成"。
+
+验收主干（Acceptance Backbone，SOP 0.8.0 新增）：`docs/03-acceptance-criteria.md` 携带机器可解析的 `## Acceptance Specs｜验收规格` 章节（`### AC-<DOMAIN>-<n>` 块），验收门禁在 `step_acceptance_criteria` 硬拦四类结构缺陷（no_specs / duplicate_id / invalid_id / missing_field），通过后冻结 `.ocoding/acceptance-specs.json`——作为 build-plan `traces` 绑定的权威 AC id 机器源，封堵"AC 写在表格里却悄悄没登记"的假完成漏洞。
 
 ---
 
@@ -61,7 +63,7 @@ Claude Code 自动接线（0.4.0-beta.2 新增）：`ocn agent setup` 一条命�
 ```bash
 npm install -g o-coding-navigation        # 推荐
 npm install -g o-coding-navigation@beta   # 显式固定 beta
-ocn --version                              # → 0.5.0-beta.2
+ocn --version                              # → 0.8.0-beta.0
 ```
 
 要求：Node.js ≥ 20。
