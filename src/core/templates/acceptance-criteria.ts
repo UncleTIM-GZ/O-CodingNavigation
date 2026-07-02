@@ -50,6 +50,26 @@ Multiple Given/When/Then blocks. Example:
 
 <!-- Which items require a named human reviewer in addition to test signals. -->
 
+## Acceptance Specs｜验收规格
+
+<!--
+SOP 0.8.0 (AM-015) — the MACHINE SOURCE of acceptance criteria. The gate
+validates these blocks and, on pass, freezes .ocoding/acceptance-specs.json —
+the canonical AC ids that build-plan \`traces\` bind to. One block per AC:
+
+### AC-<DOMAIN>-<n>
+- desc: <one-line criterion text — REQUIRED>
+- priority: P0                 # optional
+- given: <precondition>        # optional Given/When/Then
+- when: <action>
+- then: <expected result>
+- trace: FR-1, NFR-2           # optional pointers to requirement ids
+
+Write real AC blocks BELOW this comment — the gate blocks on an empty section.
+Do NOT define acceptance criteria in tables or prose: only \`### AC-…\` blocks
+here register as addressable AC ids.
+-->
+
 ## Readiness Declarations｜就绪声明
 
 <!-- SOP 0.4.0 readiness block — declare the scenario IDs (pointers, R1).

@@ -31,9 +31,9 @@ describe("core/init.initProject", () => {
 
     const sopYaml = await fs.readFile(join(project.cwd, ".ocoding/sop.yaml"), "utf8");
     expect(sopYaml).toMatch(/profile: default-ai-coding-sop/);
-    // SOP 0.7.0 default (DEC-039) — fresh init writes the 0.7.0 snapshot.
-    expect(sopYaml).toMatch(/version: 0\.7\.0/);
-    expect(state.project.sopProfileVersion).toBe("0.7.0");
+    // SOP 0.8.0 default (AM-015 / DEC-041) — fresh init writes the 0.8.0 snapshot.
+    expect(sopYaml).toMatch(/version: 0\.8\.0/);
+    expect(state.project.sopProfileVersion).toBe("0.8.0");
     const gatesYaml = await fs.readFile(join(project.cwd, ".ocoding/gates.yaml"), "utf8");
     // 0.2.0 PRD requires section_product_form (not section_scenarios).
     expect(gatesYaml).toMatch(/section_product_form/);
@@ -41,7 +41,7 @@ describe("core/init.initProject", () => {
     expect(gatesYaml).toMatch(/section_task_specs/);
     const configYaml = await fs.readFile(join(project.cwd, ".ocoding/config.yaml"), "utf8");
     expect(configYaml).toMatch(/tier: minimal/);
-    expect(configYaml).toMatch(/version: 0\.7\.0/);
+    expect(configYaml).toMatch(/version: 0\.8\.0/);
 
     // AM-004 / DEC-030 — fresh 0.4.0+ init also writes the readiness rulebook.
     const readinessYaml = await fs.readFile(

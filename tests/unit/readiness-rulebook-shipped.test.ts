@@ -47,10 +47,10 @@ describe("shipped readiness rulebook (SOP 0.4.0)", () => {
     expect(lintReadinessRulebook(parsed.rulebook!)).toEqual([]);
   });
 
-  it("runtime default IS 0.7.0 and carries the readiness rulebook (DEC-039 cutover)", async () => {
+  it("runtime default IS 0.8.0 and carries the readiness rulebook (AM-015 cutover)", async () => {
     const { DEFAULT_SOP_PROFILE_VERSION, loadSopProfile } =
       await import("../../src/core/sop/loader.js");
-    expect(DEFAULT_SOP_PROFILE_VERSION).toBe("0.7.0");
+    expect(DEFAULT_SOP_PROFILE_VERSION).toBe("0.8.0");
     expect(loadSopProfile().readinessYaml).toContain(readinessYaml);
   });
 });

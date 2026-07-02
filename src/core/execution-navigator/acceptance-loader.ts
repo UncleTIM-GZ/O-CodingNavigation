@@ -16,11 +16,10 @@
 
 import { promises as fs } from "node:fs";
 import { join, relative } from "node:path";
-import {
-  emptyAcceptanceParseResult,
-  parseAcceptanceCriteria,
-} from "./acceptance-parser.js";
-import type { AcceptanceParseResult } from "./types.js";
+import type { AcceptanceSpec } from "../../types/acceptance-spec.js";
+import { resolveAcceptanceSpecs } from "../acceptance/acceptance-source.js";
+import { emptyAcceptanceParseResult, parseAcceptanceCriteria } from "./acceptance-parser.js";
+import type { AcceptanceCriterion, AcceptanceParseResult } from "./types.js";
 
 export const ACCEPTANCE_RELATIVE_PATH = "docs/03-acceptance-criteria.md";
 
@@ -36,10 +35,45 @@ export interface AcceptanceLoadResult {
 //   the OS error code (e.g. `EACCES`, `ELOOP`, `EISDIR`).
 // - File present → parsed result with whatever warnings the parser emitted.
 //
+// SOP 0.8.0 (AM-015) — fold a validated structured spec into the legacy
+// AcceptanceCriterion shape so every Path A consumer (evidence-map,
+// verify-status, next-prompt, verdict, render) keeps working unchanged. desc
+// carries the free-text signal; Given/When/Then are appended so the text
+// heuristics see them too. Authored ids are non-null (addressable for traces).
+function criterionText(spec: AcceptanceSpec): string {
+  return [spec.desc, spec.given, spec.when, spec.then]
+    .filter((s): s is string => typeof s === "string" && s.length > 0)
+    .join(" ");
+}
+
+function specsToParseResult(specs: readonly AcceptanceSpec[]): AcceptanceParseResult {
+  const criteria: readonly AcceptanceCriterion[] = specs.map((spec, i) => ({
+    id: spec.id,
+    originalId: spec.id,
+    text: criterionText(spec),
+    sourceLine: i + 1,
+    generatedId: false,
+  }));
+  return {
+    path: ACCEPTANCE_RELATIVE_PATH,
+    found: true,
+    criteriaCount: criteria.length,
+    criteria,
+    warnings: [],
+  };
+}
+
 // Never throws.
-export async function loadAcceptanceFromProject(
-  cwd: string,
-): Promise<AcceptanceLoadResult> {
+export async function loadAcceptanceFromProject(cwd: string): Promise<AcceptanceLoadResult> {
+  // Staleness-safe structured source (SOP 0.8.0+): the frozen projection while
+  // docs/03 is unchanged since the gate, else the current structured parse (so
+  // post-gate edits aren't silently invisible). Null → legacy markdown fallback
+  // for pre-0.8.0 docs with no structured Acceptance Specs section.
+  const specs = await resolveAcceptanceSpecs(cwd);
+  if (specs !== null) {
+    return { result: specsToParseResult(specs), warnings: [] };
+  }
+
   const absPath = join(cwd, ACCEPTANCE_RELATIVE_PATH);
   let raw: string;
   try {

@@ -73,6 +73,18 @@ import {
 import { gatesYaml as gatesYaml070 } from "../../sops/default-ai-coding-sop/0.7.0/gates.js";
 import { readinessYaml as readinessYaml070 } from "../../sops/default-ai-coding-sop/0.7.0/readiness.js";
 import { sopYaml as sopYaml070 } from "../../sops/default-ai-coding-sop/0.7.0/sop.js";
+import { artifactsYaml as artifactsYaml080 } from "../../sops/default-ai-coding-sop/0.8.0/artifacts.js";
+import { defaultConfigYaml as defaultConfigYaml080 } from "../../sops/default-ai-coding-sop/0.8.0/config.js";
+import {
+  PROFILE_ID as PROFILE_ID_080,
+  PROFILE_VERSION as PROFILE_VERSION_080,
+  REQUIRED_SECTIONS_BY_STEP as REQUIRED_SECTIONS_BY_STEP_080,
+  STATE_ORDER as STATE_ORDER_080,
+  STEPS_BY_STATE as STEPS_BY_STATE_080,
+} from "../../sops/default-ai-coding-sop/0.8.0/data.js";
+import { gatesYaml as gatesYaml080 } from "../../sops/default-ai-coding-sop/0.8.0/gates.js";
+import { readinessYaml as readinessYaml080 } from "../../sops/default-ai-coding-sop/0.8.0/readiness.js";
+import { sopYaml as sopYaml080 } from "../../sops/default-ai-coding-sop/0.8.0/sop.js";
 
 // P1-003 — the runtime profile and the persisted .ocoding/sop.yaml share a
 // single source of truth (data.ts). The loader is a thin adapter that wires
@@ -92,9 +104,9 @@ import { sopYaml as sopYaml070 } from "../../sops/default-ai-coding-sop/0.7.0/so
 // the runtime constant. Always reflects the default profile. (0.5.0 keeps the
 // same 8 states and 20 steps as 0.3.0/0.4.0; only the build-plan section
 // gate + task ledger are new.)
-export const STATE_ORDER: readonly StateId[] = STATE_ORDER_070;
+export const STATE_ORDER: readonly StateId[] = STATE_ORDER_080;
 
-export type SopProfileVersion = "0.1.0" | "0.2.0" | "0.3.0" | "0.4.0" | "0.5.0" | "0.7.0";
+export type SopProfileVersion = "0.1.0" | "0.2.0" | "0.3.0" | "0.4.0" | "0.5.0" | "0.7.0" | "0.8.0";
 
 interface ProfileSource {
   readonly id: string;
@@ -186,6 +198,21 @@ const PROFILE_SOURCES: Readonly<Record<SopProfileVersion, ProfileSource>> = {
     stepsByState: STEPS_BY_STATE_070,
     requiredSectionsByStep: REQUIRED_SECTIONS_BY_STEP_070,
   },
+  // SOP 0.8.0 — 0.7.0 + acceptance backbone (AM-015 / DEC-041). Adds
+  // section_acceptance_specs to step_acceptance_criteria; the gate validates
+  // the spec blocks and freezes .ocoding/acceptance-specs.json on pass.
+  "0.8.0": {
+    id: PROFILE_ID_080,
+    version: PROFILE_VERSION_080 as SopProfileVersion,
+    sopYaml: sopYaml080,
+    gatesYaml: gatesYaml080,
+    artifactsYaml: artifactsYaml080,
+    defaultConfigYaml: defaultConfigYaml080,
+    readinessYaml: readinessYaml080,
+    stateOrder: STATE_ORDER_080,
+    stepsByState: STEPS_BY_STATE_080,
+    requiredSectionsByStep: REQUIRED_SECTIONS_BY_STEP_080,
+  },
 };
 
 function buildArtifactPathIndex(source: ProfileSource): Map<string, string> {
@@ -261,13 +288,16 @@ export function isKnownSopProfileVersion(version: string): version is SopProfile
 }
 
 /**
- * Default runtime profile — flipped to 0.7.0 (DEC-039, npm/SOP version
- * unification; content-equal to 0.5.0). Prior defaults were 0.5.0 (DEC-032),
- * 0.4.0 (DEC-030), 0.3.0 (AM-003 / DEC-025) and 0.2.0 (DEC-023). Every
- * runtime path (init, status, brief, check, gate, advance, MCP) reads this
- * loader by default and therefore sees 0.7.0 from this commit forward.
+ * Default runtime profile — flipped to 0.8.0 (AM-015 / DEC-041, Acceptance
+ * Backbone). Prior defaults were 0.7.0 (DEC-039), 0.5.0 (DEC-032), 0.4.0
+ * (DEC-030), 0.3.0 (AM-003 / DEC-025) and 0.2.0 (DEC-023). Every runtime path
+ * (init, status, brief, check, gate, advance, MCP) reads this loader by
+ * default and therefore sees 0.8.0 from this commit forward — a fresh
+ * `ocn init` requires a valid `## Acceptance Specs` block at
+ * step_acceptance_criteria. Older pins keep their behavior via
+ * `resolveProfileForProject` and migrate with `ocn sop upgrade`.
  */
-export const DEFAULT_SOP_PROFILE_VERSION: SopProfileVersion = "0.7.0";
+export const DEFAULT_SOP_PROFILE_VERSION: SopProfileVersion = "0.8.0";
 
 export function loadSopProfile(): SopProfile {
   return getProfile(DEFAULT_SOP_PROFILE_VERSION);

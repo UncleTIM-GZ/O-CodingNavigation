@@ -3551,3 +3551,47 @@ repo-probe→策略表）。`currentState < dueState` 判 `DEFERRED`（不阻断
 第一步悬崖消失（不提前），且每条 block 检查在其正确关卡准时复活阻断（不缺失），项目带未满足项到不了 VERIFY。
 代价：新增一个 DEFERRED 判定 + dueState 解析器 + 0.7.0 规则手册多一行开关。补上了"从默认版本从零走就绪门"
 的 e2e（`readiness-precision-walkthrough.test.ts`），堵住 dogfood 盲区。
+
+---
+
+## DEC-041｜验收主干（Acceptance Backbone，SOP 0.8.0）
+
+Date: 2026-07-02
+Implements: AM-015 (`docs/amendments/2026-07-02-acceptance-backbone-amendment.md`); 全文 `docs/acceptance-backbone-proposal.md`
+
+### Status
+
+Accepted — implemented and tested.
+
+### Context
+
+验收标准（`docs/03`）是 OCN 里唯一还停在"自由文本 + 启发式解析"的机读物件（跳过表格/围栏、自动生成 id），
+与 Logic/Task Backbone 的"结构化块 + zod + 门禁硬拦 + JSON 投影"范式脱节，是一处潜在 false-completion 漏洞：
+AC 写成表格就静默不登记，build-plan `traces` 无从绑定，门禁却可能绿灯。用户要求把 AC 拉齐到 Backbone 范式，
+"不许用表格、门禁硬拦、绝不只发警告"。
+
+### Decision
+
+`docs/03` 新增 `## Acceptance Specs｜验收规格` 机器块（`### AC-…` + `- desc:` 必填，含可选 priority/GWT/trace），
+zod 校验，`step_acceptance_criteria` 在 section 门后硬拦结构缺陷（`ERR_ARTIFACT_INVALID`），通过后冻结
+`.ocoding/acceptance-specs.json`。该投影成为 AC id 的唯一机读真源；表格/散文里的 AC 不算定义（空块即拦、
+traces 悬空即拦）——规范由构造保证。新建 SOP 0.8.0 profile、默认翻 0.8.0、npm 锁步 0.8.0-beta.0。
+
+### Sub-decisions
+
+1. **新 Backbone = SOP minor bump**：沿 Logic=0.3.0 / Task=0.5.0 先例，新增一条 backbone 走 SOP 版本，
+   不是"非 SOP bump 的引擎细化"。0.8.0 继承 0.7.0，仅给 `step_acceptance_criteria` 加一个必填 section。
+2. **只碰 Path A（Markdown AC id）；Path B 不动**：Readiness 的 `ocn-readiness` 围栏块 `scenarios:`（scenario→
+   测试节点 trace）是独立子系统、独立命名空间，本改动一行不碰。
+3. **下游靠适配器零改动**：`acceptance-loader` 投影优先映射为现有 `AcceptanceCriterion`（`text=desc`+GWT），
+   evidence-map/verify-status/next-prompt/verdict/render 全不改；无投影 → markdown 回退（<0.8.0 pin 逐字不变）。
+4. **围栏保持跳过**：代码围栏内的 AC 视为示例（非定义），不登记——避免"演示 AC 语法"被误当真定义。
+5. **向后兼容 + 迁移**：老 pin 靠 `resolveProfileForProject` 保持行为；`ocn sop upgrade` 把新 section 落在
+   已过的 SPEC 步，游标 + config.yaml 保留。
+6. MCP 白名单 7 工具不变（验收门走既有 run_gate）。
+
+### Consequences
+
+AC 获得唯一无歧义的机读真源，false-completion 的"AC 藏进表格"通路被从构造上关闭；build-plan traces 只能绑定
+真实、已校验的 AC。代价：新增一整套 acceptance 核心层 + 0.8.0 profile + 默认/版本翻转（含 11 处默认版本断言更新）。
+补上默认 0.8.0 从零 e2e（`acceptance-backbone-walkthrough.test.ts`），堵住此前全部 e2e 钉 0.3.0 的盲区。
