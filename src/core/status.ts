@@ -3,12 +3,8 @@ import type { CommandResult } from "../types/result.js";
 import type { ProjectState } from "../types/state.js";
 import { blocked, ok } from "./result.js";
 import { msg } from "./i18n.js";
-import { loadSopProfile } from "./sop/loader.js";
-import {
-  StateInvalidError,
-  StateNotFoundError,
-  readState,
-} from "./state/state-store.js";
+import { resolveProfileForProject } from "./sop/loader.js";
+import { StateInvalidError, StateNotFoundError, readState } from "./state/state-store.js";
 
 export interface StatusOptions {
   readonly cwd: string;
@@ -49,7 +45,9 @@ export async function getStatus(opts: StatusOptions): Promise<CommandResult<Stat
     throw err;
   }
 
-  const profile = loadSopProfile();
+  // Pin-resolved (H-3) — a 0.8.0-pinned project must keep rendering 0.8.0
+  // structure after the P4b default flip to 0.9.0.
+  const profile = resolveProfileForProject(state.project.sopProfileVersion);
   const relativeArtifactPath = profile.artifactPathForStep(state.currentStepId);
   const currentArtifactPath =
     relativeArtifactPath === null ? "" : join(opts.cwd, relativeArtifactPath);

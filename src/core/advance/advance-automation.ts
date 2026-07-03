@@ -7,7 +7,7 @@ import { writeAutomationRuntime } from "../automation/automation-runtime-store.j
 import { clearFailureCounter, recordAiGateFailure } from "../automation/circuit-breaker.js";
 import { msg } from "../i18n.js";
 import { blocked } from "../result.js";
-import { loadSopProfile } from "../sop/loader.js";
+import type { SopProfile } from "../../types/sop.js";
 import { readTaskLedger } from "../task/task-ledger-store.js";
 import type { AdvanceEventBuilder } from "./advance-events.js";
 
@@ -23,6 +23,10 @@ export interface AdvanceAutomationContext {
   readonly from: StepLocation;
   readonly correlationId: string;
   readonly buildEvent: AdvanceEventBuilder;
+  /** A-H1 / C-1 — the PINNED profile, resolved once by the orchestrator so the
+   *  auto-mode authorization target and the manual advance compute the same
+   *  next step (never the default profile). */
+  readonly profile: SopProfile;
 }
 
 /** Step 0 — ai_agent callers need the human's grant for the advance TARGET
@@ -33,7 +37,7 @@ export async function authorizeAiAdvanceOrBlock(
   rationale: string | undefined,
 ): Promise<{ surface: AutomationSurface } | { blocked: CommandResult<AdvanceResult> }> {
   const surface = await loadAutomation(ctx.cwd);
-  const target = loadSopProfile().nextStep(ctx.from.stateId, ctx.from.stepId);
+  const target = ctx.profile.nextStep(ctx.from.stateId, ctx.from.stepId);
   const refusal = authorizeAiAdvance(
     { ...surface, ...(rationale !== undefined ? { rationale } : {}) },
     target?.stateId ?? null,

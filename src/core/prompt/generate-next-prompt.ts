@@ -8,7 +8,7 @@ import {
 } from "../automation/governance-text.js";
 import { msg } from "../i18n.js";
 import { blocked, ok } from "../result.js";
-import { loadSopProfile } from "../sop/loader.js";
+import { resolveProfileForProject } from "../sop/loader.js";
 import { StateInvalidError, StateNotFoundError, readState } from "../state/state-store.js";
 
 export interface GenerateNextPromptOptions {
@@ -85,7 +85,12 @@ export async function generateNextPrompt(
 ): Promise<CommandResult<NextPromptData>> {
   try {
     const state = await readState(opts.cwd);
-    const profile = loadSopProfile();
+    // C-1 — resolve the PINNED profile (this fn backs the whitelisted MCP tool
+    // navigator.generate_next_prompt and feeds auto-mode delegation; using the
+    // default profile would tell a 0.8.0-pinned project its next step is
+    // 0.9.0's step_release — the AC-15 terminal leak, re-opened on the MCP
+    // surface).
+    const profile = resolveProfileForProject(state.project.sopProfileVersion);
     const required = profile.requiredSectionsForStep(state.currentStepId);
     const artifactPath = profile.artifactPathForStep(state.currentStepId);
     const requiredCanonical = required.map((r) => r.canonical);

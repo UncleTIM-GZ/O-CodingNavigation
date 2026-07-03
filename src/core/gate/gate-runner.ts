@@ -22,6 +22,7 @@ import {
   writeOutcomeLedger,
 } from "../outcome/outcome-ledger-store.js";
 import { outcomeSpecGateBlockOrNull } from "../outcome/outcome-spec-gate.js";
+import { requiresOutcome } from "../outcome/pin.js";
 import { runContractDriftStep } from "../contract/contract-gate-step.js";
 import { evaluateLogicBackbone } from "./logic-backbone-gate.js";
 import { readinessStepBlockOrNull } from "./readiness-step.js";
@@ -300,7 +301,7 @@ export async function runGate(opts: RunGateOptions): Promise<CommandResult<GateR
     state.currentStepId === "step_acceptance_criteria" &&
     required.some((r) => r.id === "section_acceptance_specs")
   ) {
-    const outcome = evaluateAcceptanceSpecs(content);
+    const outcome = evaluateAcceptanceSpecs(content, requiresOutcome(profile.version));
     if (!outcome.ok) {
       const acResult: GateResult = {
         status: "blocked",

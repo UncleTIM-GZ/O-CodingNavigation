@@ -23,7 +23,7 @@ import {
 } from "./automation/governance-text.js";
 import { blocked, ok } from "./result.js";
 import { msg } from "./i18n.js";
-import { loadSopProfile } from "./sop/loader.js";
+import { resolveProfileForProject } from "./sop/loader.js";
 import { StateInvalidError, StateNotFoundError, readState } from "./state/state-store.js";
 
 export interface BriefOptions {
@@ -93,7 +93,9 @@ export async function generateBrief(opts: BriefOptions): Promise<CommandResult<B
     throw err;
   }
 
-  const profile = loadSopProfile();
+  // Pin-resolved (H-3) — keep a 0.8.0-pinned project on 0.8.0 governance/steps
+  // after the P4b default flip to 0.9.0.
+  const profile = resolveProfileForProject(state.project.sopProfileVersion);
   const required = profile.requiredSectionsForStep(state.currentStepId);
   const relativeArtifactPath = profile.artifactPathForStep(state.currentStepId);
 

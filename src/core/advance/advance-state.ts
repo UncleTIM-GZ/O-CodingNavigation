@@ -8,7 +8,7 @@ import type { AutomationSurface } from "../automation/ai-guard.js";
 import { runGate } from "../gate/gate-runner.js";
 import { msg } from "../i18n.js";
 import { blocked, ok } from "../result.js";
-import { loadSopProfile, resolveProfileForProject } from "../sop/loader.js";
+import { resolveProfileForProject } from "../sop/loader.js";
 import { outcomeLedgerGuardOrNull } from "./outcome-ledger-guard.js";
 import { StateInvalidError, StateNotFoundError, readState } from "../state/state-store.js";
 import {
@@ -71,8 +71,20 @@ export async function advanceState(opts: AdvanceOptions): Promise<CommandResult<
   }
 
   const from: StepLocation = { stateId: state.currentStateId, stepId: state.currentStepId };
+  // A-H1 / C-1 — resolve the PINNED profile once and thread it through every
+  // nextStep + guard consumer below. A 0.8.0-pinned project must keep its own
+  // terminal (step_final_build_verdict) even after the default flips to 0.9.0;
+  // resolving here (not `loadSopProfile()`) guarantees the manual and auto-mode
+  // paths compute the identical next step — the two call sites cannot diverge.
+  const profile = resolveProfileForProject(state.project.sopProfileVersion);
   const buildEvent = makeAdvanceEventBuilder({ cwd: opts.cwd, from, correlationId, actor });
-  const autoCtx: AdvanceAutomationContext = { cwd: opts.cwd, from, correlationId, buildEvent };
+  const autoCtx: AdvanceAutomationContext = {
+    cwd: opts.cwd,
+    from,
+    correlationId,
+    buildEvent,
+    profile,
+  };
 
   // 0. AM-009 — ai_agent callers need the human's grant + un-tripped breaker.
   let automation: AutomationSurface | null = null;
@@ -137,8 +149,8 @@ export async function advanceState(opts: AdvanceOptions): Promise<CommandResult<
     });
   }
 
-  // 3b. Gate passed → compute next step.
-  const next = loadSopProfile().nextStep(from.stateId, from.stepId);
+  // 3b. Gate passed → compute next step from the PINNED profile (A-H1 / C-1).
+  const next = profile.nextStep(from.stateId, from.stepId);
   if (next === null) {
     // DEC-033 (ruling ⑨) — no machine judgement at the terminal: point the
     // human at the two legal ways forward.
@@ -176,11 +188,7 @@ export async function advanceState(opts: AdvanceOptions): Promise<CommandResult<
   // (dormant <0.9.0: requiresOutcome is false, so byte-identical). Blocks a
   // forward move to a state at/after a due outcome AC's due-state while that AC
   // is unmeasured/no-evidence (unwaived). MEASURED_FAIL never blocks.
-  const outcomeBlock = await outcomeLedgerGuardOrNull(
-    opts.cwd,
-    resolveProfileForProject(state.project.sopProfileVersion),
-    next.stateId,
-  );
+  const outcomeBlock = await outcomeLedgerGuardOrNull(opts.cwd, profile, next.stateId);
   if (outcomeBlock !== null) {
     await safeAudit(
       opts.cwd,

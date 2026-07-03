@@ -38,9 +38,16 @@ function toV1Spec(spec: AcceptanceSpecV2): AcceptanceSpec {
 export function buildAcceptanceProjection(
   specs: readonly AcceptanceSpecV2[],
   specsHash: string,
+  // AC-16 — pin awareness. Only a 0.9.0+ profile emits v2 (kind/measure).
+  // A <0.9.0 pin with `kind:outcome` in docs still gets v1 (the outcome kind
+  // is dropped), which keeps every downstream consumer byte-identical AND
+  // holds the gate-runner's outcome-freeze bypass (keyed on `version === 2`)
+  // dormant. Defaults to `true` so callers that don't thread a profile
+  // (tests, non-gate paths) keep the pre-AC-16 behavior.
+  outcomeCapable = true,
 ): AcceptanceProjection {
   const generatedAt = nowIsoUtc();
-  const hasOutcome = specs.some((s) => s.kind === "outcome");
+  const hasOutcome = outcomeCapable && specs.some((s) => s.kind === "outcome");
   if (!hasOutcome) {
     // Byte-identical with pre-0.9.0: v1 shape, no kind/measure keys.
     return { version: 1, generatedAt, specsHash, items: specs.map(toV1Spec) };
