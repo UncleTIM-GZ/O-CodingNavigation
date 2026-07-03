@@ -25,6 +25,7 @@ import { outcomeSpecGateBlockOrNull } from "../outcome/outcome-spec-gate.js";
 import { requiresOutcome } from "../outcome/pin.js";
 import { runContractDriftStep } from "../contract/contract-gate-step.js";
 import { evaluateLogicBackbone } from "./logic-backbone-gate.js";
+import { runOutcomeReflectGateStep } from "./outcome-reflect-gate-step.js";
 import { runOutcomeShipGateStep } from "./outcome-ship-gate-step.js";
 import { readinessStepBlockOrNull } from "./readiness-step.js";
 import { StateInvalidError, StateNotFoundError, readState } from "../state/state-store.js";
@@ -531,6 +532,42 @@ export async function runGate(opts: RunGateOptions): Promise<CommandResult<GateR
         );
         return blocked("ERR_IO_OR_CONFIG", ioMessage);
       }
+    }
+  }
+
+  // SOP 0.9.0 (AM-016) P4b §D.1 — REFLECT gate on step_evolution_report. Runs
+  // after the required-section gate passes; mechanically cross-checks the
+  // `### Outcome References` lines against the frozen ledger (self-guarded to
+  // step_evolution_report + a 0.9.0+ pin).
+  {
+    const reflect = await runOutcomeReflectGateStep({
+      cwd: opts.cwd,
+      profile,
+      currentStepId: state.currentStepId,
+      content,
+    });
+    if (reflect.kind === "io_error") return blocked("ERR_IO_OR_CONFIG", reflect.message);
+    if (reflect.kind === "blocked") {
+      const rResult: GateResult = {
+        status: "blocked",
+        currentStateId: state.currentStateId,
+        currentStepId: state.currentStepId,
+        artifactPath: relativeArtifactPath,
+        missingRequiredSectionIds: [],
+        blockingReasons: [reflect.reason],
+      };
+      await safeAudit(
+        opts.cwd,
+        createAuditEvent(
+          baseAudit("artifact_gate_blocked", "blocked", reflect.message, {
+            status: "blocked",
+            reason: reflect.reason,
+          }),
+        ),
+      );
+      const code =
+        reflect.reason === "outcome_ledger_missing" ? "ERR_ARTIFACT_INVALID" : "ERR_GATE_FAILED";
+      return blocked(code, reflect.message, rResult);
     }
   }
 
