@@ -25,6 +25,7 @@ import { outcomeSpecGateBlockOrNull } from "../outcome/outcome-spec-gate.js";
 import { requiresOutcome } from "../outcome/pin.js";
 import { runContractDriftStep } from "../contract/contract-gate-step.js";
 import { evaluateLogicBackbone } from "./logic-backbone-gate.js";
+import { runOutcomeShipGateStep } from "./outcome-ship-gate-step.js";
 import { readinessStepBlockOrNull } from "./readiness-step.js";
 import { StateInvalidError, StateNotFoundError, readState } from "../state/state-store.js";
 
@@ -200,13 +201,53 @@ export async function runGate(opts: RunGateOptions): Promise<CommandResult<GateR
     return blocked(step.failureCode, step.message, result);
   };
 
+  // SOP 0.9.0 (AM-016) P4b §C — the SHIP gate for step_release. Cross-cutting
+  // like readiness/contract, self-guarded to state_ship + a 0.9.0+ pin. Because
+  // step_release is null-artifact-only, this MUST run in the null-artifact
+  // branch (the normal-pass path never reaches it) — otherwise the runner
+  // auto-passes SHIP. On block/io_error it returns the mapped failure; else null.
+  const shipGateOrNull = async (): Promise<CommandResult<GateResult> | null> => {
+    const step = await runOutcomeShipGateStep({
+      cwd: opts.cwd,
+      profile,
+      currentStateId: state.currentStateId,
+    });
+    if (step.kind === "skip" || step.kind === "pass") return null;
+    if (step.kind === "io_error") return blocked("ERR_IO_OR_CONFIG", step.message);
+    const result: GateResult = {
+      status: "blocked",
+      currentStateId: state.currentStateId,
+      currentStepId: state.currentStepId,
+      missingRequiredSectionIds: [],
+      blockingReasons: [step.reason],
+    };
+    await safeAudit(
+      opts.cwd,
+      createAuditEvent(
+        baseAudit("artifact_gate_blocked", "blocked", step.message, {
+          status: "blocked",
+          reason: step.reason,
+        }),
+      ),
+    );
+    // A missing/corrupt ledger or integrity breach is an invalid-artifact
+    // condition (exit 2); an unmeasured/undecided outcome is a gate failure.
+    const code =
+      step.reason === "outcome_ledger_missing" || step.reason.startsWith("outcome_integrity_")
+        ? "ERR_ARTIFACT_INVALID"
+        : "ERR_GATE_FAILED";
+    return blocked(code, step.message, result);
+  };
+
   // Step has no required artifact — readiness still applies (cross-cutting),
-  // then auto-pass with not_applicable.
+  // then the SHIP gate (state_ship only), then auto-pass with not_applicable.
   if (relativeArtifactPath === null) {
     const readinessBlock = await readinessOrNull();
     if (readinessBlock !== null) return readinessBlock;
     const contractBlock = await contractDriftOrNull();
     if (contractBlock !== null) return contractBlock;
+    const shipBlock = await shipGateOrNull();
+    if (shipBlock !== null) return shipBlock;
     const result: GateResult = {
       status: "not_applicable",
       currentStateId: state.currentStateId,
