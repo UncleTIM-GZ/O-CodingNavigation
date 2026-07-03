@@ -94,7 +94,7 @@ export async function generateBrief(opts: BriefOptions): Promise<CommandResult<B
   }
 
   // Pin-resolved (H-3) — keep a 0.8.0-pinned project on 0.8.0 governance/steps
-  // after the P4b default flip to 0.9.0.
+  // once the (still-pending, human-gated) default flip to 0.9.0 lands.
   const profile = resolveProfileForProject(state.project.sopProfileVersion);
   const required = profile.requiredSectionsForStep(state.currentStepId);
   const relativeArtifactPath = profile.artifactPathForStep(state.currentStepId);

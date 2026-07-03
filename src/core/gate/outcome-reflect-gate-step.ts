@@ -1,9 +1,8 @@
-import type { AcceptanceProjection } from "../../types/acceptance-spec.js";
 import type { BilingualMessage } from "../../types/i18n.js";
 import type { OutcomeLedger } from "../../types/outcome-ledger.js";
 import type { SopProfile } from "../../types/sop.js";
-import { readAcceptanceSpecs } from "../acceptance/acceptance-spec-store.js";
 import { msg } from "../i18n.js";
+import { docsOutcomeSpecs } from "../outcome/outcome-contract-source.js";
 import { readOutcomeLedger } from "../outcome/outcome-ledger-store.js";
 import { parseOutcomeReferences } from "../outcome/outcome-references-parser.js";
 import { requiresOutcome } from "../outcome/pin.js";
@@ -40,11 +39,6 @@ interface MeasurementRef {
   readonly value: number | null;
 }
 
-function outcomeAcIds(projection: AcceptanceProjection): readonly string[] {
-  if (projection.version !== 2) return [];
-  return projection.items.filter((s) => s.kind === "outcome").map((s) => s.id);
-}
-
 /** measurementId → { acId, value } across the whole (per-round) ledger. */
 function indexMeasurements(ledger: OutcomeLedger): Map<string, MeasurementRef> {
   const index = new Map<string, MeasurementRef>();
@@ -56,14 +50,12 @@ function indexMeasurements(ledger: OutcomeLedger): Map<string, MeasurementRef> {
   return index;
 }
 
-function unwaivedOutcomeAcIds(
-  ledger: OutcomeLedger,
-  outcomeIds: readonly string[],
-): readonly string[] {
-  const waived = new Set(
-    ledger.entries.filter((e) => e.waived !== undefined).map((e) => e.acId),
-  );
-  return outcomeIds.filter((id) => !waived.has(id));
+/** The round's unwaived outcome ACs = the ledger's frozen entries minus waivers.
+ *  The ledger IS the authoritative per-round outcome-contract set (frozen from
+ *  docs/03 by the acceptance gate) — coverage is derived from it, not the
+ *  deletable projection. */
+function unwaivedOutcomeAcIds(ledger: OutcomeLedger): readonly string[] {
+  return ledger.entries.filter((e) => e.waived === undefined).map((e) => e.acId);
 }
 
 function preview(ids: readonly string[]): string {
@@ -79,9 +71,10 @@ export async function runOutcomeReflectGateStep(
   if (!requiresOutcome(opts.profile.version)) return { kind: "skip" };
 
   try {
-    const projection = await readAcceptanceSpecs(opts.cwd);
-    const outcomeIds = projection === null ? [] : outcomeAcIds(projection);
-    if (outcomeIds.length === 0) return { kind: "pass", message: passMessage() };
+    // Anchor "were outcomes expected?" on docs/03 (canonical, non-.ocoding,
+    // kept across cycle new) — not the deletable projection (review Finding 2).
+    const contractSpecs = await docsOutcomeSpecs(opts.cwd, opts.profile);
+    if (contractSpecs.length === 0) return { kind: "pass", message: passMessage() };
 
     const ledger = await readOutcomeLedger(opts.cwd);
     if (ledger === null) {
@@ -89,8 +82,8 @@ export async function runOutcomeReflectGateStep(
         kind: "blocked",
         reason: "outcome_ledger_missing",
         message: msg(
-          "Reflect blocked: outcome ACs are frozen but `.ocoding/outcome-ledger.json` is missing or unreadable.",
-          "复盘被阻：已冻结效果 AC，但 `.ocoding/outcome-ledger.json` 缺失或损坏。",
+          "Reflect blocked: docs/03 declares outcome AC(s) but `.ocoding/outcome-ledger.json` is missing or unreadable.",
+          "复盘被阻：docs/03 声明了效果 AC，但 `.ocoding/outcome-ledger.json` 缺失或损坏。",
         ),
       };
     }
@@ -133,9 +126,7 @@ export async function runOutcomeReflectGateStep(
     }
 
     const referencedAcIds = new Set(parsed.references.map((r) => r.acId));
-    const uncovered = unwaivedOutcomeAcIds(ledger, outcomeIds).filter(
-      (id) => !referencedAcIds.has(id),
-    );
+    const uncovered = unwaivedOutcomeAcIds(ledger).filter((id) => !referencedAcIds.has(id));
     if (uncovered.length > 0) {
       return {
         kind: "blocked",

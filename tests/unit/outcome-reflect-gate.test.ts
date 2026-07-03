@@ -1,3 +1,5 @@
+import { promises as fs } from "node:fs";
+import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   buildAcceptanceProjection,
@@ -39,7 +41,26 @@ const P080 = loadSopProfileByVersion("0.8.0");
 const report = (body: string): string =>
   ["# Evolution Report", "", "## Outcome References", "", body, ""].join("\n");
 
+// docs/03 is the "outcomes expected?" anchor (not the deletable projection).
+const DOCS03 = [
+  "# Acceptance Criteria",
+  "",
+  "## Acceptance Specs｜验收规格",
+  "",
+  "### AC-CORE-003",
+  "- desc: onboarding under 30m",
+  "- kind: outcome",
+  `- measure.command: ${PROBE}`,
+  "- measure.threshold: >= 1",
+  "- measure.source: cases/*.json",
+  "- measure.due: state_ship",
+  "- measure.timeout: 60",
+  "",
+].join("\n");
+
 async function freeze(cwd: string): Promise<void> {
+  await fs.mkdir(join(cwd, "docs"), { recursive: true });
+  await fs.writeFile(join(cwd, "docs", "03-acceptance-criteria.md"), DOCS03, "utf8");
   await writeAcceptanceSpecs(cwd, buildAcceptanceProjection(SPECS, "h", true));
   const ledger = reconcileFrozenContracts(SPECS, null);
   if (ledger !== null) await writeOutcomeLedger(cwd, ledger);

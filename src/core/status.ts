@@ -46,7 +46,7 @@ export async function getStatus(opts: StatusOptions): Promise<CommandResult<Stat
   }
 
   // Pin-resolved (H-3) — a 0.8.0-pinned project must keep rendering 0.8.0
-  // structure after the P4b default flip to 0.9.0.
+  // structure once the (still-pending, human-gated) default flip to 0.9.0 lands.
   const profile = resolveProfileForProject(state.project.sopProfileVersion);
   const relativeArtifactPath = profile.artifactPathForStep(state.currentStepId);
   const currentArtifactPath =

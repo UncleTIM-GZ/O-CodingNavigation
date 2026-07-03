@@ -1,9 +1,8 @@
-import type { AcceptanceProjection, AcceptanceSpecV2 } from "../../types/acceptance-spec.js";
 import type { BilingualMessage } from "../../types/i18n.js";
 import type { SopProfile } from "../../types/sop.js";
-import { readAcceptanceSpecs } from "../acceptance/acceptance-spec-store.js";
 import { msg } from "../i18n.js";
 import { evaluateOutcomeGuard } from "../advance/outcome-ledger-guard.js";
+import { docsOutcomeSpecs } from "../outcome/outcome-contract-source.js";
 import { reconcileLedgerWithAudit } from "../outcome/outcome-integrity.js";
 import { readOutcomeLedger } from "../outcome/outcome-ledger-store.js";
 import { requiresOutcome } from "../outcome/pin.js";
@@ -29,16 +28,6 @@ export type ShipGateResult =
   | { readonly kind: "io_error"; readonly message: BilingualMessage }
   | { readonly kind: "blocked"; readonly message: BilingualMessage; readonly reason: string };
 
-function projectionOutcomeSpecs(projection: AcceptanceProjection): readonly AcceptanceSpecV2[] {
-  if (projection.version === 2) return projection.items.filter((s) => s.kind === "outcome");
-  return [];
-}
-
-function projectionAllSpecs(projection: AcceptanceProjection): readonly AcceptanceSpecV2[] {
-  if (projection.version === 2) return projection.items;
-  return projection.items.map((s) => ({ kind: "build" as const, ...s }));
-}
-
 export interface ShipGateStepOptions {
   readonly cwd: string;
   readonly profile: SopProfile;
@@ -51,42 +40,48 @@ export async function runOutcomeShipGateStep(opts: ShipGateStepOptions): Promise
   if (!requiresOutcome(opts.profile.version)) return { kind: "skip" };
 
   try {
-    const projection = await readAcceptanceSpecs(opts.cwd);
-    const outcomeExpected = projection !== null && projectionOutcomeSpecs(projection).length > 0;
+    // Anchor "were outcomes expected?" on docs/03 — the canonical human contract
+    // OUTSIDE .ocoding, kept across cycle new. A file-tampering attacker can
+    // delete the derived `.ocoding` projection AND ledger; they cannot make
+    // docs/03's frozen outcome ACs vanish without the acceptance gate re-freezing
+    // to a genuinely outcome-free contract next round (review Findings 1 & 2).
+    const contractSpecs = await docsOutcomeSpecs(opts.cwd, opts.profile);
+    const outcomeExpected = contractSpecs.length > 0;
     const ledger = await readOutcomeLedger(opts.cwd);
 
-    // C-3 — outcome contracts were frozen, but the ledger is gone/corrupt.
+    // C-3 — outcome contracts are declared, but the ledger is gone/corrupt.
     if (outcomeExpected && ledger === null) {
       return {
         kind: "blocked",
         reason: "outcome_ledger_missing",
         message: msg(
-          "Ship blocked: outcome contracts were frozen at SPEC but `.ocoding/outcome-ledger.json` is missing or unreadable. Restore it or re-freeze via the acceptance gate, then run `ocn outcome check`.",
-          "发布被阻：SPEC 阶段已冻结效果契约，但 `.ocoding/outcome-ledger.json` 缺失或损坏。请恢复该文件或经验收门重新冻结，再执行 `ocn outcome check`。",
+          "Ship blocked: docs/03 declares outcome AC(s) but `.ocoding/outcome-ledger.json` is missing or unreadable. Restore it or re-freeze via the acceptance gate, then run `ocn outcome check`.",
+          "发布被阻：docs/03 声明了效果 AC，但 `.ocoding/outcome-ledger.json` 缺失或损坏。请恢复该文件或经验收门重新冻结，再执行 `ocn outcome check`。",
         ),
       };
     }
 
-    // No outcome backbone at all (no frozen outcome AC and no ledger) → nothing
-    // to enforce at SHIP; pass. (An empty/absent ledger with outcomeExpected was
-    // already blocked above.)
+    // No outcome backbone at all (no declared outcome AC and no ledger) → nothing
+    // to enforce at SHIP; pass. (An absent ledger with outcomeExpected was already
+    // blocked above.)
     if (ledger === null) {
       return { kind: "pass", message: shipPassMessage() };
     }
 
-    // Tamper / drift against the never-archived audit trust root.
-    if (projection !== null) {
-      const breach = await reconcileLedgerWithAudit(opts.cwd, projectionAllSpecs(projection));
-      if (breach !== null) {
-        return {
-          kind: "blocked",
-          reason: `outcome_integrity_${breach.kind}`,
-          message: msg(
-            `Ship blocked: outcome ledger integrity breach (${breach.kind}, ${breach.acId}). ${breach.detail}`,
-            `发布被阻：效果台账完整性异常（${breach.kind}，${breach.acId}）。${breach.detail}`,
-          ),
-        };
-      }
+    // Tamper / drift against the never-archived audit trust root. Run WHENEVER a
+    // ledger exists (not gated on the deletable projection — Finding 1): the
+    // chain + measurementId-membership checks are projection-independent; the
+    // contract-drift arm uses docs/03's specs.
+    const breach = await reconcileLedgerWithAudit(opts.cwd, contractSpecs);
+    if (breach !== null) {
+      return {
+        kind: "blocked",
+        reason: `outcome_integrity_${breach.kind}`,
+        message: msg(
+          `Ship blocked: outcome ledger integrity breach (${breach.kind}, ${breach.acId}). ${breach.detail}`,
+          `发布被阻：效果台账完整性异常（${breach.kind}，${breach.acId}）。${breach.detail}`,
+        ),
+      };
     }
 
     // Due unmeasured (block) OR unwaived MEASURED_FAIL (warn at advance, but a

@@ -565,8 +565,12 @@ export async function runGate(opts: RunGateOptions): Promise<CommandResult<GateR
           }),
         ),
       );
-      const code =
-        reflect.reason === "outcome_ledger_missing" ? "ERR_ARTIFACT_INVALID" : "ERR_GATE_FAILED";
+      // Structural defects (missing ledger, malformed reference line) → exit 2,
+      // matching acceptance/task structural defects; a ledger-mismatch (accurate
+      // structure, wrong numbers) → exit 1.
+      const structural =
+        reflect.reason === "outcome_ledger_missing" || reflect.reason === "malformed_reference";
+      const code = structural ? "ERR_ARTIFACT_INVALID" : "ERR_GATE_FAILED";
       return blocked(code, reflect.message, rResult);
     }
   }
