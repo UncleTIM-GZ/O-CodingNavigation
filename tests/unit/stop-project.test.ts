@@ -65,7 +65,9 @@ describe("stopProject (ocn stop)", () => {
       expect(state.currentStepId).toBe("step_project_brief");
 
       const events = await readEvents(project.cwd);
-      const stopped = events.filter((e) => e.eventType === "project_stopped" && e.result === "success");
+      const stopped = events.filter(
+        (e) => e.eventType === "project_stopped" && e.result === "success",
+      );
       expect(stopped).toHaveLength(1);
       expect(stopped[0]?.data?.reason).toBe("docs done");
     });
@@ -89,6 +91,18 @@ describe("stopProject (ocn stop)", () => {
       expect(second.ok).toBe(true);
       // Timestamp unchanged — the first stop stands.
       expect((await readState(project.cwd)).stoppedAt).toBe(firstTs);
+    });
+
+    it("re-running stop finishes a partial teardown (leftover wiring is removed)", async () => {
+      await stopProject({ cwd: project.cwd });
+      // Simulate a prior partial teardown: a wiring file survived.
+      const leftover = join(project.cwd, ".claude", "ocn.md");
+      await fs.mkdir(join(project.cwd, ".claude"), { recursive: true });
+      await fs.writeFile(leftover, "# leftover\n", "utf8");
+
+      const rerun = await stopProject({ cwd: project.cwd });
+      expect(rerun.ok).toBe(true);
+      await expect(fs.stat(leftover)).rejects.toThrow();
     });
 
     it("can stop from a later state too", async () => {

@@ -10,7 +10,12 @@ import { msg } from "../i18n.js";
 import { Paths } from "../paths.js";
 import { blocked, ok } from "../result.js";
 import { LockTimeoutError, withLock } from "../state/lock.js";
-import { StateInvalidError, StateNotFoundError, readState, writeStateUnlocked } from "../state/state-store.js";
+import {
+  StateInvalidError,
+  StateNotFoundError,
+  readState,
+  writeStateUnlocked,
+} from "../state/state-store.js";
 import { nowIsoUtc } from "../time.js";
 import { isStopped } from "./stopped.js";
 
@@ -92,15 +97,23 @@ export async function stopProject(opts: StopOptions): Promise<CommandResult<Stop
     data,
   });
 
-  // Idempotent: already stopped → report and do nothing (one-way, no re-write).
+  // Idempotent: already stopped → no state re-write, but RE-RUN teardown so a
+  // retry can finish an uninstall that a prior run left partial (the first stop
+  // is fail-open on teardown; teardown itself is idempotent). This is the only
+  // way to complete a half-uninstalled project.
   if (isStopped(state)) {
-    return ok(
-      msg(
-        "OCN is already stopped for this project.",
-        "本项目的 OCN 已处于终止状态。",
-      ),
-      { from, stoppedAt: state.stoppedAt as string, teardown: [], correlationId },
-    );
+    let teardownFiles: readonly TeardownFile[] = [];
+    try {
+      teardownFiles = (await teardownAgentIntegration({ cwd: opts.cwd })).files;
+    } catch {
+      // fail-open: a teardown hiccup must not turn an idempotent retry into an error.
+    }
+    return ok(msg("OCN is already stopped for this project.", "本项目的 OCN 已处于终止状态。"), {
+      from,
+      stoppedAt: state.stoppedAt as string,
+      teardown: teardownFiles,
+      correlationId,
+    });
   }
 
   const lockFile = join(Paths.ocodingDir(opts.cwd), ".lock");
@@ -118,10 +131,7 @@ export async function stopProject(opts: StopOptions): Promise<CommandResult<Stop
       { lockFile, command: "stop", projectRoot: opts.cwd, lifecycle: lockHook },
       async () => {
         const current = await readState(opts.cwd);
-        if (
-          current.currentStateId !== from.stateId ||
-          current.currentStepId !== from.stepId
-        ) {
+        if (current.currentStateId !== from.stateId || current.currentStepId !== from.stepId) {
           throw new StaleStopError({
             stateId: current.currentStateId,
             stepId: current.currentStepId,
@@ -141,7 +151,11 @@ export async function stopProject(opts: StopOptions): Promise<CommandResult<Stop
       await safeAudit(
         opts.cwd,
         createAuditEvent(
-          buildEvent("failed", message, { from, observed: err.observed, failureReason: "stale_state" }),
+          buildEvent("failed", message, {
+            from,
+            observed: err.observed,
+            failureReason: "stale_state",
+          }),
         ),
       );
       return blocked("ERR_STATE_MACHINE", message, { from, correlationId });
@@ -165,10 +179,15 @@ export async function stopProject(opts: StopOptions): Promise<CommandResult<Stop
       return blocked("ERR_IO_OR_CONFIG", message, { from, correlationId });
     }
     if (isFsError(err)) {
-      const message = msg(`Stop failed while writing state: ${err.message}`, `终止写入状态失败：${err.message}`);
+      const message = msg(
+        `Stop failed while writing state: ${err.message}`,
+        `终止写入状态失败：${err.message}`,
+      );
       await safeAudit(
         opts.cwd,
-        createAuditEvent(buildEvent("failed", message, { from, failureReason: "state_write_failed" })),
+        createAuditEvent(
+          buildEvent("failed", message, { from, failureReason: "state_write_failed" }),
+        ),
       );
       return blocked("ERR_IO_OR_CONFIG", message, { from, correlationId });
     }

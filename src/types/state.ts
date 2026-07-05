@@ -44,7 +44,16 @@ export const ProjectState = z
     // the human ran `ocn stop`, so the runtime goes quiet and the injected
     // Claude Code wiring is uninstalled (one-way). `.default(null)` keeps
     // pre-existing state.json (written before this field) parsing byte-compatibly.
-    stoppedAt: z.string().nullable().default(null),
+    // Must be ISO 8601 UTC ending "Z" (CLAUDE.md §4.3) so garbage never silently
+    // flips a project into the stopped state.
+    stoppedAt: z
+      .string()
+      .regex(
+        /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/,
+        "stoppedAt must be ISO 8601 UTC ending Z",
+      )
+      .nullable()
+      .default(null),
   })
   .strict();
 export type ProjectState = z.infer<typeof ProjectState>;

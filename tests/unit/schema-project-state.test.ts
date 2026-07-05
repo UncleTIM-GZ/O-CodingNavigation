@@ -99,6 +99,25 @@ describe("ProjectState schema", () => {
     expect(result.success).toBe(true);
   });
 
+  it("rejects a non-ISO-Z stoppedAt (hard timestamp contract)", () => {
+    const result = ProjectState.safeParse({
+      schemaVersion: "1.0",
+      project: {
+        projectId: "p",
+        name: "n",
+        tier: "minimal",
+        sopProfileId: "default-ai-coding-sop",
+        sopProfileVersion: "0.1.0",
+      },
+      currentStateId: "state_spec",
+      currentStepId: "step_prd",
+      artifacts: {},
+      latestGateResult: null,
+      stoppedAt: "yesterday",
+    });
+    expect(result.success).toBe(false);
+  });
+
   it("rejects a non-enum currentStateId", () => {
     const result = ProjectState.safeParse({
       schemaVersion: "1.0",
