@@ -24,6 +24,7 @@ function buildState(overrides: Partial<ProjectState["project"]> = {}): ProjectSt
     currentStepId: "step_prd",
     artifacts: {},
     latestGateResult: null,
+    stoppedAt: null,
   };
 }
 

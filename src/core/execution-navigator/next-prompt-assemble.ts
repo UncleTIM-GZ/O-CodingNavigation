@@ -75,6 +75,22 @@ export interface AssembledPrompt {
 }
 
 export function assemblePrompt(input: PromptInputs): AssembledPrompt {
+  // `ocn stop` — the project is terminated: emit a quiet stopped banner instead
+  // of the workflow objective + automation loop (defense-in-depth; the
+  // /ocn-next command file itself is uninstalled by `ocn stop`).
+  if (input.ocn.stopped === true) {
+    return {
+      prompt: [
+        "# OCN stopped",
+        "",
+        "OCN has been stopped for this project (`ocn stop`). The runtime no longer " +
+          "governs it — no gate, objective, or next step applies. Develop freely. " +
+          "Re-wire with `ocn agent setup` to resume OCN.",
+      ].join("\n"),
+      riskFlags: [],
+    };
+  }
+
   const overlay = AGENT_OVERLAYS[input.opts.agent];
   const flags = collectRiskFlags(input);
 

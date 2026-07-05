@@ -4,11 +4,8 @@ import type { ProjectState } from "../types/state.js";
 import { blocked, ok } from "./result.js";
 import { msg } from "./i18n.js";
 import { loadSopProfile } from "./sop/loader.js";
-import {
-  StateInvalidError,
-  StateNotFoundError,
-  readState,
-} from "./state/state-store.js";
+import { StateInvalidError, StateNotFoundError, readState } from "./state/state-store.js";
+import { STOPPED_REMINDER, isStopped } from "./stop/stopped.js";
 
 export interface StatusOptions {
   readonly cwd: string;
@@ -47,6 +44,23 @@ export async function getStatus(opts: StatusOptions): Promise<CommandResult<Stat
       );
     }
     throw err;
+  }
+
+  // `ocn stop` — terminated: surface the stopped notice instead of a next step.
+  if (isStopped(state)) {
+    return ok(
+      msg(
+        `OCN ${state.project.name} — stopped (free self-development)`,
+        `OCN ${state.project.name} — 已终止（自由自我开发）`,
+      ),
+      {
+        project: state.project,
+        currentStateId: state.currentStateId,
+        currentStepId: state.currentStepId,
+        currentArtifactPath: "",
+        nextAction: STOPPED_REMINDER,
+      },
+    );
   }
 
   const profile = loadSopProfile();

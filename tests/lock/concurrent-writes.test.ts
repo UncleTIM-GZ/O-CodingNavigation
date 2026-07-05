@@ -21,6 +21,7 @@ function buildState(name: string): ProjectState {
     currentStepId: "step_prd",
     artifacts: {},
     latestGateResult: null,
+    stoppedAt: null,
   };
 }
 

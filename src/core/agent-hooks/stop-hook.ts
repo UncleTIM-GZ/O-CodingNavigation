@@ -1,6 +1,8 @@
 import { promises as fs } from "node:fs";
 import { Paths } from "../paths.js";
 import { checkCurrentArtifact } from "../check.js";
+import { readState } from "../state/state-store.js";
+import { isStopped } from "../stop/stopped.js";
 
 // AM-006 / DEC-031 — Claude Code Stop-hook engine. Called (via `ocn hook
 // stop`) when the agent tries to end its turn: re-runs the OCN gate and, if
@@ -61,6 +63,14 @@ export async function runStopHook(opts: StopHookOptions): Promise<StopHookOutcom
   // Not an OCN project (or not initialized) — never interfere.
   if (!(await stateFileExists(opts.cwd))) {
     return { action: "allow" };
+  }
+  // `ocn stop` — the project is terminated: never force the AI to keep going.
+  // On any read failure, fall through to the check below (which keeps the
+  // authoritative fail-open warning path).
+  try {
+    if (isStopped(await readState(opts.cwd))) return { action: "allow" };
+  } catch {
+    // fall through
   }
   try {
     const result = await checkCurrentArtifact({ cwd: opts.cwd });

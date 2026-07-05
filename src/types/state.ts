@@ -39,6 +39,12 @@ export const ProjectState = z
     currentStepId: StepId,
     artifacts: z.record(z.string(), z.unknown()).default({}),
     latestGateResult: z.unknown().nullable().default(null),
+    // `ocn stop` (engine/CLI feature, NOT an SOP bump) — terminal detach
+    // marker. null = OCN still drives the project; an ISO 8601 UTC timestamp =
+    // the human ran `ocn stop`, so the runtime goes quiet and the injected
+    // Claude Code wiring is uninstalled (one-way). `.default(null)` keeps
+    // pre-existing state.json (written before this field) parsing byte-compatibly.
+    stoppedAt: z.string().nullable().default(null),
   })
   .strict();
 export type ProjectState = z.infer<typeof ProjectState>;

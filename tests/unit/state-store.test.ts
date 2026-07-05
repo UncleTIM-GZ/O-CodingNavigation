@@ -23,6 +23,7 @@ const validState: ProjectState = {
   currentStepId: "step_prd",
   artifacts: {},
   latestGateResult: null,
+  stoppedAt: null,
 };
 
 describe("state-store read/write", () => {

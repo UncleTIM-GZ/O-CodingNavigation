@@ -15,9 +15,7 @@ import { join } from "node:path";
 import { ProjectState } from "../../types/state.js";
 import type { ExecStatusOcnData } from "./types.js";
 
-export async function readOcnProjectState(
-  projectRoot: string,
-): Promise<ExecStatusOcnData> {
+export async function readOcnProjectState(projectRoot: string): Promise<ExecStatusOcnData> {
   const stateFile = join(projectRoot, ".ocoding", "state.json");
 
   let raw: string;
@@ -71,5 +69,6 @@ export async function readOcnProjectState(
     sopProfileVersion: state.project.sopProfileVersion,
     currentStateId: state.currentStateId,
     currentStepId: state.currentStepId,
+    stopped: state.stoppedAt !== null,
   };
 }

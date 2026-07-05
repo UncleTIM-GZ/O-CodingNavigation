@@ -10,6 +10,7 @@ import { msg } from "../i18n.js";
 import { blocked, ok } from "../result.js";
 import { loadSopProfile } from "../sop/loader.js";
 import { StateInvalidError, StateNotFoundError, readState } from "../state/state-store.js";
+import { STOPPED_REMINDER, isStopped } from "../stop/stopped.js";
 
 export interface GenerateNextPromptOptions {
   readonly cwd: string;
@@ -85,6 +86,24 @@ export async function generateNextPrompt(
 ): Promise<CommandResult<NextPromptData>> {
   try {
     const state = await readState(opts.cwd);
+
+    // `ocn stop` — terminated: emit a quiet stopped prompt (also via MCP
+    // `navigator.generate_next_prompt`) instead of the workflow next step.
+    if (isStopped(state)) {
+      return ok(
+        msg(
+          `OCN is stopped for ${state.currentStateId} / ${state.currentStepId}.`,
+          `${state.currentStateId} / ${state.currentStepId} 的 OCN 已终止。`,
+        ),
+        {
+          targetStateId: state.currentStateId,
+          targetStepId: state.currentStepId,
+          requiredSections: [],
+          instruction: `# OCN stopped\n\n${STOPPED_REMINDER}`,
+        },
+      );
+    }
+
     const profile = loadSopProfile();
     const required = profile.requiredSectionsForStep(state.currentStepId);
     const artifactPath = profile.artifactPathForStep(state.currentStepId);

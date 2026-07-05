@@ -59,6 +59,46 @@ describe("ProjectState schema", () => {
     expect(result.success).toBe(false);
   });
 
+  // `ocn stop` — back-compat: a state.json written before the stoppedAt field
+  // existed must still parse, defaulting to null (OCN still driving).
+  it("defaults stoppedAt to null when absent (back-compat)", () => {
+    const result = ProjectState.safeParse({
+      schemaVersion: "1.0",
+      project: {
+        projectId: "p",
+        name: "n",
+        tier: "minimal",
+        sopProfileId: "default-ai-coding-sop",
+        sopProfileVersion: "0.1.0",
+      },
+      currentStateId: "state_spec",
+      currentStepId: "step_prd",
+      artifacts: {},
+      latestGateResult: null,
+    });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.stoppedAt).toBeNull();
+  });
+
+  it("accepts an ISO timestamp for stoppedAt", () => {
+    const result = ProjectState.safeParse({
+      schemaVersion: "1.0",
+      project: {
+        projectId: "p",
+        name: "n",
+        tier: "minimal",
+        sopProfileId: "default-ai-coding-sop",
+        sopProfileVersion: "0.1.0",
+      },
+      currentStateId: "state_spec",
+      currentStepId: "step_prd",
+      artifacts: {},
+      latestGateResult: null,
+      stoppedAt: "2026-07-05T00:00:00.000Z",
+    });
+    expect(result.success).toBe(true);
+  });
+
   it("rejects a non-enum currentStateId", () => {
     const result = ProjectState.safeParse({
       schemaVersion: "1.0",

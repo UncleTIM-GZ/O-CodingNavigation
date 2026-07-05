@@ -80,6 +80,7 @@ export async function initProject(opts: InitOptions): Promise<CommandResult<Init
     currentStepId: "step_project_brief",
     artifacts: {},
     latestGateResult: null,
+    stoppedAt: null,
   };
 
   let alreadyInitialized = false;

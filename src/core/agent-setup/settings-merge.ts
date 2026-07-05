@@ -84,6 +84,51 @@ function ensureActorEnv(root: JsonObject): boolean {
   return true;
 }
 
+/** Inverse of `mergeClaudeSettings` — used by `ocn stop` teardown. Surgically
+ *  removes ONLY the OCN-owned surfaces (hook groups whose command mentions
+ *  `ocn hook`, and `env.OCN_ACTOR === ai_agent`); user-customized entries and
+ *  every other key are left byte-for-byte intact. Empty `hooks[event]` arrays
+ *  and an emptied `hooks` / `env` object are pruned so we do not leave debris.
+ *  Fail-safe: malformed JSON is reported (caller skips — never rewrites a file
+ *  it cannot parse). */
+export function unmergeClaudeSettings(existingText: string | null): SettingsMergeResult {
+  if (existingText === null) return { ok: true, content: "", action: "skipped" };
+
+  let root: unknown;
+  try {
+    root = JSON.parse(existingText);
+  } catch {
+    return { ok: false, malformed: true };
+  }
+  if (!isPlainObject(root)) return { ok: false, malformed: true };
+
+  let changed = false;
+
+  const hooks = root["hooks"];
+  if (isPlainObject(hooks)) {
+    for (const event of ["Stop", "PostToolUse"]) {
+      const slot = hooks[event];
+      if (!Array.isArray(slot)) continue;
+      const kept = slot.filter((g) => !containsOcnHook(g));
+      if (kept.length === slot.length) continue;
+      changed = true;
+      if (kept.length === 0) delete hooks[event];
+      else hooks[event] = kept;
+    }
+    if (Object.keys(hooks).length === 0) delete root["hooks"];
+  }
+
+  const env = root["env"];
+  if (isPlainObject(env) && env[OCN_ACTOR_ENV_KEY] === OCN_ACTOR_ENV_VALUE) {
+    delete env[OCN_ACTOR_ENV_KEY];
+    changed = true;
+    if (Object.keys(env).length === 0) delete root["env"];
+  }
+
+  if (!changed) return { ok: true, content: existingText, action: "skipped" };
+  return { ok: true, content: serialize(root), action: "updated" };
+}
+
 export function mergeClaudeSettings(existingText: string | null): SettingsMergeResult {
   if (existingText === null) {
     const fresh: JsonObject = {
