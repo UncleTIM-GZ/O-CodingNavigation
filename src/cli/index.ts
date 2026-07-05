@@ -18,6 +18,7 @@ import { registerReadinessCommand } from "./commands/readiness.js";
 import { registerRewindCommand } from "./commands/rewind.js";
 import { registerSopCommand } from "./commands/sop.js";
 import { registerStatusCommand } from "./commands/status.js";
+import { registerStopCommand } from "./commands/stop.js";
 import { registerTaskCommand } from "./commands/task.js";
 import { registerVerdictCommand } from "./commands/verdict.js";
 import { registerVerifyCommand } from "./commands/verify.js";
@@ -44,6 +45,9 @@ registerAutoCommand(program);
 // exposed over MCP).
 registerRewindCommand(program);
 registerCycleCommand(program);
+// `ocn stop` — terminate OCN + uninstall the Claude Code wiring (one-way,
+// human-only; never exposed over MCP).
+registerStopCommand(program);
 // SOP 0.4.0 (AM-004) — role-based readiness checks.
 registerReadinessCommand(program);
 // DEC-029 / AM-005 — SOP profile upgrade (forward-only, human-only).

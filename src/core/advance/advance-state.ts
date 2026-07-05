@@ -10,6 +10,7 @@ import { msg } from "../i18n.js";
 import { blocked, ok } from "../result.js";
 import { loadSopProfile } from "../sop/loader.js";
 import { StateInvalidError, StateNotFoundError, readState } from "../state/state-store.js";
+import { isStopped } from "../stop/stopped.js";
 import {
   type AdvanceAutomationContext,
   type BreakerSummary,
@@ -67,6 +68,18 @@ export async function advanceState(opts: AdvanceOptions): Promise<CommandResult<
     const handled = notInitialized(err);
     if (handled !== null) return handled;
     throw err;
+  }
+
+  // `ocn stop` — the workflow is terminated: refuse to advance. No audit here
+  // (a refusal, like the not-initialized guard), symmetric with brief/status.
+  if (isStopped(state)) {
+    return blocked(
+      "ERR_STATE_MACHINE",
+      msg(
+        "OCN is stopped for this project (`ocn stop`) — the runtime no longer advances it. Re-wire with `ocn agent setup` to resume.",
+        "本项目已终止 OCN（`ocn stop`）——运行时不再推进。如需恢复请用 `ocn agent setup` 重新接线。",
+      ),
+    );
   }
 
   const from: StepLocation = { stateId: state.currentStateId, stepId: state.currentStepId };

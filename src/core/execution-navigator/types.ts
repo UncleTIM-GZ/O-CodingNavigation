@@ -94,6 +94,10 @@ export interface ExecStatusOcnData {
   readonly sopProfileVersion?: string | null;
   readonly currentStateId?: string | null;
   readonly currentStepId?: string | null;
+  /** `ocn stop` — true once the project is terminated (state.json `stoppedAt`
+   *  is set). The prompt assembler emits a quiet stopped banner instead of the
+   *  workflow objective + automation loop. */
+  readonly stopped?: boolean;
 }
 
 export type ExecStatusOverall = "clean" | "dirty" | "no-git" | "empty-repo";

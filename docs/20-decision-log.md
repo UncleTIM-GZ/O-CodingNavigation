@@ -3595,3 +3595,42 @@ traces 悬空即拦）——规范由构造保证。新建 SOP 0.8.0 profile、�
 AC 获得唯一无歧义的机读真源，false-completion 的"AC 藏进表格"通路被从构造上关闭；build-plan traces 只能绑定
 真实、已校验的 AC。代价：新增一整套 acceptance 核心层 + 0.8.0 profile + 默认/版本翻转（含 11 处默认版本断言更新）。
 补上默认 0.8.0 从零 e2e（`acceptance-backbone-walkthrough.test.ts`），堵住此前全部 e2e 钉 0.3.0 的盲区。
+
+## DEC-042｜`ocn stop`：终止 OCN 驱动（彻底卸载，单向；引擎/CLI，非 SOP bump）
+
+Date: 2026-07-05
+Implements: AM-016 (`docs/amendments/2026-07-05-stop-detach-amendment.md`)
+
+### Status
+
+Accepted — implemented and tested.
+
+### Context
+
+OCN 没有"结束"状态：走到 REFLECT 终点后 `ocn advance` 只永远 `blocked` 指向 `cycle new`/`rewind`，OCN 永远
+在驱动。用户真实场景是"规划文档写完就想停掉 OCN、进入自由自我开发"，而 OCN 通过 5 个注入面持续把 AI 拉回
+`.ocoding/*.json` 工作流，Stop hook 还会硬性 block 逼 AI 继续。用户要求："增加一个 OCN 的终止命令，告诉
+`.claude/ocn.md` 等系统文件不要再进入 json 文件。"
+
+### Decision
+
+新增 `ocn stop`，彻底卸载、单向，两条杠杆并用：① 运行时标记 `state.json.stoppedAt`（ISO/null），每个 AI 面向
+面在最早处 `isStopped` 拦截 → 静默（brief/next-prompt/status）或礼貌拒绝（advance→`ERR_STATE_MACHINE`；Stop
+hook→allow），CLI 与 MCP 同步；② 物理卸载 `teardownAgentIntegration`（setup 的逆操作）删 `.claude/ocn.md` 与
+`/ocn-next`、`unmergeClaudeSettings` 摘 OCN hooks + `OCN_ACTOR`、去掉 `CLAUDE.md` 导入行，用户内容逐字保留。
+审计 `project_stopped`（单类型 success|failed）。
+
+### Sub-decisions
+
+1. **彻底卸载 + 单向**（用户决策）：无内建 `ocn attach`；要回来重跑 `ocn agent setup`。命名 `ocn stop`（用户选定）。
+2. **从任意状态可执行**：脱离不必走到 REFLECT；游标/docs/审计 JSONL 不动。
+3. **非 SOP bump**：引擎/CLI 生命周期特性（沿 rewind/cycle/auto 先例），不新增 backbone、不动 profile。
+4. **human-only、CLI-only、绝不进 MCP**：`exitIfAiAgent` + `--yes` 强制（缺失 → exit 4）；加入硬人类专属区。
+5. **teardown 失效安全**：state 提交后卸载失败不回滚，降级审计 `teardownWarning`（沿 AM-013 fail-open）。
+6. **只碰 OCN 注入物**：根 `CLAUDE.md` 手写正文与 Claude Code `memory/*.md` 不动（非 OCN 生成物）。
+
+### Consequences
+
+规划完成后有了干净、机器可验证的"下车"路径：运行时全面静默 + 注入指令物理移除，AI 不再被拉回 json 工作流。
+代价：`ProjectState` 加一字段（+11 处 literal 构造补 `stoppedAt: null`）、新增 stop/teardown 两个核心模块 +
+一命令 + 6 个面 honor。新增 19 例测试（含默认 0.3.0 e2e `stop-walkthrough`），全量 1353 绿。

@@ -57,6 +57,12 @@ export const AuditEventType = z.enum([
   // this slice of the audit log stays trustworthy even though actor labels
   // are a governance signature rather than a security boundary.
   "auto_mode_changed",
+  // `ocn stop` (engine/CLI feature, NOT an SOP bump) — the human terminated
+  // OCN for this project: state.json got the `stoppedAt` marker and the
+  // injected Claude Code wiring was uninstalled. Single-type design like
+  // cursor_rewind / cycle_started (result success|failed + data.failureReason).
+  // Human-only by construction (the switch refuses ai_agent).
+  "project_stopped",
 ]);
 export type AuditEventType = z.infer<typeof AuditEventType>;
 

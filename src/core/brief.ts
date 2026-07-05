@@ -24,6 +24,7 @@ import { blocked, ok } from "./result.js";
 import { msg } from "./i18n.js";
 import { loadSopProfile } from "./sop/loader.js";
 import { StateInvalidError, StateNotFoundError, readState } from "./state/state-store.js";
+import { STOPPED_NOTICE, STOPPED_REMINDER, isStopped } from "./stop/stopped.js";
 
 export interface BriefOptions {
   readonly cwd: string;
@@ -87,6 +88,23 @@ export async function generateBrief(opts: BriefOptions): Promise<CommandResult<B
       );
     }
     throw err;
+  }
+
+  // `ocn stop` — the project is terminated: go quiet instead of driving the
+  // workflow. Every downstream reader (CLI + MCP `navigator.brief`) sees this.
+  if (isStopped(state)) {
+    return ok(STOPPED_NOTICE, {
+      project: state.project,
+      currentStateId: state.currentStateId,
+      currentStepId: state.currentStepId,
+      currentArtifactPath: "",
+      currentArtifactStatus: "not_applicable",
+      currentObjective: STOPPED_REMINDER,
+      currentBlockers: [],
+      nextActions: [STOPPED_REMINDER],
+      aiGovernanceReminder: STOPPED_REMINDER,
+      uncertaintyPolicy: UNCERTAINTY_POLICY,
+    });
   }
 
   const profile = loadSopProfile();
