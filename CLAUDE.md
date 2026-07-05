@@ -1,9 +1,9 @@
 # O'CodingNavigator (OCN) — Claude Code Working Contract
 
-> Generated: 2026-04-28 · Updated: 2026-06-12
+> Generated: 2026-04-28 · Updated: 2026-07-05
 > SOP Profile: `default-ai-coding-sop@0.8.0` (runtime default since AM-015/DEC-041 — **Acceptance Backbone**; npm/SOP version lockstep; 0.1.0 / 0.2.0 / 0.3.0 / 0.4.0 / 0.5.0 / 0.7.0 frozen + importable, 0.6.0 skipped)
-> Current State: shipped — Planning Gatekeeper + Execution Navigator + Logic Backbone + Readiness Backbone + **Task Backbone** + **Acceptance Backbone** (incl. `ocn sop upgrade`) + **Rewind & Cycle** (DEC-033/AM-008) + **Auto Mode** (DEC-034/AM-009).
-> Published: `o-coding-navigation@0.5.0-beta.0` (pre-GA beta).
+> Current State: shipped — Planning Gatekeeper + Execution Navigator + Logic Backbone + Readiness Backbone + **Task Backbone** + **Acceptance Backbone** (incl. `ocn sop upgrade`) + **Rewind & Cycle** (DEC-033/AM-008) + **Auto Mode** (DEC-034/AM-009) + **`ocn stop`** (terminate + uninstall wiring, DEC-042/AM-016).
+> Published: `o-coding-navigation@0.8.0-beta.1` (pre-GA beta; npm latest + beta).
 > Skeleton Spike (Phase 0) is **complete**; the sections below that describe it are kept as historical context.
 
 ---
@@ -220,8 +220,8 @@ DISCOVERY → SPEC → DESIGN → PLAN → BUILD → VERIFY → SHIP → REFLECT
 
 ```
 SOP Profile  : default-ai-coding-sop@0.8.0 (runtime default — AM-015/DEC-041, Acceptance Backbone; npm/SOP lockstep)
-Published    : o-coding-navigation@0.8.0-beta.x (npm latest + beta; alpha preserved at 0.1.0-alpha.2)
-Surface      : Planning Gatekeeper (00–19) + Execution Navigator + readiness (list/waive) + task (list/check) + sop upgrade + rewind/cycle + MCP (7 tools)
+Published    : o-coding-navigation@0.8.0-beta.1 (npm latest + beta; alpha preserved at 0.1.0-alpha.2)
+Surface      : Planning Gatekeeper (00–19) + Execution Navigator + readiness (list/waive) + task (list/check) + sop upgrade + rewind/cycle + stop + MCP (7 tools)
 State machine: 20 wired steps across DISCOVERY → SPEC → DESIGN → PLAN → BUILD → VERIFY (SHIP/REFLECT stubs)
 Status       : pre-GA beta, dogfooded; Skeleton Spike + 0.2.0/0.3.0/0.4.0/0.5.0/0.7.0/0.8.0 cutovers + logic, readiness, task & acceptance backbones shipped
 ```

@@ -1,6 +1,6 @@
 # O'CodingNavigator (OCN) — 一页纸介绍 + 操作手册
 
-> 版本：`0.8.0-beta.0` · 适用范围：tester / 内部使用 · 状态：beta，非 GA
+> 版本：`0.8.0-beta.1` · 适用范围：tester / 内部使用 · 状态：beta，非 GA
 
 ---
 
@@ -8,7 +8,7 @@
 
 本地优先、MCP-first、状态机驱动的 AI Coding 工作流操作系统。CLI `ocn` + MCP 服务 `ocn-mcp`。所有数据落本地文件（Markdown + JSON + JSONL + YAML），无云、无数据库、不调 LLM。Apache-2.0。
 
-当前版本：`0.8.0-beta.0`（npm `latest` 与 `beta` 同指此版）。仅在 Claude Desktop on Windows + WSL2 验证。Cursor / Cline 未验证。仍是 beta，不是 GA。
+当前版本：`0.8.0-beta.1`（npm `latest` 与 `beta` 同指此版）。仅在 Claude Desktop on Windows + WSL2 验证。Cursor / Cline 未验证。仍是 beta，不是 GA。
 
 ---
 
@@ -63,7 +63,7 @@ Claude Code 自动接线（0.4.0-beta.2 新增）：`ocn agent setup` 一条命�
 ```bash
 npm install -g o-coding-navigation        # 推荐
 npm install -g o-coding-navigation@beta   # 显式固定 beta
-ocn --version                              # → 0.8.0-beta.0
+ocn --version                              # → 0.8.0-beta.1
 ```
 
 要求：Node.js ≥ 20。
