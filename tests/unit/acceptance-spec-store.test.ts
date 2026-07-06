@@ -11,7 +11,7 @@ import type { AcceptanceSpecV2 } from "../../src/types/acceptance-spec.js";
 import { createTempProject, type TempProject } from "../helpers/temp-project.js";
 
 // SOP 0.8.0 (AM-015) — acceptance projection store: defensive reads, atomic writes.
-// SOP 0.9.0 (AM-016) — build-only specs freeze as v1 (byte-identical); an
+// SOP 0.9.0 (AM-017) — build-only specs freeze as v1 (byte-identical); an
 // outcome spec promotes the projection to v2, carrying the measure contract.
 
 const SPECS: readonly AcceptanceSpecV2[] = [

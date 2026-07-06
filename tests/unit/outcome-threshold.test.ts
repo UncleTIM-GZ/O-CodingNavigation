@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { compareThreshold, parseThreshold } from "../../src/core/outcome/threshold.js";
 
-// SOP 0.9.0 (AM-016) — threshold mini-language: one module for parse-time
+// SOP 0.9.0 (AM-017) — threshold mini-language: one module for parse-time
 // validation and runtime comparison.
 
 describe("parseThreshold", () => {

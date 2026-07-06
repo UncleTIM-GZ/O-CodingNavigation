@@ -45,7 +45,7 @@ function archiveMoveSources(cwd: string): readonly string[] {
     // other projections so the new round's traces/brief never bind to the prior
     // round's frozen AC ids (acceptance-loader + readAcIds are projection-first).
     Paths.acceptanceSpecsFile(cwd),
-    // AM-016 (AC-14) — the outcome ledger is per-round LIVE state (frozen
+    // AM-017 (AC-14) — the outcome ledger is per-round LIVE state (frozen
     // contracts + measurement history + waivers). Archive it (MOVE) so the new
     // round starts with no live ledger: docs/ is kept, so re-walking to
     // step_acceptance_criteria re-freezes from the same docs/03 → the SAME

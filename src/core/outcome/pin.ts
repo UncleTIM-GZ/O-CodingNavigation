@@ -1,4 +1,4 @@
-// SOP 0.9.0 (AM-016) P3 — pin-awareness. The Outcome Backbone gates (SPEC
+// SOP 0.9.0 (AM-017) P3 — pin-awareness. The Outcome Backbone gates (SPEC
 // requirement, zero_tasks relaxation, VERIFY→SHIP guard) are dormant below a
 // 0.9.0 pin: a <0.9.0 project must behave byte-identically. P4 adds the 0.9.0
 // profile that makes `requiresOutcome` true. Version compare is numeric so a

@@ -1,4 +1,4 @@
-// SOP 0.9.0 bundled default config (AM-016 / DEC-042, Outcome Backbone).
+// SOP 0.9.0 bundled default config (AM-017 / DEC-043, Outcome Backbone).
 // Written by `ocn init --sop-version 0.9.0` and, once P4b flips the runtime
 // default, by a fresh `ocn init`. Identical to 0.8.0 except the pinned profile
 // version (0.9.0).

@@ -8,7 +8,7 @@ import { decExists } from "./dec-log.js";
 import { readOutcomeLedger } from "./outcome-ledger-store.js";
 import { requiresOutcome } from "./pin.js";
 
-// SOP 0.9.0 (AM-016) P3 §3.1 — the SPEC gate. Runs at step_acceptance_criteria
+// SOP 0.9.0 (AM-017) P3 §3.1 — the SPEC gate. Runs at step_acceptance_criteria
 // AFTER the acceptance gate passes, but ONLY for a >=0.9.0 pin (caller gates on
 // `requiresOutcome`). Closes the "process is complete but nothing measurable was
 // promised" hole: a SPEC must declare >=1 outcome AC, OR record a project-level

@@ -6,7 +6,7 @@ import { verifyHashOf } from "../task/task-ledger-store.js";
 import { canonicalOutcomeEventHash } from "./outcome-hash.js";
 import { readOutcomeLedger } from "./outcome-ledger-store.js";
 
-// SOP 0.9.0 (AM-016) — the integrity reconcile. The NEVER-archived, chained
+// SOP 0.9.0 (AM-017) — the integrity reconcile. The NEVER-archived, chained
 // `outcome_measured` audit subset is the trust root; the ledger is the
 // attacker-editable projection. A breach = the ledger claims a measurement the
 // (chain-verified) audit does not corroborate. Design (review synthesis):

@@ -5,7 +5,7 @@ import type { SopProfile } from "../../types/sop.js";
 import { parseAcceptanceSpecs } from "../acceptance/acceptance-spec-parser.js";
 import { parsedAcceptanceToSpec } from "../acceptance/acceptance-source.js";
 
-// SOP 0.9.0 (AM-016) P4b — the INDEPENDENT outcome-contract source for the SHIP
+// SOP 0.9.0 (AM-017) P4b — the INDEPENDENT outcome-contract source for the SHIP
 // and REFLECT gates. This subsystem's threat model is file tampering, so
 // "were outcomes expected this round?" must NOT be answered solely by the
 // editable, cycle-archived `.ocoding` projection/ledger (a review finding: both

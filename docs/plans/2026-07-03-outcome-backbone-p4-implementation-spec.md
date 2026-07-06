@@ -8,7 +8,7 @@ origin: docs/plans/2026-07-02-outcome-backbone-p2-p4-implementation-spec.md
 
 # Outcome Backbone P4 实现规格｜Implementation Spec (SOP 0.9.0 最终阶段)
 
-> Version: 1.0 · 2026-07-03 · AM-016 / DEC-042（以实施时实际下一号为准）
+> Version: 1.0 · 2026-07-03 · AM-017 / DEC-043（以实施时实际下一号为准）
 > 上游：[P2–P4 总 spec](2026-07-02-outcome-backbone-p2-p4-implementation-spec.md) §4 · [执行计划 + 5-agent 评审综合](2026-07-02-feat-outcome-backbone-p2-p4-execution-plan.md)
 > 前置：P2 已落 PR #93（台账/probe/命令组/链式审计信任根）；P3 核心已落 PR #94（SPEC 门/激活/VERIFY→SHIP 守卫，全部 `requiresOutcome` 休眠于 <0.9.0）。
 > **P4 = 让一切上电**：加 0.9.0 profile → P3 的休眠门全部激活；状态机首次越过 `step_final_build_verdict`。
@@ -128,7 +128,7 @@ origin: docs/plans/2026-07-02-outcome-backbone-p2-p4-implementation-spec.md
 ## 8. 发布与文档（human-gated）
 
 - npm `0.9.0-beta.0`（lockstep DEC-039，latest+beta）+ GitHub release；发布单独提交，publish 需人类。
-- amendment `docs/amendments/2026-07-xx-outcome-backbone-amendment.md`（AM-016）+ DEC-042 进 `docs/20-decision-log.md` + CLAUDE.md §6/§5（22→23 编号勘正）+ README/onepager + proposal Status → implemented。PDF 走 build/pdf 管线（pandoc→xelatex）。
+- amendment `docs/amendments/2026-07-xx-outcome-backbone-amendment.md`（AM-017）+ DEC-043 进 `docs/20-decision-log.md` + CLAUDE.md §6/§5（22→23 编号勘正）+ README/onepager + proposal Status → implemented。PDF 走 build/pdf 管线（pandoc→xelatex）。
 - **0.9.0 后冻结新 backbone**（proposal §12）。
 
 ## 9. PR 拆分（每 PR ≤500 行、全量 pre-commit 门）

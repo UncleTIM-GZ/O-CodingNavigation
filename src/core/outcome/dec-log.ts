@@ -1,4 +1,4 @@
-// SOP 0.9.0 (AM-016) P3 — structured DEC-id extraction from docs/20. The
+// SOP 0.9.0 (AM-017) P3 — structured DEC-id extraction from docs/20. The
 // SPEC/SHIP gates re-verify a waiver's `--dec` still exists on EVERY run
 // (readiness waive-with-probe precedent): delete the DEC and the waiver goes
 // void. We parse DECLARED ids (heading / list / table-cell at line start), NOT
@@ -8,7 +8,7 @@ const HEADING_RE = /^#{1,6}\s+.*?\bDEC-(\d+)\b/;
 const LIST_OR_TABLE_RE = /^\s*[-*|]\s*\**DEC-(\d+)\b/;
 const LABEL_RE = /^\s*\**DEC-(\d+)\b/;
 
-/** Normalise a DEC id to `DEC-<n>` with leading zeros stripped (DEC-042 ≡ DEC-42). */
+/** Normalise a DEC id to `DEC-<n>` with leading zeros stripped (DEC-043 ≡ DEC-42). */
 export function normaliseDecId(id: string): string | null {
   const m = /\bDEC-0*(\d+)\b/i.exec(id.trim());
   return m ? `DEC-${m[1]}` : null;

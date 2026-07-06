@@ -1,6 +1,6 @@
 # Outcome Backbone P2–P4 实现规格｜Implementation Spec (SOP 0.9.0)
 
-> Version: 1.0 · 2026-07-02 · 编号预留 AM-016 / DEC-042（以实施时仓库实际下一号为准）
+> Version: 1.0 · 2026-07-02 · 编号预留 AM-017 / DEC-043（以实施时仓库实际下一号为准）
 > 上游：[proposal](../outcome-backbone-proposal.md) · [升级计划 + 评审综合](2026-07-02-outcome-backbone-0.9.0-upgrade-plan.md)（§0 八条 CRITICAL 修正 + §12 分主题综合）
 > P1（类型+解析+v2 投影）已在 PR #92 落地；本文档只规范 **P2 / P3 / P4**——把"定义 outcome"升级为"强制测量 + 驱动 + 落地 SHIP/REFLECT"。
 > 硬约束继承 CLAUDE.md §8：文件 ≤300 行、函数 ≤50 行、参数 ≤4、圈复杂度 ≤10、导出 API 零裸 any/unknown、单 PR ≤500 行；MCP 白名单钉死 7 工具；human-only 硬区不变。
@@ -268,7 +268,7 @@ export function reconcileLedgerWithAudit(root: string): Promise<IntegrityBreach 
 
 ### 4.6 发布
 - npm `0.9.0-beta.0`（lockstep DEC-039，latest+beta）+ GitHub release；MCP 白名单钉死断言确认**仍 7 工具**。
-- 文档收尾：amendment（`docs/amendments/2026-07-xx-outcome-backbone-amendment.md`）+ DEC-042 + CLAUDE.md §6 + README/onepager + proposal Status 翻 implemented。PDF 走 build/pdf 管线（pandoc→xelatex）。
+- 文档收尾：amendment（`docs/amendments/2026-07-xx-outcome-backbone-amendment.md`）+ DEC-043 + CLAUDE.md §6 + README/onepager + proposal Status 翻 implemented。PDF 走 build/pdf 管线（pandoc→xelatex）。
 
 ### 4.7 P4 e2e｜`tests/e2e/outcome-backbone-walkthrough.test.ts`（从零默认 0.9.0）
 - 全程 DISCOVERY→REFLECT：init→SPEC（含 outcome AC）→…→BUILD→VERIFY 内 `outcome check`→VERIFY→SHIP→REFLECT→`cycle new`。

@@ -38,7 +38,7 @@ export const AcceptanceSpec = z
   .strict();
 export type AcceptanceSpec = z.infer<typeof AcceptanceSpec>;
 
-// SOP 0.9.0 (AM-016) — Outcome Backbone: the v2 spec carries `kind` and, for
+// SOP 0.9.0 (AM-017) — Outcome Backbone: the v2 spec carries `kind` and, for
 // outcome ACs, a measurement contract. Discriminated on `kind` so `measure` is
 // required-iff-outcome and unrepresentable on a build spec (illegal states can't
 // be constructed). The v1 `AcceptanceSpec` above stays frozen for read-compat.

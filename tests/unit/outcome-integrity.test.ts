@@ -13,7 +13,7 @@ import { AuditPaths } from "../../src/core/audit/audit-paths.js";
 import type { AcceptanceSpecV2 } from "../../src/types/acceptance-spec.js";
 import { measureOnce } from "./outcome-measure-helper.js";
 
-// SOP 0.9.0 (AM-016) P2 — reconcile the ledger against the CHAINED, never-
+// SOP 0.9.0 (AM-017) P2 — reconcile the ledger against the CHAINED, never-
 // archived outcome_measured audit subset. The chain is the trust root; the
 // ledger is the attacker-editable projection.
 

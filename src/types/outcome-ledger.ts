@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-// SOP 0.9.0 (AM-016 / DEC-042) — Outcome Backbone｜效果主干 P2.
+// SOP 0.9.0 (AM-017 / DEC-043) — Outcome Backbone｜效果主干 P2.
 //
 // `.ocoding/outcome-ledger.json` — the per-AC measurement history. zod is the
 // single source of truth AND the integrity boundary: `readOutcomeLedger`

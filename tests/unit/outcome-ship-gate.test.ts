@@ -15,7 +15,7 @@ import type { AcceptanceSpecV2 } from "../../src/types/acceptance-spec.js";
 import { createTempProject, type TempProject } from "../helpers/temp-project.js";
 import { measureOnce } from "./outcome-measure-helper.js";
 
-// SOP 0.9.0 (AM-016) P4b §C — the SHIP gate for step_release, incl. the C-3
+// SOP 0.9.0 (AM-017) P4b §C — the SHIP gate for step_release, incl. the C-3
 // trust-source fix (a deleted/corrupt ledger must NOT ship silently).
 
 const PROBE = "node probe.js";

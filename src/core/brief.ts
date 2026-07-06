@@ -53,7 +53,7 @@ export interface BriefData {
   readonly tasks?: TaskBriefSummary;
   /** Present once the acceptance projection has been frozen (SOP 0.8.0 / AM-015). */
   readonly acceptance?: AcceptanceBriefSummary;
-  /** Present once an outcome ledger exists (SOP 0.9.0 / AM-016). Verdict counts
+  /** Present once an outcome ledger exists (SOP 0.9.0 / AM-017). Verdict counts
    *  + freshness — the reality-contact dashboard. */
   readonly outcome?: OutcomeBriefSummary;
   /** Present once the contract drift gate has run (AM-012; opt-in). */
@@ -196,7 +196,7 @@ export async function generateBrief(opts: BriefOptions): Promise<CommandResult<B
   const acceptance =
     acceptanceProjection === null ? undefined : summarizeAcceptance(acceptanceProjection);
 
-  // SOP 0.9.0 (AM-016) — fold the outcome ledger's verdict counts into the brief.
+  // SOP 0.9.0 (AM-017) — fold the outcome ledger's verdict counts into the brief.
   // Absent until an outcome AC is frozen under 0.9.0+.
   const outcome = await summarizeOutcome(opts.cwd, Date.now());
 

@@ -202,7 +202,7 @@ export async function runGate(opts: RunGateOptions): Promise<CommandResult<GateR
     return blocked(step.failureCode, step.message, result);
   };
 
-  // SOP 0.9.0 (AM-016) P4b §C — the SHIP gate for step_release. Cross-cutting
+  // SOP 0.9.0 (AM-017) P4b §C — the SHIP gate for step_release. Cross-cutting
   // like readiness/contract, self-guarded to state_ship + a 0.9.0+ pin. Because
   // step_release is null-artifact-only, this MUST run in the null-artifact
   // branch (the normal-pass path never reaches it) — otherwise the runner
@@ -370,7 +370,7 @@ export async function runGate(opts: RunGateOptions): Promise<CommandResult<GateR
     if (outcome.projection !== undefined) {
       try {
         await writeAcceptanceSpecs(opts.cwd, outcome.projection);
-        // SOP 0.9.0 (AM-016) — freeze outcome contracts as a side-effect of the
+        // SOP 0.9.0 (AM-017) — freeze outcome contracts as a side-effect of the
         // acceptance gate passing (no `ocn outcome freeze` command, invariant §8).
         // A v2 projection carries kind:outcome specs; seed/refresh the ledger so
         // `ocn outcome check` has a frozen command hash to run + drift-check.
@@ -395,7 +395,7 @@ export async function runGate(opts: RunGateOptions): Promise<CommandResult<GateR
         );
         return blocked("ERR_IO_OR_CONFIG", ioMessage);
       }
-      // SOP 0.9.0 (AM-016) P3 §3.1 — SPEC outcome requirement (dormant <0.9.0):
+      // SOP 0.9.0 (AM-017) P3 §3.1 — SPEC outcome requirement (dormant <0.9.0):
       // a passing acceptance projection must declare >=1 outcome AC or a valid
       // no-outcome waiver. Runs after the freeze so the ledger's waiver is current.
       const specBlock = await outcomeSpecGateBlockOrNull(
@@ -535,7 +535,7 @@ export async function runGate(opts: RunGateOptions): Promise<CommandResult<GateR
     }
   }
 
-  // SOP 0.9.0 (AM-016) P4b §D.1 — REFLECT gate on step_evolution_report. Runs
+  // SOP 0.9.0 (AM-017) P4b §D.1 — REFLECT gate on step_evolution_report. Runs
   // after the required-section gate passes; mechanically cross-checks the
   // `### Outcome References` lines against the frozen ledger (self-guarded to
   // step_evolution_report + a 0.9.0+ pin).

@@ -92,7 +92,7 @@ function toTaskSpec(task: ParsedTask): TaskSpec {
   };
 }
 
-/** SOP 0.9.0 (AM-016) §E.2 (AC-12) — a project whose only "defect" is an empty
+/** SOP 0.9.0 (AM-017) §E.2 (AC-12) — a project whose only "defect" is an empty
  *  build plan is legitimate when it carries >=1 UNWAIVED outcome AC: a frozen
  *  outcome probe IS a verifiable deliverable, so BUILD needn't enumerate tasks.
  *  The predicate is "unwaived" (not merely "present") so an all-waived project

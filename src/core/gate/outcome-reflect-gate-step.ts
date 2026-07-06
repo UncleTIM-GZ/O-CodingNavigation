@@ -7,7 +7,7 @@ import { readOutcomeLedger } from "../outcome/outcome-ledger-store.js";
 import { parseOutcomeReferences } from "../outcome/outcome-references-parser.js";
 import { requiresOutcome } from "../outcome/pin.js";
 
-// SOP 0.9.0 (AM-016) P4b §D.1 — the REFLECT gate for step_evolution_report.
+// SOP 0.9.0 (AM-017) P4b §D.1 — the REFLECT gate for step_evolution_report.
 // Unlike SHIP (a null-artifact closure), this step HAS an artifact
 // (docs/23-evolution-report.md), so it runs in the runner's normal step-keyed
 // branch after the required-section gate passes. It mechanically cross-checks

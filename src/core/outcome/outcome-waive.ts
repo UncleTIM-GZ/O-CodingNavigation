@@ -11,7 +11,7 @@ import {
   setOutcomeWaiver,
 } from "./outcome-ledger-store.js";
 
-// SOP 0.9.0 (AM-016) — `ocn outcome waive` core. HUMAN-ONLY hard zone (the CLI
+// SOP 0.9.0 (AM-017) — `ocn outcome waive` core. HUMAN-ONLY hard zone (the CLI
 // refuses ai_agent before reaching here). Two shapes: per-AC (`--ac-id`) writes
 // entry.waived; project-level (`--no-outcome`) writes ledger.noOutcomeWaiver.
 // `--dec` is only a REFERENCE recorded here — the SPEC/SHIP gates (P3/P4)

@@ -16,7 +16,7 @@ import { seedState } from "../helpers/seed-state.js";
 import { createTempProject, type TempProject } from "../helpers/temp-project.js";
 import type { AcceptanceSpecV2 } from "../../src/types/acceptance-spec.js";
 
-// SOP 0.9.0 (AM-016) P2 — the `ocn outcome check/waive` command flow end to
+// SOP 0.9.0 (AM-017) P2 — the `ocn outcome check/waive` command flow end to
 // end (core level, no CLI spawn): drift refusal (exit 2), exec_error (exit 4,
 // no write), and the human-only waive refusal for ai_agent.
 
@@ -154,9 +154,9 @@ describe("ocn outcome list / waive", () => {
 
   it("per-AC waive records a DEC and marks the entry waived", async () => {
     await freeze(`echo '{"metric":"p95","value":180}'`);
-    const r = await runOutcomeWaive({ cwd, acId: AC, dec: "DEC-042", reason: "pivot" });
+    const r = await runOutcomeWaive({ cwd, acId: AC, dec: "DEC-043", reason: "pivot" });
     expect(r.ok).toBe(true);
     const led = await readOutcomeLedger(cwd);
-    expect(led!.entries[0]!.waived?.dec).toBe("DEC-042");
+    expect(led!.entries[0]!.waived?.dec).toBe("DEC-043");
   });
 });

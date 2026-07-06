@@ -9,7 +9,7 @@ import type {
 } from "../../types/outcome-ledger.js";
 import { nowIsoUtc } from "../time.js";
 
-// SOP 0.9.0 (AM-016) — pure record-assembly + messaging for `ocn outcome check`,
+// SOP 0.9.0 (AM-017) — pure record-assembly + messaging for `ocn outcome check`,
 // split out to keep the orchestrator under the 300-line hard limit. No IO.
 
 export function auditResultFor(verdict: OutcomeVerdict): AuditResult {

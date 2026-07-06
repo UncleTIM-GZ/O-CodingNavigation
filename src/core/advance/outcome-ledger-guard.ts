@@ -6,7 +6,7 @@ import { classifyEntry } from "../outcome/outcome-activation.js";
 import { readOutcomeLedger } from "../outcome/outcome-ledger-store.js";
 import { requiresOutcome } from "../outcome/pin.js";
 
-// SOP 0.9.0 (AM-016) P3 §3.3 — the VERIFY→SHIP outcome guard. Sibling of
+// SOP 0.9.0 (AM-017) P3 §3.3 — the VERIFY→SHIP outcome guard. Sibling of
 // task-ledger-guard (NOT folded into advance-state). 3-way (A-M4): block the
 // honest gap (due UNMEASURED / NO_EVIDENCE, unwaived), WARN-but-pass a measured
 // failure (OCN sells discipline, not success — a FAIL forces a visible human

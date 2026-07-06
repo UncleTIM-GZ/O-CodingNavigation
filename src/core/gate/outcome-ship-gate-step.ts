@@ -7,7 +7,7 @@ import { reconcileLedgerWithAudit } from "../outcome/outcome-integrity.js";
 import { readOutcomeLedger } from "../outcome/outcome-ledger-store.js";
 import { requiresOutcome } from "../outcome/pin.js";
 
-// SOP 0.9.0 (AM-016) P4b §C — the SHIP gate for `step_release`. `step_release`
+// SOP 0.9.0 (AM-017) P4b §C — the SHIP gate for `step_release`. `step_release`
 // has NO required artifact, so the gate runner would auto-pass it in the
 // null-artifact branch; this closure is called there (and, defensively, in the
 // normal-pass path) with an internal `state_ship` self-guard — mirroring the

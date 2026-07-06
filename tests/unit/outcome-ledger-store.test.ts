@@ -88,12 +88,12 @@ describe("appendMeasurement", () => {
 describe("waivers", () => {
   it("setOutcomeWaiver marks an entry non-blocking; setNoOutcomeWaiver records project-level", async () => {
     await writeOutcomeLedger(root, reconcileFrozenContracts([outcomeSpec("AC-P-1", "node probe.js")], null)!);
-    await setOutcomeWaiver(root, "AC-P-1", { dec: "DEC-042", reason: "pivot", at: new Date().toISOString() });
+    await setOutcomeWaiver(root, "AC-P-1", { dec: "DEC-043", reason: "pivot", at: new Date().toISOString() });
     const led = await readOutcomeLedger(root);
-    expect(led!.entries[0]!.waived?.dec).toBe("DEC-042");
+    expect(led!.entries[0]!.waived?.dec).toBe("DEC-043");
     expect(blocksAdvance(led!.entries[0]!)).toBe(false); // waived → never blocks
-    await setNoOutcomeWaiver(root, { dec: "DEC-042", reason: "no outcome", at: new Date().toISOString() });
-    expect((await readOutcomeLedger(root))!.noOutcomeWaiver?.dec).toBe("DEC-042");
+    await setNoOutcomeWaiver(root, { dec: "DEC-043", reason: "no outcome", at: new Date().toISOString() });
+    expect((await readOutcomeLedger(root))!.noOutcomeWaiver?.dec).toBe("DEC-043");
   });
 });
 

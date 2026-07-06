@@ -233,7 +233,7 @@ const PROFILE_SOURCES: Readonly<Record<SopProfileVersion, ProfileSource>> = {
     stepsByState: STEPS_BY_STATE_080,
     requiredSectionsByStep: REQUIRED_SECTIONS_BY_STEP_080,
   },
-  // SOP 0.9.0 — 0.8.0 + Outcome Backbone activation (AM-016 / DEC-042). First
+  // SOP 0.9.0 — 0.8.0 + Outcome Backbone activation (AM-017 / DEC-043). First
   // profile to wire state_ship (step_release) and state_reflect
   // (step_evolution_report); the SHIP/REFLECT gates + runtime-default flip land
   // in P4b. Registered + importable here so `ocn init --sop-version 0.9.0` and

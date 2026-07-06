@@ -111,7 +111,7 @@ export function authorizeAiTaskCheck(ctx: AiAuthContext, currentStateId: string)
   return commonRefusal(ctx);
 }
 
-/** SOP 0.9.0 (AM-016) — `ocn outcome check` runs a frozen probe and appends to
+/** SOP 0.9.0 (AM-017) — `ocn outcome check` runs a frozen probe and appends to
  *  the outcome ledger. Same delegation envelope as `ocn task check`: phase-2
  *  auto mode ON and inside BUILD/VERIFY. `phaseOfState` naturally locks SHIP /
  *  REFLECT to human-only (they are not phase-2 states). NON-reuse of

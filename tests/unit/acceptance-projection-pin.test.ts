@@ -3,7 +3,7 @@ import { evaluateAcceptanceSpecs } from "../../src/core/acceptance/acceptance-ga
 import { buildAcceptanceProjection } from "../../src/core/acceptance/acceptance-spec-store.js";
 import type { AcceptanceSpecV2 } from "../../src/types/acceptance-spec.js";
 
-// SOP 0.9.0 (AM-016) — AC-16: the acceptance projection is pin-aware. Only a
+// SOP 0.9.0 (AM-017) — AC-16: the acceptance projection is pin-aware. Only a
 // 0.9.0+ profile emits v2 (kind/measure). A <0.9.0 pin with `kind:outcome` in
 // docs must still get a v1 projection (outcome kind dropped) + a warn, which
 // keeps every downstream consumer byte-identical AND holds the gate-runner's

@@ -4,7 +4,7 @@ import { ok } from "../result.js";
 import { readOutcomeLedger } from "./outcome-ledger-store.js";
 import { latestVerdict, type ComputedVerdict } from "./outcome-verdict.js";
 
-// SOP 0.9.0 (AM-016) — `ocn outcome list` (pull-mode, NO audit — §4.7 parity
+// SOP 0.9.0 (AM-017) — `ocn outcome list` (pull-mode, NO audit — §4.7 parity
 // with `task list`). Read-only projection of the outcome ledger: per-AC
 // computed verdict + days since last measurement + waived flag. No synthetic
 // "health score" — just the verdict counts and freshness (invariant §3.5).

@@ -13,7 +13,7 @@ import { evaluateTaskSpecs } from "../../src/core/task/task-gate.js";
 import type { AcceptanceSpecV2 } from "../../src/types/acceptance-spec.js";
 import { createTempProject, type TempProject } from "../helpers/temp-project.js";
 
-// SOP 0.9.0 (AM-016) §E.2 / AC-12 — a lone `no_tasks` defect is downgraded to a
+// SOP 0.9.0 (AM-017) §E.2 / AC-12 — a lone `no_tasks` defect is downgraded to a
 // warning for a pure-outcome project (>=1 UNWAIVED outcome AC), so the build
 // plan can be empty and the project still reaches SHIP. All-waived or <0.9.0 →
 // `no_tasks` still hard-blocks.
@@ -85,7 +85,7 @@ describe("evaluateTaskSpecs — no_tasks relaxation (§E.2)", () => {
   it("still blocks when the only outcome AC is waived (no silent empty BUILD)", async () => {
     await freezeOutcome(project.cwd);
     await setOutcomeWaiver(project.cwd, "AC-CORE-003", {
-      dec: "DEC-042",
+      dec: "DEC-043",
       reason: "accepted",
       at: "2026-07-03T00:00:00.000Z",
     });

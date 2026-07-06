@@ -20,7 +20,7 @@ export type AcceptanceDefectCode =
   | "duplicate_id"
   | "invalid_id"
   | "missing_field"
-  // SOP 0.9.0 (AM-016) — outcome measurement contract defects.
+  // SOP 0.9.0 (AM-017) — outcome measurement contract defects.
   | "invalid_kind"
   | "missing_measure_field"
   | "invalid_threshold"
@@ -68,7 +68,7 @@ const KNOWN_KEYS: ReadonlySet<string> = new Set([
   "then",
   "priority",
   "trace",
-  // SOP 0.9.0 (AM-016) — outcome kind + measurement contract keys.
+  // SOP 0.9.0 (AM-017) — outcome kind + measurement contract keys.
   "kind",
   "measure.command",
   "measure.threshold",

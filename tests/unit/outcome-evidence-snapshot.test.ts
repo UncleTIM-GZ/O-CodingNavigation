@@ -8,7 +8,7 @@ import {
   snapshotEvidence,
 } from "../../src/core/outcome/evidence-snapshot.js";
 
-// SOP 0.9.0 (AM-016) P2 — the evidence snapshot is forgery-EVIDENT: it skips
+// SOP 0.9.0 (AM-017) P2 — the evidence snapshot is forgery-EVIDENT: it skips
 // symlinks (parent-dir escape), forces NO_EVIDENCE on zero hits, and covers the
 // probe program entry file so editing it to fabricate a value leaves a trace.
 

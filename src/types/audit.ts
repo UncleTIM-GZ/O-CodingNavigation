@@ -69,10 +69,9 @@ export const AuditEventType = z.enum([
   // `data.prevEventHash` linking the prior outcome_measured event, so the
   // never-archived audit JSONL — not the attacker-editable ledger — is what
   // `reconcileLedgerWithAudit` verifies against. result: pass|failed|no_evidence.
-  // See src/core/outcome/outcome-integrity.ts.
-  // NOTE: the Outcome Backbone amendment/DEC number COLLIDES with `ocn stop`
-  // (both drafted as AM-016/DEC-042); the outcome docs need renumbering to
-  // AM-017/DEC-043 in a follow-up — tracked separately from this merge.
+  // See src/core/outcome/outcome-integrity.ts. (Outcome Backbone = AM-017 /
+  // DEC-043 — renumbered from its draft AM-016/DEC-042, which `ocn stop`
+  // shipped under first.)
   "outcome_measured",
   // SOP 0.9.0 — per-AC or project-level outcome escape hatch was recorded
   // (`ocn outcome waive`, human-only push event). result: success.

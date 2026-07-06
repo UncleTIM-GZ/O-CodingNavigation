@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-// SOP 0.9.0 (AM-016 / DEC-042) — Outcome Backbone｜效果主干.
+// SOP 0.9.0 (AM-017 / DEC-043) — Outcome Backbone｜效果主干.
 //
 // Type layer (P1) for outcome-type acceptance criteria. An `### AC-*` block may
 // carry `kind: build | outcome` (default `build`, so pre-0.9.0 docs are

@@ -197,7 +197,7 @@ export async function advanceState(opts: AdvanceOptions): Promise<CommandResult<
     return blocked("ERR_GATE_FAILED", ledgerBlock.message, { from, correlationId });
   }
 
-  // 3d. SOP 0.9.0 (AM-016) P3 §3.3 — outcome guard on the VERIFY→SHIP boundary
+  // 3d. SOP 0.9.0 (AM-017) P3 §3.3 — outcome guard on the VERIFY→SHIP boundary
   // (dormant <0.9.0: requiresOutcome is false, so byte-identical). Blocks a
   // forward move to a state at/after a due outcome AC's due-state while that AC
   // is unmeasured/no-evidence (unwaived). MEASURED_FAIL never blocks.

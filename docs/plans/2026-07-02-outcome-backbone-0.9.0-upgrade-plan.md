@@ -3,7 +3,7 @@
 > Doc-only planning artifact. No source / tests / package / workflow / npm change is performed by this PR.
 > Companion proposal: [`docs/outcome-backbone-proposal.md`](../outcome-backbone-proposal.md)（设计动机、分支裁决、FFF 案例对照）。
 > 实现排期：0.8.0 dogfood 之后启动（proposal §10 裁决 1）；第一个 dogfood 对象是 OCN 自己。
-> 编号预留：AM-016 / DEC-042（以实施时仓库实际下一号为准）。
+> 编号预留：AM-017 / DEC-043（以实施时仓库实际下一号为准）。
 
 ---
 

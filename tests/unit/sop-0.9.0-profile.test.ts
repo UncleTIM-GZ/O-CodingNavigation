@@ -8,7 +8,7 @@ import {
   resolveProfileForProject,
 } from "../../src/core/sop/loader.js";
 
-// SOP 0.9.0 (AM-016 / DEC-042) — P4a: profile registered + importable, default
+// SOP 0.9.0 (AM-017 / DEC-043) — P4a: profile registered + importable, default
 // still 0.8.0. These tests pin the A-H1 / C-1 terminal-leak invariant and the
 // shallow-copy isolation BEFORE the P4b runtime-default flip, so the flip lands
 // on already-green regressions.

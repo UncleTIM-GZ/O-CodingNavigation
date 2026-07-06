@@ -14,7 +14,7 @@ import {
 import type { AcceptanceSpecV2 } from "../../src/types/acceptance-spec.js";
 import { createTempProject, type TempProject } from "../helpers/temp-project.js";
 
-// SOP 0.9.0 (AM-016) P4b §D.2 / AC-14 — the outcome ledger is per-round LIVE
+// SOP 0.9.0 (AM-017) P4b §D.2 / AC-14 — the outcome ledger is per-round LIVE
 // state: `cycle new` MUST MOVE it into the round archive so the new round
 // starts with no live ledger (verdict + waiver reset). The audit JSONL is NOT
 // archived (one continuous log spans rounds).

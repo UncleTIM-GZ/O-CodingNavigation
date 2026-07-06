@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { runProbe, verdictFor } from "../../src/core/outcome/probe-runner.js";
 import type { MeasureContract } from "../../src/types/outcome.js";
 
-// SOP 0.9.0 (AM-016) P2 — the probe executor's tri-state mapping is the first
+// SOP 0.9.0 (AM-017) P2 — the probe executor's tri-state mapping is the first
 // anti-forgery boundary: exit 0 with a bad last line is exec_error (never a
 // silent "measured"), exit 20 is no_evidence, non-finite values are rejected.
 

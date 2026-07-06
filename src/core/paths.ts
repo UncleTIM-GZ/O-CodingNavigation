@@ -26,7 +26,7 @@ export const Paths = {
   // SOP 0.8.0 (AM-015) — acceptance backbone projection (frozen validated
   // acceptance specs; regenerated on every passing acceptance-criteria gate).
   acceptanceSpecsFile: (root: string): string => join(root, ".ocoding", "acceptance-specs.json"),
-  // SOP 0.9.0 (AM-016) — outcome backbone ledger (frozen measure.command hashes
+  // SOP 0.9.0 (AM-017) — outcome backbone ledger (frozen measure.command hashes
   // + append-only measurement history; written under the state-store lock). The
   // contract is frozen as a side-effect of the acceptance gate passing; history
   // is appended only by `ocn outcome check` running the frozen command.

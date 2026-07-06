@@ -1,7 +1,7 @@
 import { readOutcomeLedger } from "./outcome/outcome-ledger-store.js";
 import { latestVerdict } from "./outcome/outcome-verdict.js";
 
-// SOP 0.9.0 (AM-016) P3 §3.5 — the outcome "reality-contact" dashboard, extracted
+// SOP 0.9.0 (AM-017) P3 §3.5 — the outcome "reality-contact" dashboard, extracted
 // so brief.ts stays under 300 lines. Read-only: verdict COUNTS + freshness (days
 // since the most recent measurement across all ACs). Deliberately NO synthetic
 // "health score" — that would be a heuristic and a new Goodhart target.

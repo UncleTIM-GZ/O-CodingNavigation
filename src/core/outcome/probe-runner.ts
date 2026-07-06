@@ -4,7 +4,7 @@ import type { MeasureContract } from "../../types/outcome.js";
 import type { OutcomeVerdict } from "../../types/outcome-ledger.js";
 import { compareThreshold } from "./threshold.js";
 
-// SOP 0.9.0 (AM-016) — the probe executor. Runs the FROZEN measure.command
+// SOP 0.9.0 (AM-017) — the probe executor. Runs the FROZEN measure.command
 // verbatim under /bin/sh and reads the last stdout line as `{metric,value}`.
 // Pure execution + mapping; the ledger write and evidence snapshot live
 // elsewhere. Hardening folded from the security review:

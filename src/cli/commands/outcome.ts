@@ -5,7 +5,7 @@ import { runOutcomeWaive } from "../../core/outcome/outcome-waive.js";
 import { exitIfAiAgent, resolveActorOrExit } from "../cli-actor.js";
 import { outputResult } from "../output.js";
 
-// SOP 0.9.0 (AM-016) — Outcome Backbone CLI surface.
+// SOP 0.9.0 (AM-017) — Outcome Backbone CLI surface.
 //   ocn outcome check <ac-id>  — run the FROZEN probe; append the verdict
 //   ocn outcome list           — pull-mode ledger overview (no audit)
 //   ocn outcome waive …        — human-only escape hatch (per-AC / --no-outcome)
@@ -52,7 +52,7 @@ export function registerOutcomeCommand(program: Command): void {
     .command("waive")
     .description("Record an outcome escape hatch (human-only): per-AC or project-level --no-outcome")
     .argument("[acId]", "Outcome AC id (omit with --no-outcome)")
-    .requiredOption("--dec <id>", "Decision-log id justifying the waiver (e.g. DEC-042)")
+    .requiredOption("--dec <id>", "Decision-log id justifying the waiver (e.g. DEC-043)")
     .requiredOption("--reason <text>", "Why this outcome is waived")
     .option("--no-outcome", "Project-level no-outcome waiver instead of per-AC", false)
     .option("--actor <actor>", "Caller identity override (user|ai_agent)")

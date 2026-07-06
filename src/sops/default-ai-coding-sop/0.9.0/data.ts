@@ -10,7 +10,7 @@ import {
   type StepDef as StepDef080,
 } from "../0.8.0/data.js";
 
-// SOP 0.9.0 (AM-016 / DEC-042) — 0.8.0 + the Outcome Backbone activation.
+// SOP 0.9.0 (AM-017 / DEC-043) — 0.8.0 + the Outcome Backbone activation.
 //
 // This is the first profile whose state machine crosses PAST
 // `step_final_build_verdict`: it wires the two previously-empty terminal

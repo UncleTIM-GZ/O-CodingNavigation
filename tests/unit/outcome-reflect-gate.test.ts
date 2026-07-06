@@ -16,7 +16,7 @@ import type { AcceptanceSpecV2 } from "../../src/types/acceptance-spec.js";
 import { createTempProject, type TempProject } from "../helpers/temp-project.js";
 import { measureOnce } from "./outcome-measure-helper.js";
 
-// SOP 0.9.0 (AM-016) P4b §D.1 — the REFLECT gate mechanically cross-checks the
+// SOP 0.9.0 (AM-017) P4b §D.1 — the REFLECT gate mechanically cross-checks the
 // `### Outcome References` block against the frozen ledger's current-round history.
 
 const PROBE = "node probe.js";
@@ -174,7 +174,7 @@ describe("runOutcomeReflectGateStep", () => {
   it("does not require a waived outcome AC to be referenced", async () => {
     await freeze(project.cwd);
     await setOutcomeWaiver(project.cwd, "AC-CORE-003", {
-      dec: "DEC-042",
+      dec: "DEC-043",
       reason: "accepted degradation this round",
       at: "2026-07-03T00:00:00.000Z",
     });

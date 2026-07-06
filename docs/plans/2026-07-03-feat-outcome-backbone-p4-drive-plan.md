@@ -53,7 +53,7 @@ Outcome Backbone 关的是**第六类假完成——过程完备式**：任务�
 1. **P4a（引信 + profile + pin 感知）**：先修 `nextStep` 按 pin 解析（引信），再加 0.9.0 七件套 profile + loader 注册 + 默认翻转 + 投影 v2 pin 感知 + 终点断言迁移。
 2. **P4b（SHIP/REFLECT + P3 遗留 + 迁移 + e2e）**：SHIP 闭包门、REFLECT 引用核对门 + References 解析器、cycle 归档补一行、next-prompt 派发优先序、`no_tasks` 放宽、`sop upgrade` 迁移（含台账种子）、从零 0.9.0 e2e。
 3. **P3a（可插队）**：gate-runner 字节等同分解（524 行超限），验收 = 现测试套件 0 改动全绿。
-4. **发布（human-gated）**：npm `0.9.0-beta.0` + GitHub release + amendment AM-016/DEC-042 + 文档勘正。
+4. **发布（human-gated）**：npm `0.9.0-beta.0` + GitHub release + amendment AM-017/DEC-043 + 文档勘正。
 
 ## 锚点校正（2026-07-03 二次实测 · [实测校正]）
 
@@ -193,7 +193,7 @@ Outcome Backbone 关的是**第六类假完成——过程完备式**：任务�
 - **[C-3 回灌] advance 守卫加固**：SHIP 门的独立信任源核对（§C 步 0）同法回灌 `evaluateOutcomeGuard`/`outcome-ledger-guard.ts:38` 的 `ledger===null`——到期应有 outcome 却台账缺失/坏 → block，而非 legacy pass。
 
 **H.2 SHIP/REFLECT 单步 stub vs CLAUDE.md §5 全量（须 DEC 记录）**
-- 0.9.0 profile 把 `state_ship = [step_release]`（无 artifact）、`state_reflect = [step_evolution_report]`——**刻意压缩**，丢下 §5 所列 20-observability / 21-audit-trail / 24-uncertainty-policy / 23-ai-governance。这是**范围决策**，须进 DEC-042 + amendment（不能静默丢）。
+- 0.9.0 profile 把 `state_ship = [step_release]`（无 artifact）、`state_reflect = [step_evolution_report]`——**刻意压缩**，丢下 §5 所列 20-observability / 21-audit-trail / 24-uncertainty-policy / 23-ai-governance。这是**范围决策**，须进 DEC-043 + amendment（不能静默丢）。
 - **obligation 交互**：`obligation_uncertainty_policy`（"enter SHIP 激活"）、`obligation_ai_governance_brief` 对单步 stub 是否触发？readiness `dueState` 把它们的 deadline 解到无产出 artifact 的 SHIP/REFLECT 是否自洽？→ 实现前核对，测试覆盖"进 SHIP 时 uncertainty obligation 行为不炸"。
 
 **H.3 rewind × outcome-ledger（尾部风险，补测）**
@@ -257,8 +257,8 @@ Outcome Backbone 关的是**第六类假完成——过程完备式**：任务�
 ## 发布与文档（human-gated）
 
 - npm `0.9.0-beta.0`（lockstep DEC-039，latest+beta）+ GitHub release；发布单独 commit，**publish 需人类**（记忆 [npm-release-procedure]：standing auth 已配，但翻默认/发布仍 human-gated）。
-- **[H-5｜编号双占裁决——必须先解决再动模板]** CLAUDE.md §5 现把 **23 分给 ai-governance**、22 分给 audit-trail。本计划把 REFLECT evolution-report 落到 `docs/23-evolution-report.md` 会与 ai-governance **双占 23**。裁决：evolution-report 用 **`docs/23-evolution-report.md`**，ai-governance **另迁编号**（如 `docs/25-ai-governance.md`，取当前未占用号）；doc-create 模板表与 REFLECT 门只 key `docs/23-evolution-report.md`，**确保无 stale 模板行仍指 23→ai-governance**（否则静默覆盖/门核错文件）。该编号映射进 DEC-042 + amendment，勿只改 §5 一行。
-- amendment `docs/amendments/2026-07-xx-outcome-backbone-amendment.md`（AM-016）+ DEC-042 进 `docs/20-decision-log.md`（含 §H.2 SHIP/REFLECT 单步 stub 范围决策 + §H.4 waiver 跨状态裁决 + 上述编号映射）+ CLAUDE.md §6/§5 勘正 + README/onepager + proposal Status → implemented。PDF 走 build/pdf 管线（pandoc→xelatex，记忆 [ocn-doc-pdf-formal-layout]）。
+- **[H-5｜编号双占裁决——必须先解决再动模板]** CLAUDE.md §5 现把 **23 分给 ai-governance**、22 分给 audit-trail。本计划把 REFLECT evolution-report 落到 `docs/23-evolution-report.md` 会与 ai-governance **双占 23**。裁决：evolution-report 用 **`docs/23-evolution-report.md`**，ai-governance **另迁编号**（如 `docs/25-ai-governance.md`，取当前未占用号）；doc-create 模板表与 REFLECT 门只 key `docs/23-evolution-report.md`，**确保无 stale 模板行仍指 23→ai-governance**（否则静默覆盖/门核错文件）。该编号映射进 DEC-043 + amendment，勿只改 §5 一行。
+- amendment `docs/amendments/2026-07-xx-outcome-backbone-amendment.md`（AM-017）+ DEC-043 进 `docs/20-decision-log.md`（含 §H.2 SHIP/REFLECT 单步 stub 范围决策 + §H.4 waiver 跨状态裁决 + 上述编号映射）+ CLAUDE.md §6/§5 勘正 + README/onepager + proposal Status → implemented。PDF 走 build/pdf 管线（pandoc→xelatex，记忆 [ocn-doc-pdf-formal-layout]）。
 - **0.9.0 后冻结新 backbone**（proposal §12）。
 
 ## Risk Analysis & Mitigation

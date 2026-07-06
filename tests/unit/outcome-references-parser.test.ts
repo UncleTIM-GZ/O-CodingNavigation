@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { parseOutcomeReferences } from "../../src/core/outcome/outcome-references-parser.js";
 
-// SOP 0.9.0 (AM-016) P4b §D.1 — the Outcome References parser is pure and TOTAL:
+// SOP 0.9.0 (AM-017) P4b §D.1 — the Outcome References parser is pure and TOTAL:
 // it never throws; a malformed line becomes a `malformed` record so the REFLECT
 // gate's coverage rule fails closed.
 

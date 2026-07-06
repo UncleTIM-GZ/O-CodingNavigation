@@ -1,7 +1,7 @@
 import type { OutcomeLedgerEntry } from "../../types/outcome-ledger.js";
 import { blocksAdvance, latestVerdict } from "./outcome-verdict.js";
 
-// SOP 0.9.0 (AM-016) P3 §3.2 — precise activation (AM-014 precedent). An
+// SOP 0.9.0 (AM-017) P3 §3.2 — precise activation (AM-014 precedent). An
 // outcome AC is enforced only from its `due` state onward; before that it is
 // DEFERRED (non-blocking, "forthcoming"). Fail-safe: an unresolvable due state
 // (not in the profile's state order) enforces from gate 1 — never "never due".

@@ -20,7 +20,7 @@ import { fsyncAuditJsonl } from "./fsync.js";
 
 type OutcomeSpec = Extract<AcceptanceSpecV2, { kind: "outcome" }>;
 
-// SOP 0.9.0 (AM-016) — `ocn outcome check <ac-id>` core. Reconcile-first (drift
+// SOP 0.9.0 (AM-017) — `ocn outcome check <ac-id>` core. Reconcile-first (drift
 // / tamper → refuse, exit 2); probe OUTSIDE the lock (long-running); exec_error
 // → exit 4, NO ledger write; zero-hit snapshot forces NO_EVIDENCE. Dual-write:
 // the outcome_measured audit event is committed (non-swallowing + fsync) BEFORE

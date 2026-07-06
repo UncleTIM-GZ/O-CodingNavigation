@@ -2,7 +2,7 @@ import type { AcceptanceKind, MeasureContract } from "../../types/outcome.js";
 import { parseThreshold } from "../outcome/threshold.js";
 import type { AcceptanceDefect } from "./acceptance-spec-parser.js";
 
-// SOP 0.9.0 (AM-016) — outcome `kind` + measurement-contract parsing, split out
+// SOP 0.9.0 (AM-017) — outcome `kind` + measurement-contract parsing, split out
 // of acceptance-spec-parser so both stay under the 300-line limit. PURE: operates
 // on an already-collected field map, pushes structural defects, no IO.
 

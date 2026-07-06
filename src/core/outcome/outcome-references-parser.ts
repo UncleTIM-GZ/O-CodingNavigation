@@ -1,4 +1,4 @@
-// SOP 0.9.0 (AM-016) P4b §D.1 — pure, TOTAL parser for the REFLECT artifact's
+// SOP 0.9.0 (AM-017) P4b §D.1 — pure, TOTAL parser for the REFLECT artifact's
 // `### Outcome References` section. Each reference line is:
 //   - <ac-id>: value=<n> @ <measurementId>
 // The REFLECT gate mechanically cross-checks each parsed reference against the

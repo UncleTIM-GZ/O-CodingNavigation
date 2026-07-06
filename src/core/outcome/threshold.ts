@@ -1,6 +1,6 @@
 import type { Threshold, ThresholdOp } from "../../types/outcome.js";
 
-// SOP 0.9.0 (AM-016 / DEC-042) — the threshold mini-language, in ONE module so
+// SOP 0.9.0 (AM-017 / DEC-043) — the threshold mini-language, in ONE module so
 // parse-time validation (invalid_threshold defect) and runtime comparison can
 // never diverge (two parsers = two truths — architecture review L2). PURE, no IO.
 

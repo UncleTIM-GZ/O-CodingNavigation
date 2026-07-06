@@ -4,7 +4,7 @@ import { isAbsolute, join, relative, sep } from "node:path";
 import type { EvidenceFile } from "../../types/outcome-ledger.js";
 import { assertResolvedPathInsideRoot } from "../security/project-root.js";
 
-// SOP 0.9.0 (AM-016) — the evidence snapshot. Fingerprints the files a probe's
+// SOP 0.9.0 (AM-017) — the evidence snapshot. Fingerprints the files a probe's
 // verdict rests on so a passing measurement is forgery-EVIDENT (not proof:
 // this is a declared boundary — no crypto). Hardening from the security review:
 //   • realpath + inside-root on EVERY hit — a symlinked PARENT dir escapes a

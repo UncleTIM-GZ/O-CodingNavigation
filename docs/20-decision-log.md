@@ -3634,3 +3634,39 @@ hook→allow），CLI 与 MCP 同步；② 物理卸载 `teardownAgentIntegratio
 规划完成后有了干净、机器可验证的"下车"路径：运行时全面静默 + 注入指令物理移除，AI 不再被拉回 json 工作流。
 代价：`ProjectState` 加一字段（+11 处 literal 构造补 `stoppedAt: null`）、新增 stop/teardown 两个核心模块 +
 一命令 + 6 个面 honor。新增 19 例测试（含默认 0.3.0 e2e `stop-walkthrough`），全量 1353 绿。
+
+## DEC-043｜效果主干（Outcome Backbone，SOP 0.9.0）
+
+Date: 2026-07-06
+Implements: AM-017 (`docs/amendments/2026-07-06-outcome-backbone-amendment.md`); 全文 `docs/outcome-backbone-proposal.md` + `docs/plans/2026-07-*outcome*`
+
+### Status
+
+Accepted — implemented and tested.
+
+### Context
+
+前五类假完成（缺 section / 逻辑未接 / 就绪缺失 / 只有回执 / AC 藏表格）都在"过程"层。第六类——**过程完备式**——
+是台账全绿、门全过，却没有任何"这东西真达成目标"的可验证数字。缺一条把 AC 绑到真实、可测量结果的机读链。
+
+### Decision
+
+新增 SOP 0.9.0 profile 激活效果主干：AC 携带机读 `measure`（metric/probe/threshold/due），投影升 v2；`ocn outcome check`
+跑冻结 probe 命令登账，信任根是**永不归档的 `outcome_measured` audit 事件链**（伪造必留痕）；SPEC/SHIP/REFLECT 三门按
+`requiresOutcome(v)`（≥0.9.0）驱动——SHIP 要求到期 outcome 已测量且 MEASURED_FAIL 已被人类决策覆盖，REFLECT 逐条按
+`measurementId` 核对报告值 vs 台账值。默认翻 0.9.0；`ocn sop upgrade` 迁移老项目（含台账种子）。
+
+### Sub-decisions
+
+见 AM-017 §Sub-decisions（信任根=audit 链 / C-3 独立信任源 / nextStep 按 pin 4 处 / SHIP 闭包 / REFLECT measurementId /
+no_tasks 放宽 / 迁移 5 不变量 / SHIP-REFLECT 单步 stub 范围决策 / auto-mode 不委托 SHIP-REFLECT / 编号 23 归 evolution-report / 0.9.0 后冻结新 backbone）。
+
+### 编号说明
+
+本主干起草时占用 AM-016/DEC-042；`ocn stop`（引擎/CLI 特性）先行 ship + 发布占用该号，故 Outcome Backbone 整体改号
+**AM-017 / DEC-043**（DEC-042 = `ocn stop`，见上）。
+
+### Consequences
+
+第六类假完成被从构造上关闭：门只放行"带真实数字、且数字过阈值或被人类决策覆盖"的发布。代价：新增整套 outcome 核心层 +
+0.9.0 profile + 默认/版本翻转。npm lockstep 0.9.0-beta.0（latest+beta）。0.9.0 后冻结新 backbone。

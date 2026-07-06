@@ -12,7 +12,7 @@ import { nowIsoUtc } from "../time.js";
 import { Paths } from "../paths.js";
 import { withLock } from "../state/lock.js";
 
-// SOP 0.9.0 (AM-016) — `.ocoding/outcome-ledger.json` store. Unlike the task /
+// SOP 0.9.0 (AM-017) — `.ocoding/outcome-ledger.json` store. Unlike the task /
 // acceptance stores (lock-less temp+rename), this uses the REAL state-store
 // lock + backup: `appendMeasurement` is a read-modify-write that phase-2 auto
 // mode can drive concurrently, so a lost update is a live risk (invariant §1.2).

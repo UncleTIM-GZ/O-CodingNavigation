@@ -103,7 +103,7 @@ describe("parseAcceptanceSpecs", () => {
     expect(r.warnings.some((w) => /unknown key "bogus"/.test(w))).toBe(true);
   });
 
-  // SOP 0.9.0 (AM-016) — Outcome Backbone: kind + measurement contract.
+  // SOP 0.9.0 (AM-017) — Outcome Backbone: kind + measurement contract.
 
   it("defaults a spec with no kind to build and carries no measure", () => {
     const s = parseAcceptanceSpecs(SECTION(["### AC-001", "- desc: d"].join("\n"))).specs[0];

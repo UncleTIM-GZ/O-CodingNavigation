@@ -1,6 +1,6 @@
 import type { OutcomeLedgerEntry, OutcomeVerdict } from "../../types/outcome-ledger.js";
 
-// SOP 0.9.0 (AM-016) — the computed verdict layer. UNMEASURED is NOT a stored
+// SOP 0.9.0 (AM-017) — the computed verdict layer. UNMEASURED is NOT a stored
 // enum value; it is the absence of any history entry. "Latest" is the LAST
 // array element (append order), never max(measuredAt) — a forged future
 // timestamp must not be able to jump the queue (invariant §1.5).
