@@ -466,22 +466,21 @@ describe("SOP 0.2.0 gate runner — all 19 generated templates pass", () => {
   });
 });
 
-describe("SOP gate runner — runtime default IS 0.8.0 (AM-015 / DEC-041)", () => {
-  it("loadSopProfile() returns 0.8.0", () => {
+describe("SOP gate runner — runtime default IS 0.9.0 (AM-017 / DEC-043)", () => {
+  it("loadSopProfile() returns 0.9.0", () => {
     const def = loadSopProfile();
-    expect(def.version).toBe("0.8.0");
+    expect(def.version).toBe("0.9.0");
     expect(def.id).toBe("default-ai-coding-sop");
   });
 
-  it("default profile has 20 wired steps total", () => {
+  it("default profile has 22 wired steps total (20 + SHIP + REFLECT)", () => {
     const def = loadSopProfile();
     let total = 0;
     for (const stateId of def.stateOrder) {
       total += def.stepsForState(stateId).length;
     }
-    // 0.3.0: 1 (discovery) + 3 (spec) + 6 (design, +logic_backbone) + 2 (plan)
-    //        + 3 (build) + 5 (verify) + 0 (ship) + 0 (reflect) = 20
-    expect(total).toBe(20);
+    // 0.9.0: the 20 of 0.3.0 + 1 (ship: step_release) + 1 (reflect: step_evolution_report) = 22
+    expect(total).toBe(22);
   });
 
   it("loadSopProfileByVersion('0.1.0') is still importable and exposes the legacy 10-step shape", () => {

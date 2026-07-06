@@ -22,9 +22,9 @@ describe("navigator.detect_sop_version", () => {
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.data?.lockedSopProfileId).toBe("default-ai-coding-sop");
-      // SOP 0.8.0 default (AM-015 / DEC-041) — fresh init pins 0.8.0; current bundled is 0.8.0.
-      expect(result.data?.lockedSopProfileVersion).toBe("0.8.0");
-      expect(result.data?.currentOcnSopProfileVersion).toBe("0.8.0");
+      // SOP 0.9.0 default (AM-017 / DEC-043) — fresh init pins 0.9.0; current bundled is 0.9.0.
+      expect(result.data?.lockedSopProfileVersion).toBe("0.9.0");
+      expect(result.data?.currentOcnSopProfileVersion).toBe("0.9.0");
       expect(result.data?.diffDetected).toBe(false);
     }
   });

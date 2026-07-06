@@ -70,9 +70,9 @@ describe("SopProfile state-machine API", () => {
     ]);
   });
 
-  it("returns empty arrays for state stubs that remain in 0.2.0 (state_ship / state_reflect)", () => {
-    expect(profile.stepsForState("state_ship")).toEqual([]);
-    expect(profile.stepsForState("state_reflect")).toEqual([]);
+  it("wires SHIP/REFLECT in the 0.9.0 default (state_ship=step_release, state_reflect=step_evolution_report)", () => {
+    expect(profile.stepsForState("state_ship")).toEqual(["step_release"]);
+    expect(profile.stepsForState("state_reflect")).toEqual(["step_evolution_report"]);
   });
 
   it("artifactPathForStep maps to the project-relative doc path", () => {
@@ -217,10 +217,10 @@ describe("nextStepFor", () => {
     });
   });
 
-  it("returns null at the terminal step (state_verify/step_final_build_verdict, since SHIP/REFLECT are stubs)", () => {
+  it("returns null at the terminal step (state_reflect/step_evolution_report in the 0.9.0 default)", () => {
     const next = nextStepFor(profile, {
-      stateId: "state_verify",
-      stepId: "step_final_build_verdict",
+      stateId: "state_reflect",
+      stepId: "step_evolution_report",
     });
     expect(next).toBeNull();
   });

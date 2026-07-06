@@ -19,9 +19,9 @@ describe("SOP 0.9.0 profile registration (P4a)", () => {
     expect(KNOWN_SOP_PROFILE_VERSIONS).toContain("0.9.0");
   });
 
-  it("does NOT flip the runtime default in P4a (still 0.8.0)", () => {
-    expect(DEFAULT_SOP_PROFILE_VERSION).toBe("0.8.0");
-    expect(loadSopProfile().version).toBe("0.8.0");
+  it("the runtime default is now 0.9.0 (activation, AM-017 / DEC-043)", () => {
+    expect(DEFAULT_SOP_PROFILE_VERSION).toBe("0.9.0");
+    expect(loadSopProfile().version).toBe("0.9.0");
   });
 
   it("wires state_ship → step_release and state_reflect → step_evolution_report", () => {

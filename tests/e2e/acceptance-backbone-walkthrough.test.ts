@@ -20,7 +20,7 @@ async function readStateJson(cwd: string): Promise<Record<string, unknown>> {
   return JSON.parse(await fs.readFile(join(cwd, ".ocoding", "state.json"), "utf8"));
 }
 
-describe("acceptance backbone — from-scratch default (0.8.0) walkthrough", () => {
+describe("acceptance backbone — from-scratch pinned-0.8.0 walkthrough", () => {
   let project: TempProject;
 
   beforeEach(async () => {
@@ -32,8 +32,9 @@ describe("acceptance backbone — from-scratch default (0.8.0) walkthrough", () 
   });
 
   it("fresh init pins 0.8.0; template blocks (no_specs); authored specs pass and freeze the projection", async () => {
-    // 1) Fresh init on the DEFAULT profile.
-    await initProject({ cwd: project.cwd, tier: "minimal" });
+    // 1) Fresh init pinned to 0.8.0 (the default is now 0.9.0; this suite
+    //    exercises the 0.8.0 acceptance cutover specifically).
+    await initProject({ cwd: project.cwd, tier: "minimal", sopVersion: "0.8.0" });
     const state = await readStateJson(project.cwd);
     expect((state["project"] as Record<string, unknown>)["sopProfileVersion"]).toBe("0.8.0");
 

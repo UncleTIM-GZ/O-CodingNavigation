@@ -334,7 +334,7 @@ export function isKnownSopProfileVersion(version: string): version is SopProfile
  * step_acceptance_criteria. Older pins keep their behavior via
  * `resolveProfileForProject` and migrate with `ocn sop upgrade`.
  */
-export const DEFAULT_SOP_PROFILE_VERSION: SopProfileVersion = "0.8.0";
+export const DEFAULT_SOP_PROFILE_VERSION: SopProfileVersion = "0.9.0";
 
 export function loadSopProfile(): SopProfile {
   return getProfile(DEFAULT_SOP_PROFILE_VERSION);

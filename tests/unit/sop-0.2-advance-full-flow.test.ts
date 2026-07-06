@@ -282,7 +282,7 @@ describe("SOP 0.3.0 advance — full 20-step flow (pinned 0.3.0)", () => {
     }
   });
 
-  it("loadSopProfile() default lists all 20 wired steps in the canonical order", () => {
+  it("loadSopProfile() default (0.9.0) lists the 20 steps + SHIP/REFLECT in canonical order", () => {
     const profile = loadSopProfile();
     const flat: string[] = [];
     for (const stateId of profile.stateOrder) {
@@ -290,6 +290,10 @@ describe("SOP 0.3.0 advance — full 20-step flow (pinned 0.3.0)", () => {
         flat.push(stepId);
       }
     }
-    expect(flat).toEqual(FULL_PATH.map((p) => p.stepId));
+    expect(flat).toEqual([
+      ...FULL_PATH.map((p) => p.stepId),
+      "step_release",
+      "step_evolution_report",
+    ]);
   });
 });
