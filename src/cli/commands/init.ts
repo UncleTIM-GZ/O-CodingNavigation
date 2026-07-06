@@ -3,22 +3,21 @@ import { initProject, type InitData } from "../../core/init.js";
 import { setupAgentIntegration } from "../../core/agent-setup/setup.js";
 import { msg } from "../../core/i18n.js";
 import { blocked, ok } from "../../core/result.js";
-import type { SopProfileVersion } from "../../core/sop/loader.js";
+import {
+  KNOWN_SOP_PROFILE_VERSIONS,
+  isKnownSopProfileVersion,
+  type SopProfileVersion,
+} from "../../core/sop/loader.js";
 import type { CommandResult } from "../../types/result.js";
 import { outputResult } from "../output.js";
 import type { Tier } from "../../types/state.js";
 
-const KNOWN_SOP_VERSIONS: readonly SopProfileVersion[] = [
-  "0.1.0",
-  "0.2.0",
-  "0.3.0",
-  "0.4.0",
-  "0.5.0",
-  "0.7.0",
-];
+// Single source of truth — the loader's registry (never a hand-maintained copy,
+// which drifts: it stalled at 0.7.0 through the 0.8.0/0.9.0 releases).
+const KNOWN_SOP_VERSIONS: readonly SopProfileVersion[] = KNOWN_SOP_PROFILE_VERSIONS;
 
 function isKnownSopVersion(v: string): v is SopProfileVersion {
-  return (KNOWN_SOP_VERSIONS as readonly string[]).includes(v);
+  return isKnownSopProfileVersion(v);
 }
 
 // AM-013 / DEC-038 — after a successful `ocn init`, wire the project for Claude

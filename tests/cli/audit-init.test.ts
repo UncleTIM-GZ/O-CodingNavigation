@@ -57,8 +57,8 @@ describe("ocn init — audit trail", () => {
     const data = projectInit?.data as Record<string, unknown> | undefined;
     expect(data?.["tier"]).toBe("minimal");
     expect(data?.["sopProfileId"]).toBe("default-ai-coding-sop");
-    // SOP 0.8.0 (DEC-039) — fresh init pins to 0.8.0 (npm/SOP lockstep).
-    expect(data?.["sopProfileVersion"]).toBe("0.8.0");
+    // SOP 0.9.0 (AM-017 / DEC-043) — fresh init pins to 0.9.0 (npm/SOP lockstep).
+    expect(data?.["sopProfileVersion"]).toBe("0.9.0");
   }, 30_000);
 
   it("a second `ocn init` (already-initialized) does NOT emit project_initialized again", async () => {

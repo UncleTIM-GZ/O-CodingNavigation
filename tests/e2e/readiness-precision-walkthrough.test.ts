@@ -30,9 +30,15 @@ describe("readiness precise activation — fresh 0.8.0 walkthrough (AM-014)", ()
   });
 
   it("不提前: DISCOVERY advances to SPEC with the 8 downstream checks DEFERRED", async () => {
-    const init = await spawnOcn(["init", "--tier", "minimal", "--no-agent"], { cwd: project.cwd });
+    const init = await spawnOcn(
+      ["init", "--tier", "minimal", "--sop-version", "0.8.0", "--no-agent"],
+      {
+        cwd: project.cwd,
+      },
+    );
     expect(init.exitCode).toBe(0);
-    // Default profile must be the readiness-ON 0.8.0 (no --sop-version pin).
+    // Pinned to the readiness-ON 0.8.0 (identical rulebook to the 0.9.0 default,
+    // but without the SPEC-phase outcome gate interfering with the readiness walk).
     const state0 = JSON.parse(
       await fs.readFile(join(project.cwd, ".ocoding", "state.json"), "utf8"),
     );
