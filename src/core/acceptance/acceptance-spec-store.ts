@@ -1,7 +1,11 @@
 import { createHash } from "node:crypto";
 import { promises as fs } from "node:fs";
 import { dirname } from "node:path";
-import { AcceptanceProjection, type AcceptanceSpec } from "../../types/acceptance-spec.js";
+import {
+  AcceptanceProjection,
+  type AcceptanceSpec,
+  type AcceptanceSpecV2,
+} from "../../types/acceptance-spec.js";
 import { Paths } from "../paths.js";
 import { nowIsoUtc } from "../time.js";
 
@@ -16,16 +20,39 @@ export function sha256Hex(text: string): string {
   return createHash("sha256").update(text).digest("hex");
 }
 
-export function buildAcceptanceProjection(
-  specs: readonly AcceptanceSpec[],
-  specsHash: string,
-): AcceptanceProjection {
+// Strip an AcceptanceSpecV2 down to the frozen v1 shape (drops kind/measure),
+// preserving the exact key order the pre-0.9.0 projection emitted so a build-only
+// projection is byte-identical.
+function toV1Spec(spec: AcceptanceSpecV2): AcceptanceSpec {
   return {
-    version: 1,
-    generatedAt: nowIsoUtc(),
-    specsHash,
-    items: [...specs],
+    id: spec.id,
+    desc: spec.desc,
+    trace: [...spec.trace],
+    ...(spec.given !== undefined ? { given: spec.given } : {}),
+    ...(spec.when !== undefined ? { when: spec.when } : {}),
+    ...(spec.then !== undefined ? { then: spec.then } : {}),
+    ...(spec.priority !== undefined ? { priority: spec.priority } : {}),
   };
+}
+
+export function buildAcceptanceProjection(
+  specs: readonly AcceptanceSpecV2[],
+  specsHash: string,
+  // AC-16 — pin awareness. Only a 0.9.0+ profile emits v2 (kind/measure).
+  // A <0.9.0 pin with `kind:outcome` in docs still gets v1 (the outcome kind
+  // is dropped), which keeps every downstream consumer byte-identical AND
+  // holds the gate-runner's outcome-freeze bypass (keyed on `version === 2`)
+  // dormant. Defaults to `true` so callers that don't thread a profile
+  // (tests, non-gate paths) keep the pre-AC-16 behavior.
+  outcomeCapable = true,
+): AcceptanceProjection {
+  const generatedAt = nowIsoUtc();
+  const hasOutcome = outcomeCapable && specs.some((s) => s.kind === "outcome");
+  if (!hasOutcome) {
+    // Byte-identical with pre-0.9.0: v1 shape, no kind/measure keys.
+    return { version: 1, generatedAt, specsHash, items: specs.map(toV1Spec) };
+  }
+  return { version: 2, generatedAt, specsHash, items: [...specs] };
 }
 
 export async function writeAcceptanceSpecs(

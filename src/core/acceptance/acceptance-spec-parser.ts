@@ -5,6 +5,8 @@ import {
   stripHtmlComments,
 } from "../execution-navigator/acceptance-parser-helpers.js";
 import { ACCEPTANCE_ID_RE } from "../../types/acceptance-spec.js";
+import type { AcceptanceKind, MeasureContract } from "../../types/outcome.js";
+import { buildMeasure, hasAnyMeasureField, resolveKind } from "./measure-parser.js";
 
 // SOP 0.8.0 (AM-015 / DEC-041) — Acceptance Spec Block parser. PURE: markdown
 // in, structured specs + structural defects out; never throws, no IO. Mirrors
@@ -13,19 +15,33 @@ import { ACCEPTANCE_ID_RE } from "../../types/acceptance-spec.js";
 // comments and fenced code blocks inside it are stripped so examples never
 // register as specs.
 
-export type AcceptanceDefectCode = "no_specs" | "duplicate_id" | "invalid_id" | "missing_field";
+export type AcceptanceDefectCode =
+  | "no_specs"
+  | "duplicate_id"
+  | "invalid_id"
+  | "missing_field"
+  // SOP 0.9.0 (AM-016) — outcome measurement contract defects.
+  | "invalid_kind"
+  | "missing_measure_field"
+  | "invalid_threshold"
+  | "invalid_due"
+  | "invalid_timeout";
 
 export interface AcceptanceDefect {
   readonly code: AcceptanceDefectCode;
   /** The offending acceptance id, when the defect is spec-scoped. */
   readonly specId?: string;
-  /** The missing/offending field name (missing_field). */
+  /** The missing/offending field name or value (missing_field / measure defects). */
   readonly field?: string;
 }
 
 export interface ParsedAcceptance {
   readonly id: string;
   readonly desc: string;
+  /** SOP 0.9.0 — build (default) vs outcome. */
+  readonly kind: AcceptanceKind;
+  /** SOP 0.9.0 — present iff kind === "outcome" and the contract is well-formed. */
+  readonly measure?: MeasureContract;
   readonly given?: string;
   readonly when?: string;
   readonly then?: string;
@@ -52,8 +68,17 @@ const KNOWN_KEYS: ReadonlySet<string> = new Set([
   "then",
   "priority",
   "trace",
+  // SOP 0.9.0 (AM-016) — outcome kind + measurement contract keys.
+  "kind",
+  "measure.command",
+  "measure.threshold",
+  "measure.source",
+  "measure.due",
+  "measure.timeout",
 ]);
-const BULLET_FIELD_RE = /^\s*[-*]\s+([A-Za-z_]+)\s*[:：]\s*(.*)$/;
+// Keys may contain dots (measure.command) and digits; the value is everything
+// after the first `:`/`：`.
+const BULLET_FIELD_RE = /^\s*[-*]\s+([A-Za-z_][A-Za-z0-9_.]*)\s*[:：]\s*(.*)$/;
 
 // Lists split on ASCII or CJK comma; entries trimmed, empties dropped.
 function splitList(value: string): readonly string[] {
@@ -129,12 +154,23 @@ function collectBlocks(sectionText: string, warnings: string[]): MutableSpec[] {
   return blocks;
 }
 
-function toParsedAcceptance(block: MutableSpec, defects: AcceptanceDefect[]): ParsedAcceptance {
+function toParsedAcceptance(
+  block: MutableSpec,
+  defects: AcceptanceDefect[],
+  warnings: string[],
+): ParsedAcceptance {
   const get = (key: string): string => block.fields.get(key) ?? "";
   const displayId = ACCEPTANCE_ID_RE.test(block.id) ? normaliseAcId(block.id) : block.id;
   if (get("desc").length === 0) {
     defects.push({ code: "missing_field", specId: displayId, field: "desc" });
   }
+  const kind = resolveKind(block.fields, displayId, defects);
+  if (kind === "build" && hasAnyMeasureField(block.fields)) {
+    warnings.push(
+      `acceptance ${displayId}: measure.* fields ignored on a build spec (missing kind: outcome?)`,
+    );
+  }
+  const measure = kind === "outcome" ? buildMeasure(block.fields, displayId, defects) : undefined;
   const given = get("given");
   const when = get("when");
   const then = get("then");
@@ -142,7 +178,9 @@ function toParsedAcceptance(block: MutableSpec, defects: AcceptanceDefect[]): Pa
   return {
     id: displayId,
     desc: get("desc"),
+    kind,
     trace: splitList(get("trace")),
+    ...(measure !== undefined ? { measure } : {}),
     ...(given.length > 0 ? { given } : {}),
     ...(when.length > 0 ? { when } : {}),
     ...(then.length > 0 ? { then } : {}),
@@ -187,7 +225,7 @@ export function parseAcceptanceSpecs(markdown: string): AcceptanceSpecParseResul
       continue; // keep the first block; later duplicates are ignored
     }
     seen.add(canonical);
-    specs.push(toParsedAcceptance(block, defects));
+    specs.push(toParsedAcceptance(block, defects, warnings));
   }
 
   return { found: true, sectionText, specs, defects, warnings };

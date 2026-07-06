@@ -85,6 +85,18 @@ import {
 import { gatesYaml as gatesYaml080 } from "../../sops/default-ai-coding-sop/0.8.0/gates.js";
 import { readinessYaml as readinessYaml080 } from "../../sops/default-ai-coding-sop/0.8.0/readiness.js";
 import { sopYaml as sopYaml080 } from "../../sops/default-ai-coding-sop/0.8.0/sop.js";
+import { artifactsYaml as artifactsYaml090 } from "../../sops/default-ai-coding-sop/0.9.0/artifacts.js";
+import { defaultConfigYaml as defaultConfigYaml090 } from "../../sops/default-ai-coding-sop/0.9.0/config.js";
+import {
+  PROFILE_ID as PROFILE_ID_090,
+  PROFILE_VERSION as PROFILE_VERSION_090,
+  REQUIRED_SECTIONS_BY_STEP as REQUIRED_SECTIONS_BY_STEP_090,
+  STATE_ORDER as STATE_ORDER_090,
+  STEPS_BY_STATE as STEPS_BY_STATE_090,
+} from "../../sops/default-ai-coding-sop/0.9.0/data.js";
+import { gatesYaml as gatesYaml090 } from "../../sops/default-ai-coding-sop/0.9.0/gates.js";
+import { readinessYaml as readinessYaml090 } from "../../sops/default-ai-coding-sop/0.9.0/readiness.js";
+import { sopYaml as sopYaml090 } from "../../sops/default-ai-coding-sop/0.9.0/sop.js";
 
 // P1-003 — the runtime profile and the persisted .ocoding/sop.yaml share a
 // single source of truth (data.ts). The loader is a thin adapter that wires
@@ -106,7 +118,15 @@ import { sopYaml as sopYaml080 } from "../../sops/default-ai-coding-sop/0.8.0/so
 // gate + task ledger are new.)
 export const STATE_ORDER: readonly StateId[] = STATE_ORDER_080;
 
-export type SopProfileVersion = "0.1.0" | "0.2.0" | "0.3.0" | "0.4.0" | "0.5.0" | "0.7.0" | "0.8.0";
+export type SopProfileVersion =
+  | "0.1.0"
+  | "0.2.0"
+  | "0.3.0"
+  | "0.4.0"
+  | "0.5.0"
+  | "0.7.0"
+  | "0.8.0"
+  | "0.9.0";
 
 interface ProfileSource {
   readonly id: string;
@@ -212,6 +232,23 @@ const PROFILE_SOURCES: Readonly<Record<SopProfileVersion, ProfileSource>> = {
     stateOrder: STATE_ORDER_080,
     stepsByState: STEPS_BY_STATE_080,
     requiredSectionsByStep: REQUIRED_SECTIONS_BY_STEP_080,
+  },
+  // SOP 0.9.0 — 0.8.0 + Outcome Backbone activation (AM-016 / DEC-042). First
+  // profile to wire state_ship (step_release) and state_reflect
+  // (step_evolution_report); the SHIP/REFLECT gates + runtime-default flip land
+  // in P4b. Registered + importable here so `ocn init --sop-version 0.9.0` and
+  // the migration/regression tests can pin it while the default stays 0.8.0.
+  "0.9.0": {
+    id: PROFILE_ID_090,
+    version: PROFILE_VERSION_090 as SopProfileVersion,
+    sopYaml: sopYaml090,
+    gatesYaml: gatesYaml090,
+    artifactsYaml: artifactsYaml090,
+    defaultConfigYaml: defaultConfigYaml090,
+    readinessYaml: readinessYaml090,
+    stateOrder: STATE_ORDER_090,
+    stepsByState: STEPS_BY_STATE_090,
+    requiredSectionsByStep: REQUIRED_SECTIONS_BY_STEP_090,
   },
 };
 

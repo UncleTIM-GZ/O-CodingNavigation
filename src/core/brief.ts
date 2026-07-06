@@ -9,6 +9,7 @@ import { summarizeLogicGraph, type LogicBackboneSummary } from "./logic/logic-gr
 import { readReadinessLedger } from "./readiness/readiness-store.js";
 import type { ReadinessLedger } from "../types/readiness.js";
 import { readTaskLedger } from "./task/task-ledger-store.js";
+import { summarizeOutcome, type OutcomeBriefSummary } from "./brief-outcome-section.js";
 import type { TaskLedger } from "../types/task.js";
 import { readAcceptanceSpecs } from "./acceptance/acceptance-spec-store.js";
 import type { AcceptanceProjection } from "../types/acceptance-spec.js";
@@ -22,7 +23,7 @@ import {
 } from "./automation/governance-text.js";
 import { blocked, ok } from "./result.js";
 import { msg } from "./i18n.js";
-import { loadSopProfile } from "./sop/loader.js";
+import { resolveProfileForProject } from "./sop/loader.js";
 import { StateInvalidError, StateNotFoundError, readState } from "./state/state-store.js";
 import { STOPPED_NOTICE, STOPPED_REMINDER, isStopped } from "./stop/stopped.js";
 
@@ -52,6 +53,9 @@ export interface BriefData {
   readonly tasks?: TaskBriefSummary;
   /** Present once the acceptance projection has been frozen (SOP 0.8.0 / AM-015). */
   readonly acceptance?: AcceptanceBriefSummary;
+  /** Present once an outcome ledger exists (SOP 0.9.0 / AM-016). Verdict counts
+   *  + freshness — the reality-contact dashboard. */
+  readonly outcome?: OutcomeBriefSummary;
   /** Present once the contract drift gate has run (AM-012; opt-in). */
   readonly contractBackbone?: ContractSummary;
   /** AM-009 — present only when auto mode is on (or suspended). Manual-mode
@@ -107,7 +111,9 @@ export async function generateBrief(opts: BriefOptions): Promise<CommandResult<B
     });
   }
 
-  const profile = loadSopProfile();
+  // Pin-resolved (H-3) — keep a 0.8.0-pinned project on 0.8.0 governance/steps
+  // once the (still-pending, human-gated) default flip to 0.9.0 lands.
+  const profile = resolveProfileForProject(state.project.sopProfileVersion);
   const required = profile.requiredSectionsForStep(state.currentStepId);
   const relativeArtifactPath = profile.artifactPathForStep(state.currentStepId);
 
@@ -190,6 +196,10 @@ export async function generateBrief(opts: BriefOptions): Promise<CommandResult<B
   const acceptance =
     acceptanceProjection === null ? undefined : summarizeAcceptance(acceptanceProjection);
 
+  // SOP 0.9.0 (AM-016) — fold the outcome ledger's verdict counts into the brief.
+  // Absent until an outcome AC is frozen under 0.9.0+.
+  const outcome = await summarizeOutcome(opts.cwd, Date.now());
+
   // AM-012 — fold the contract drift coverage into the brief so the BUILD/VERIFY
   // loop sees wired/undeclared/unverified counts. Read only when the project is
   // still opted in, so a disabled contract never surfaces a stale projection.
@@ -224,6 +234,7 @@ export async function generateBrief(opts: BriefOptions): Promise<CommandResult<B
       ...(readiness !== undefined ? { readiness } : {}),
       ...(tasks !== undefined ? { tasks } : {}),
       ...(acceptance !== undefined ? { acceptance } : {}),
+      ...(outcome !== undefined ? { outcome } : {}),
       ...(contractBackbone !== undefined ? { contractBackbone } : {}),
       ...(automationActive ? { automation: automationStatus } : {}),
     },

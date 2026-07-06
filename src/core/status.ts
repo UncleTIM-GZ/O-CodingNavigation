@@ -3,7 +3,7 @@ import type { CommandResult } from "../types/result.js";
 import type { ProjectState } from "../types/state.js";
 import { blocked, ok } from "./result.js";
 import { msg } from "./i18n.js";
-import { loadSopProfile } from "./sop/loader.js";
+import { resolveProfileForProject } from "./sop/loader.js";
 import { StateInvalidError, StateNotFoundError, readState } from "./state/state-store.js";
 import { STOPPED_REMINDER, isStopped } from "./stop/stopped.js";
 
@@ -63,7 +63,9 @@ export async function getStatus(opts: StatusOptions): Promise<CommandResult<Stat
     );
   }
 
-  const profile = loadSopProfile();
+  // Pin-resolved (H-3) — a 0.8.0-pinned project must keep rendering 0.8.0
+  // structure once the (still-pending, human-gated) default flip to 0.9.0 lands.
+  const profile = resolveProfileForProject(state.project.sopProfileVersion);
   const relativeArtifactPath = profile.artifactPathForStep(state.currentStepId);
   const currentArtifactPath =
     relativeArtifactPath === null ? "" : join(opts.cwd, relativeArtifactPath);

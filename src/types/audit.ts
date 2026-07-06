@@ -63,6 +63,20 @@ export const AuditEventType = z.enum([
   // cursor_rewind / cycle_started (result success|failed + data.failureReason).
   // Human-only by construction (the switch refuses ai_agent).
   "project_stopped",
+  // SOP 0.9.0 — Outcome Backbone. A frozen measurement probe ran and its
+  // verdict was appended to `.ocoding/outcome-ledger.json` (`ocn outcome
+  // check`, push event). These events are the CHAINED trust root: each carries
+  // `data.prevEventHash` linking the prior outcome_measured event, so the
+  // never-archived audit JSONL — not the attacker-editable ledger — is what
+  // `reconcileLedgerWithAudit` verifies against. result: pass|failed|no_evidence.
+  // See src/core/outcome/outcome-integrity.ts.
+  // NOTE: the Outcome Backbone amendment/DEC number COLLIDES with `ocn stop`
+  // (both drafted as AM-016/DEC-042); the outcome docs need renumbering to
+  // AM-017/DEC-043 in a follow-up — tracked separately from this merge.
+  "outcome_measured",
+  // SOP 0.9.0 — per-AC or project-level outcome escape hatch was recorded
+  // (`ocn outcome waive`, human-only push event). result: success.
+  "outcome_waived",
 ]);
 export type AuditEventType = z.infer<typeof AuditEventType>;
 
@@ -74,6 +88,10 @@ export const AuditResult = z.enum([
   "warning",
   "detected",
   "executed",
+  // SOP 0.9.0 — an outcome probe found zero evidence (exit 20 / empty
+  // snapshot). Distinct from `failed` (a measured threshold miss) because the
+  // Outcome Backbone blocks on unmeasured, never on measured-fail.
+  "no_evidence",
 ]);
 export type AuditResult = z.infer<typeof AuditResult>;
 

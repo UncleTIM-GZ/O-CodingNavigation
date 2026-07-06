@@ -33,7 +33,13 @@ function composeBlockedMessage(defects: readonly AcceptanceDefect[]): BilingualM
   return msg(`Acceptance Specs have defects: ${en}${moreEn}`, `验收规格存在缺陷：${zh}${moreZh}`);
 }
 
-export function evaluateAcceptanceSpecs(content: string): AcceptanceGateOutcome {
+export function evaluateAcceptanceSpecs(
+  content: string,
+  // AC-16 — true only for a 0.9.0+ pin. Threaded into the projection builder so
+  // a <0.9.0 project with `kind:outcome` in docs gets a v1 projection + a warn
+  // (never a v2 freeze).
+  outcomeCapable = true,
+): AcceptanceGateOutcome {
   const parsed = parseAcceptanceSpecs(content);
   if (parsed.defects.length > 0) {
     return {
@@ -44,12 +50,23 @@ export function evaluateAcceptanceSpecs(content: string): AcceptanceGateOutcome 
     };
   }
   const specs = parsed.specs.map(parsedAcceptanceToSpec);
-  const projection = buildAcceptanceProjection(specs, sha256Hex(parsed.sectionText ?? ""));
+  const projection = buildAcceptanceProjection(
+    specs,
+    sha256Hex(parsed.sectionText ?? ""),
+    outcomeCapable,
+  );
+  const downgradedOutcome = !outcomeCapable && specs.some((s) => s.kind === "outcome");
+  const warn = downgradedOutcome
+    ? msg(
+        " (outcome AC require SOP 0.9.0 — recorded as ordinary AC; run `ocn sop upgrade` to activate the Outcome Backbone)",
+        "（outcome 验收项需 SOP 0.9.0——已按普通验收项登记；执行 `ocn sop upgrade` 激活结果主干）",
+      )
+    : msg("", "");
   return {
     ok: true,
     message: msg(
-      `Acceptance Specs validated (${specs.length} spec(s); frozen to projection).`,
-      `验收规格校验通过（${specs.length} 条；已冻结至投影）。`,
+      `Acceptance Specs validated (${specs.length} spec(s); frozen to projection).${warn.en}`,
+      `验收规格校验通过（${specs.length} 条；已冻结至投影）。${warn.zh}`,
     ),
     projection,
   };

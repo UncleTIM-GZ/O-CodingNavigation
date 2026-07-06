@@ -16,8 +16,17 @@ import { evaluateTaskSpecs } from "../task/task-gate.js";
 import { writeTaskLedger } from "../task/task-ledger-store.js";
 import { evaluateAcceptanceSpecs } from "../acceptance/acceptance-gate.js";
 import { writeAcceptanceSpecs } from "../acceptance/acceptance-spec-store.js";
+import {
+  readOutcomeLedger,
+  reconcileFrozenContracts,
+  writeOutcomeLedger,
+} from "../outcome/outcome-ledger-store.js";
+import { outcomeSpecGateBlockOrNull } from "../outcome/outcome-spec-gate.js";
+import { requiresOutcome } from "../outcome/pin.js";
 import { runContractDriftStep } from "../contract/contract-gate-step.js";
 import { evaluateLogicBackbone } from "./logic-backbone-gate.js";
+import { runOutcomeReflectGateStep } from "./outcome-reflect-gate-step.js";
+import { runOutcomeShipGateStep } from "./outcome-ship-gate-step.js";
 import { readinessStepBlockOrNull } from "./readiness-step.js";
 import { StateInvalidError, StateNotFoundError, readState } from "../state/state-store.js";
 
@@ -193,13 +202,53 @@ export async function runGate(opts: RunGateOptions): Promise<CommandResult<GateR
     return blocked(step.failureCode, step.message, result);
   };
 
+  // SOP 0.9.0 (AM-016) P4b §C — the SHIP gate for step_release. Cross-cutting
+  // like readiness/contract, self-guarded to state_ship + a 0.9.0+ pin. Because
+  // step_release is null-artifact-only, this MUST run in the null-artifact
+  // branch (the normal-pass path never reaches it) — otherwise the runner
+  // auto-passes SHIP. On block/io_error it returns the mapped failure; else null.
+  const shipGateOrNull = async (): Promise<CommandResult<GateResult> | null> => {
+    const step = await runOutcomeShipGateStep({
+      cwd: opts.cwd,
+      profile,
+      currentStateId: state.currentStateId,
+    });
+    if (step.kind === "skip" || step.kind === "pass") return null;
+    if (step.kind === "io_error") return blocked("ERR_IO_OR_CONFIG", step.message);
+    const result: GateResult = {
+      status: "blocked",
+      currentStateId: state.currentStateId,
+      currentStepId: state.currentStepId,
+      missingRequiredSectionIds: [],
+      blockingReasons: [step.reason],
+    };
+    await safeAudit(
+      opts.cwd,
+      createAuditEvent(
+        baseAudit("artifact_gate_blocked", "blocked", step.message, {
+          status: "blocked",
+          reason: step.reason,
+        }),
+      ),
+    );
+    // A missing/corrupt ledger or integrity breach is an invalid-artifact
+    // condition (exit 2); an unmeasured/undecided outcome is a gate failure.
+    const code =
+      step.reason === "outcome_ledger_missing" || step.reason.startsWith("outcome_integrity_")
+        ? "ERR_ARTIFACT_INVALID"
+        : "ERR_GATE_FAILED";
+    return blocked(code, step.message, result);
+  };
+
   // Step has no required artifact — readiness still applies (cross-cutting),
-  // then auto-pass with not_applicable.
+  // then the SHIP gate (state_ship only), then auto-pass with not_applicable.
   if (relativeArtifactPath === null) {
     const readinessBlock = await readinessOrNull();
     if (readinessBlock !== null) return readinessBlock;
     const contractBlock = await contractDriftOrNull();
     if (contractBlock !== null) return contractBlock;
+    const shipBlock = await shipGateOrNull();
+    if (shipBlock !== null) return shipBlock;
     const result: GateResult = {
       status: "not_applicable",
       currentStateId: state.currentStateId,
@@ -294,7 +343,7 @@ export async function runGate(opts: RunGateOptions): Promise<CommandResult<GateR
     state.currentStepId === "step_acceptance_criteria" &&
     required.some((r) => r.id === "section_acceptance_specs")
   ) {
-    const outcome = evaluateAcceptanceSpecs(content);
+    const outcome = evaluateAcceptanceSpecs(content, requiresOutcome(profile.version));
     if (!outcome.ok) {
       const acResult: GateResult = {
         status: "blocked",
@@ -321,6 +370,15 @@ export async function runGate(opts: RunGateOptions): Promise<CommandResult<GateR
     if (outcome.projection !== undefined) {
       try {
         await writeAcceptanceSpecs(opts.cwd, outcome.projection);
+        // SOP 0.9.0 (AM-016) — freeze outcome contracts as a side-effect of the
+        // acceptance gate passing (no `ocn outcome freeze` command, invariant §8).
+        // A v2 projection carries kind:outcome specs; seed/refresh the ledger so
+        // `ocn outcome check` has a frozen command hash to run + drift-check.
+        if (outcome.projection.version === 2) {
+          const prevLedger = await readOutcomeLedger(opts.cwd);
+          const nextLedger = reconcileFrozenContracts(outcome.projection.items, prevLedger);
+          if (nextLedger !== null) await writeOutcomeLedger(opts.cwd, nextLedger);
+        }
       } catch (err) {
         const ioMessage = msg(
           `Failed to persist acceptance specs projection: ${(err as Error).message}`,
@@ -336,6 +394,33 @@ export async function runGate(opts: RunGateOptions): Promise<CommandResult<GateR
           ),
         );
         return blocked("ERR_IO_OR_CONFIG", ioMessage);
+      }
+      // SOP 0.9.0 (AM-016) P3 §3.1 — SPEC outcome requirement (dormant <0.9.0):
+      // a passing acceptance projection must declare >=1 outcome AC or a valid
+      // no-outcome waiver. Runs after the freeze so the ledger's waiver is current.
+      const specBlock = await outcomeSpecGateBlockOrNull(
+        opts.cwd,
+        profile.version,
+        outcome.projection,
+      );
+      if (specBlock !== null) {
+        await safeAudit(
+          opts.cwd,
+          createAuditEvent(
+            baseAudit("artifact_gate_blocked", "blocked", specBlock.message, {
+              status: "blocked",
+              reason: specBlock.reason,
+            }),
+          ),
+        );
+        return blocked("ERR_GATE_FAILED", specBlock.message, {
+          status: "blocked",
+          currentStateId: state.currentStateId,
+          currentStepId: state.currentStepId,
+          artifactPath: relativeArtifactPath,
+          missingRequiredSectionIds: [],
+          blockingReasons: [specBlock.reason],
+        });
       }
     }
   }
@@ -447,6 +532,46 @@ export async function runGate(opts: RunGateOptions): Promise<CommandResult<GateR
         );
         return blocked("ERR_IO_OR_CONFIG", ioMessage);
       }
+    }
+  }
+
+  // SOP 0.9.0 (AM-016) P4b §D.1 — REFLECT gate on step_evolution_report. Runs
+  // after the required-section gate passes; mechanically cross-checks the
+  // `### Outcome References` lines against the frozen ledger (self-guarded to
+  // step_evolution_report + a 0.9.0+ pin).
+  {
+    const reflect = await runOutcomeReflectGateStep({
+      cwd: opts.cwd,
+      profile,
+      currentStepId: state.currentStepId,
+      content,
+    });
+    if (reflect.kind === "io_error") return blocked("ERR_IO_OR_CONFIG", reflect.message);
+    if (reflect.kind === "blocked") {
+      const rResult: GateResult = {
+        status: "blocked",
+        currentStateId: state.currentStateId,
+        currentStepId: state.currentStepId,
+        artifactPath: relativeArtifactPath,
+        missingRequiredSectionIds: [],
+        blockingReasons: [reflect.reason],
+      };
+      await safeAudit(
+        opts.cwd,
+        createAuditEvent(
+          baseAudit("artifact_gate_blocked", "blocked", reflect.message, {
+            status: "blocked",
+            reason: reflect.reason,
+          }),
+        ),
+      );
+      // Structural defects (missing ledger, malformed reference line) → exit 2,
+      // matching acceptance/task structural defects; a ledger-mismatch (accurate
+      // structure, wrong numbers) → exit 1.
+      const structural =
+        reflect.reason === "outcome_ledger_missing" || reflect.reason === "malformed_reference";
+      const code = structural ? "ERR_ARTIFACT_INVALID" : "ERR_GATE_FAILED";
+      return blocked(code, reflect.message, rResult);
     }
   }
 

@@ -14,6 +14,7 @@ import { registerGithubCommand } from "./commands/github.js";
 import { registerHookCommand } from "./commands/hook.js";
 import { registerInitCommand } from "./commands/init.js";
 import { registerNextPromptCommand } from "./commands/next-prompt.js";
+import { registerOutcomeCommand } from "./commands/outcome.js";
 import { registerReadinessCommand } from "./commands/readiness.js";
 import { registerRewindCommand } from "./commands/rewind.js";
 import { registerSopCommand } from "./commands/sop.js";
@@ -58,6 +59,7 @@ registerHookCommand(program);
 // AM-007 / DEC-032 — task backbone (SOP 0.5.0+): ledger overview + frozen
 // verify-command check-off. Human-only; never exposed over MCP.
 registerTaskCommand(program);
+registerOutcomeCommand(program);
 // Execution Navigator skeleton (DEC-024 PR 1) — read-only, no evidence ingestion yet.
 registerExecCommand(program);
 registerGithubCommand(program);

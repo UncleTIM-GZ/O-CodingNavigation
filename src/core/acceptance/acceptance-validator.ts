@@ -28,5 +28,30 @@ export function describeAcceptanceDefect(defect: AcceptanceDefect): BilingualMes
         `acceptance ${id} is missing required field: ${defect.field ?? ""}`,
         `验收 ${id} 缺少必填字段：${defect.field ?? ""}`,
       );
+    case "invalid_kind":
+      return msg(
+        `acceptance ${id} has an unknown kind "${defect.field ?? ""}" (must be build or outcome)`,
+        `验收 ${id} 的 kind 非法："${defect.field ?? ""}"（必须为 build 或 outcome）`,
+      );
+    case "missing_measure_field":
+      return msg(
+        `outcome acceptance ${id} is missing required measurement field: ${defect.field ?? ""}`,
+        `效果型验收 ${id} 缺少必填测量字段：${defect.field ?? ""}`,
+      );
+    case "invalid_threshold":
+      return msg(
+        `outcome acceptance ${id} has an invalid threshold: ${defect.field ?? ""}`,
+        `效果型验收 ${id} 的阈值非法：${defect.field ?? ""}`,
+      );
+    case "invalid_due":
+      return msg(
+        `outcome acceptance ${id} has an invalid measure.due (must be a state id): ${defect.field ?? ""}`,
+        `效果型验收 ${id} 的 measure.due 非法（必须是状态 id）：${defect.field ?? ""}`,
+      );
+    case "invalid_timeout":
+      return msg(
+        `outcome acceptance ${id} has an invalid measure.timeout (integer 1–600): ${defect.field ?? ""}`,
+        `效果型验收 ${id} 的 measure.timeout 非法（1–600 的整数）：${defect.field ?? ""}`,
+      );
   }
 }

@@ -102,4 +102,117 @@ describe("parseAcceptanceSpecs", () => {
     expect(r.defects).toEqual([]);
     expect(r.warnings.some((w) => /unknown key "bogus"/.test(w))).toBe(true);
   });
+
+  // SOP 0.9.0 (AM-016) — Outcome Backbone: kind + measurement contract.
+
+  it("defaults a spec with no kind to build and carries no measure", () => {
+    const s = parseAcceptanceSpecs(SECTION(["### AC-001", "- desc: d"].join("\n"))).specs[0];
+    expect(s?.kind).toBe("build");
+    expect(s?.measure).toBeUndefined();
+  });
+
+  it("parses a well-formed outcome AC with a full measurement contract", () => {
+    const md = SECTION(
+      [
+        "### AC-CORE-3",
+        "- desc: 新用户 30 分钟内完成首份 artifact",
+        "- kind: outcome",
+        "- measure.command: node scripts/probe-onboarding.js",
+        "- measure.threshold: >= 1",
+        "- measure.source: case-records/onboarding/*.json",
+        "- measure.due: state_ship",
+        "- measure.timeout: 90",
+      ].join("\n"),
+    );
+    const r = parseAcceptanceSpecs(md);
+    expect(r.defects).toEqual([]);
+    expect(r.specs[0]?.kind).toBe("outcome");
+    expect(r.specs[0]?.measure).toEqual({
+      command: "node scripts/probe-onboarding.js",
+      threshold: { op: ">=", value: 1 },
+      source: "case-records/onboarding/*.json",
+      due: "state_ship",
+      timeoutSeconds: 90,
+    });
+  });
+
+  it("defaults measure.due and measure.timeout when omitted", () => {
+    const md = SECTION(
+      [
+        "### AC-002",
+        "- desc: d",
+        "- kind: outcome",
+        "- measure.command: run.sh",
+        "- measure.threshold: > 0.5",
+        "- measure.source: out/*.json",
+      ].join("\n"),
+    );
+    const m = parseAcceptanceSpecs(md).specs[0]?.measure;
+    expect(m?.due).toBe("state_ship");
+    expect(m?.timeoutSeconds).toBe(60);
+  });
+
+  it("flags missing measurement fields on an outcome AC", () => {
+    const md = SECTION(["### AC-003", "- desc: d", "- kind: outcome"].join("\n"));
+    const r = parseAcceptanceSpecs(md);
+    const fields = r.defects.filter((d) => d.code === "missing_measure_field").map((d) => d.field);
+    expect(fields).toEqual(["measure.command", "measure.threshold", "measure.source"]);
+    expect(r.specs[0]?.measure).toBeUndefined();
+  });
+
+  it("flags an invalid threshold and an invalid due", () => {
+    const md = SECTION(
+      [
+        "### AC-004",
+        "- desc: d",
+        "- kind: outcome",
+        "- measure.command: c",
+        "- measure.threshold: ~ 1",
+        "- measure.source: s",
+        "- measure.due: SHIP",
+      ].join("\n"),
+    );
+    const r = parseAcceptanceSpecs(md);
+    expect(r.defects.some((d) => d.code === "invalid_threshold" && d.specId === "AC-004")).toBe(
+      true,
+    );
+    expect(r.defects.some((d) => d.code === "invalid_due" && d.specId === "AC-004")).toBe(true);
+  });
+
+  it("flags an invalid measure.timeout (non-integer / out of range) and drops the contract", () => {
+    const md = SECTION(
+      [
+        "### AC-007",
+        "- desc: d",
+        "- kind: outcome",
+        "- measure.command: c",
+        "- measure.threshold: >= 1",
+        "- measure.source: s",
+        "- measure.timeout: 999999",
+      ].join("\n"),
+    );
+    const r = parseAcceptanceSpecs(md);
+    expect(r.defects).toContainEqual({
+      code: "invalid_timeout",
+      specId: "AC-007",
+      field: "999999",
+    });
+    expect(r.specs[0]?.measure).toBeUndefined();
+  });
+
+  it("flags an unknown kind", () => {
+    const md = SECTION(["### AC-005", "- desc: d", "- kind: outome"].join("\n"));
+    const r = parseAcceptanceSpecs(md);
+    expect(r.defects).toContainEqual({ code: "invalid_kind", specId: "AC-005", field: "outome" });
+  });
+
+  it("warns when measure fields appear on a build spec (likely a missing kind: outcome)", () => {
+    const md = SECTION(
+      ["### AC-006", "- desc: d", "- measure.command: c", "- measure.threshold: >= 1"].join("\n"),
+    );
+    const r = parseAcceptanceSpecs(md);
+    expect(r.defects).toEqual([]);
+    expect(r.specs[0]?.kind).toBe("build");
+    expect(r.warnings.some((w) => /measure\.\* fields ignored/.test(w))).toBe(true);
+  });
 });

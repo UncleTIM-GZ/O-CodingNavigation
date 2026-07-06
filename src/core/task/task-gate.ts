@@ -4,9 +4,12 @@ import type { BilingualMessage } from "../../types/i18n.js";
 import type { SopProfile } from "../../types/sop.js";
 import type { TaskLedger, TaskSpec } from "../../types/task.js";
 import { parseAcceptanceCriteria } from "../execution-navigator/acceptance-parser.js";
+import { readAcceptanceSpecs } from "../acceptance/acceptance-spec-store.js";
 import { resolveAcceptanceSpecs } from "../acceptance/acceptance-source.js";
 import { msg } from "../i18n.js";
 import { readLogicGraphProjection } from "../logic/logic-graph-store.js";
+import { readOutcomeLedger } from "../outcome/outcome-ledger-store.js";
+import { requiresOutcome } from "../outcome/pin.js";
 import { buildLedger, readTaskLedger, sha256Hex, verifyHashOf } from "./task-ledger-store.js";
 import { parseTaskSpecs, type ParsedTask, type TaskDefect } from "./task-spec-parser.js";
 import { describeTaskDefect, validateTaskSpecs } from "./task-validator.js";
@@ -89,6 +92,24 @@ function toTaskSpec(task: ParsedTask): TaskSpec {
   };
 }
 
+/** SOP 0.9.0 (AM-016) §E.2 (AC-12) — a project whose only "defect" is an empty
+ *  build plan is legitimate when it carries >=1 UNWAIVED outcome AC: a frozen
+ *  outcome probe IS a verifiable deliverable, so BUILD needn't enumerate tasks.
+ *  The predicate is "unwaived" (not merely "present") so an all-waived project
+ *  can't silently empty BUILD (silent-failure Q3). Dormant below a 0.9.0 pin. */
+async function hasUnwaivedOutcomeAc(opts: EvaluateTaskSpecsOptions): Promise<boolean> {
+  if (!requiresOutcome(opts.profile.version)) return false;
+  const projection = await readAcceptanceSpecs(opts.cwd);
+  if (projection === null || projection.version !== 2) return false;
+  const outcomeIds = projection.items.filter((s) => s.kind === "outcome").map((s) => s.id);
+  if (outcomeIds.length === 0) return false;
+  const ledger = await readOutcomeLedger(opts.cwd);
+  const waived = new Set(
+    (ledger?.entries ?? []).filter((e) => e.waived !== undefined).map((e) => e.acId),
+  );
+  return outcomeIds.some((id) => !waived.has(id));
+}
+
 export async function evaluateTaskSpecs(opts: EvaluateTaskSpecsOptions): Promise<TaskGateOutcome> {
   const parsed = parseTaskSpecs(opts.buildPlanContent);
   const [acIds, logicNodeIds] = await Promise.all([
@@ -96,8 +117,22 @@ export async function evaluateTaskSpecs(opts: EvaluateTaskSpecsOptions): Promise
     readLogicNodeIds(opts.cwd),
   ]);
   const validation = validateTaskSpecs(parsed.tasks, { acIds, logicNodeIds });
-  const defects: readonly TaskDefect[] = [...parsed.defects, ...validation.defects];
-  const warnings: readonly string[] = [...parsed.warnings, ...validation.warnings];
+  let defects: readonly TaskDefect[] = [...parsed.defects, ...validation.defects];
+  let warnings: readonly string[] = [...parsed.warnings, ...validation.warnings];
+
+  // §E.2 — downgrade a lone `no_tasks` defect to a warning for a pure-outcome
+  // project. Only when it is the SOLE defect (any real spec defect still blocks).
+  if (
+    defects.length === 1 &&
+    defects[0]?.code === "no_tasks" &&
+    (await hasUnwaivedOutcomeAc(opts))
+  ) {
+    defects = [];
+    warnings = [
+      ...warnings,
+      "Build plan has no tasks; accepted because the project carries an unwaived outcome AC (a frozen outcome probe is the verifiable deliverable).",
+    ];
+  }
 
   if (defects.length > 0) {
     return {

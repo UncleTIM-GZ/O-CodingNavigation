@@ -12,22 +12,23 @@ import { runGate } from "../../src/core/gate/gate-runner.js";
 import { initProject } from "../../src/core/init.js";
 import { loadSopProfileByVersion } from "../../src/core/sop/loader.js";
 import { readTaskLedger } from "../../src/core/task/task-ledger-store.js";
-import type { AcceptanceSpec } from "../../src/types/acceptance-spec.js";
+import type { AcceptanceSpecV2 } from "../../src/types/acceptance-spec.js";
 import { seedState } from "../helpers/seed-state.js";
 import { createTempProject, type TempProject } from "../helpers/temp-project.js";
 
 // SOP 0.8.0 (AM-015) — the projection is the canonical AC source; the legacy
 // markdown parse is a back-compat fallback (pre-0.8.0 pins / gate-not-passed).
 
-const SPECS: readonly AcceptanceSpec[] = [
+const SPECS: readonly AcceptanceSpecV2[] = [
   {
+    kind: "build",
     id: "AC-INIT-001",
     desc: "init lands .ocoding",
     given: "empty dir",
     when: "ocn init",
     trace: [],
   },
-  { id: "AC-GATE-001", desc: "gate aggregates step gates", trace: [] },
+  { kind: "build", id: "AC-GATE-001", desc: "gate aggregates step gates", trace: [] },
 ];
 
 describe("acceptance source: projection-first with markdown fallback", () => {

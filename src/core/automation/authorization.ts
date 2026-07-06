@@ -111,6 +111,39 @@ export function authorizeAiTaskCheck(ctx: AiAuthContext, currentStateId: string)
   return commonRefusal(ctx);
 }
 
+/** SOP 0.9.0 (AM-016) — `ocn outcome check` runs a frozen probe and appends to
+ *  the outcome ledger. Same delegation envelope as `ocn task check`: phase-2
+ *  auto mode ON and inside BUILD/VERIFY. `phaseOfState` naturally locks SHIP /
+ *  REFLECT to human-only (they are not phase-2 states). NON-reuse of
+ *  authorizeAiTaskCheck so the two can diverge (different message). */
+export function authorizeAiOutcomeCheck(
+  ctx: AiAuthContext,
+  currentStateId: string,
+): AiRefusal | null {
+  if (!ctx.config.phase2 || phaseOfState(currentStateId) !== "phase2") {
+    return notEnabled(
+      msg(
+        "`ocn outcome check` is delegated to the AI agent only with phase-2 auto mode ON and inside BUILD/VERIFY.",
+        "`ocn outcome check` 仅在第二阶段自动模式开启且处于 BUILD/VERIFY 时委托给 AI。",
+      ),
+    );
+  }
+  return commonRefusal(ctx);
+}
+
+/** `ocn outcome waive` (per-AC and project-level) is a hard human-only zone —
+ *  an escape hatch is never delegable. An ai_agent caller is refused
+ *  unconditionally (rendered exit 4), regardless of auto-mode state. */
+export function refuseAiOutcomeWaive(): AiRefusal {
+  return {
+    reason: "automation_not_enabled",
+    message: msg(
+      "`ocn outcome waive` is human-only (a hard zone, like readiness waive / cycle new / sop upgrade). It is never delegated to the AI agent.",
+      "`ocn outcome waive` 为人工专属硬区（同 readiness waive / cycle new / sop upgrade），永不委托给 AI。",
+    ),
+  };
+}
+
 export interface AiRewindRequest {
   readonly fromStateId: string;
   readonly targetStepId: string;
