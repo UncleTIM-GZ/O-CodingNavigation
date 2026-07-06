@@ -95,7 +95,9 @@ describe("outcome backbone — from-scratch default (0.9.0) walkthrough", () => 
     // 3) The v2 projection is frozen and carries the outcome spec + its contract.
     const projection = await readAcceptanceSpecs(project.cwd);
     expect(projection?.version).toBe(2);
-    const outcomeSpec = projection?.items.find((s) => s.id === "AC-ADOPT-001");
+    const outcomeSpec = projection?.items.find((s) => s.id === "AC-ADOPT-001") as
+      | { kind?: string }
+      | undefined;
     expect(outcomeSpec?.kind).toBe("outcome");
   });
 });
