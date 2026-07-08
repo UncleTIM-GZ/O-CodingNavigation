@@ -25,7 +25,11 @@ function ledgerLockOpts(root: string) {
   };
 }
 
-async function writeLedgerUnlocked(root: string, ledger: OutcomeLedger): Promise<void> {
+/** Backup-then-temp-then-rename WITHOUT acquiring the lock — for callers that
+ *  already hold `.ocoding/.lock` (e.g. the `ocn sop upgrade` ledger seed, whose
+ *  critical section also moves the pin). The public `writeOutcomeLedger` wraps
+ *  this in `withLock`; calling it from inside the lock self-deadlocks. */
+export async function writeLedgerUnlocked(root: string, ledger: OutcomeLedger): Promise<void> {
   const file = Paths.outcomeLedgerFile(root);
   await fs.mkdir(dirname(file), { recursive: true });
   try {

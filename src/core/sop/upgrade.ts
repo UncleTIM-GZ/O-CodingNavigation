@@ -16,6 +16,7 @@ import {
   loadSopProfileByVersion,
 } from "./loader.js";
 import { profileOwnedSnapshotPaths, writeProfileSnapshots } from "./snapshot.js";
+import { seedOutcomeLedgerUnlocked } from "./upgrade-outcome-seed.js";
 
 // DEC-029 / AM-005 — `ocn sop upgrade`: move an initialized project's pinned
 // SOP profile forward to a newer bundled version. Forward-only, CLI-only
@@ -259,6 +260,20 @@ async function applyUpgradeLocked(
   if (validation.kind !== "proceed") return validation.result;
   const profile = validation.profile;
   const written = await writeProfileSnapshots(cwd, profile, { configMode: "preserve" });
+  // SOP 0.9.0 (AM-017 / DEC-043) §F — seed the outcome ledger from docs/03
+  // BEFORE moving the pin (snapshots → seed → pin, invariant #1). A seed IO
+  // failure aborts the upgrade with the pin untouched (re-runnable).
+  try {
+    await seedOutcomeLedgerUnlocked(cwd, profile);
+  } catch (err) {
+    return blocked(
+      "ERR_IO_OR_CONFIG",
+      msg(
+        `Upgrade aborted: failed to seed the outcome ledger: ${(err as Error).message}. The pin is unchanged — fix and re-run \`ocn sop upgrade\`.`,
+        `升级已中止：outcome 台账种子写入失败：${(err as Error).message}。锁定版本未改动——修复后重跑 \`ocn sop upgrade\`。`,
+      ),
+    );
+  }
   const nextState: ProjectState = {
     ...state,
     project: {
