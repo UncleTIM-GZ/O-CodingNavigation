@@ -9,25 +9,20 @@ import { parseHeadings } from "../artifact/markdown-parser.js";
 import type { CreateAuditEventInput } from "../audit/audit-event.js";
 import { createAuditEvent, safeAudit } from "../audit/index.js";
 import { msg } from "../i18n.js";
-import { writeLogicGraphProjection } from "../logic/logic-graph-store.js";
 import { blocked, ok } from "../result.js";
 import { resolveProfileForProject } from "../sop/loader.js";
-import { evaluateTaskSpecs } from "../task/task-gate.js";
-import { writeTaskLedger } from "../task/task-ledger-store.js";
-import { evaluateAcceptanceSpecs } from "../acceptance/acceptance-gate.js";
-import { writeAcceptanceSpecs } from "../acceptance/acceptance-spec-store.js";
 import {
-  readOutcomeLedger,
-  reconcileFrozenContracts,
-  writeOutcomeLedger,
-} from "../outcome/outcome-ledger-store.js";
-import { outcomeSpecGateBlockOrNull } from "../outcome/outcome-spec-gate.js";
-import { requiresOutcome } from "../outcome/pin.js";
-import { runContractDriftStep } from "../contract/contract-gate-step.js";
-import { evaluateLogicBackbone } from "./logic-backbone-gate.js";
-import { runOutcomeReflectGateStep } from "./outcome-reflect-gate-step.js";
-import { runOutcomeShipGateStep } from "./outcome-ship-gate-step.js";
-import { readinessStepBlockOrNull } from "./readiness-step.js";
+  contractDriftOrNull,
+  readinessOrNull,
+  shipGateOrNull,
+  type GateStepCtx,
+} from "./gate-cross-cutting-steps.js";
+import {
+  acceptanceStepOrNull,
+  logicStepOrNull,
+  reflectStepOrNull,
+  taskStepOrNull,
+} from "./gate-artifact-steps.js";
 import { StateInvalidError, StateNotFoundError, readState } from "../state/state-store.js";
 
 export interface RunGateOptions {
@@ -140,114 +135,26 @@ export async function runGate(opts: RunGateOptions): Promise<CommandResult<GateR
     ),
   );
 
-  // SOP 0.4.0 (AM-004) — readiness cross-cutting gate. Cross-cutting: it runs
-  // whether or not the step has a required artifact (so a no-artifact step
-  // cannot advance past unmet readiness). Shared with `ocn check`.
-  const readinessOrNull = (): Promise<CommandResult<GateResult> | null> =>
-    readinessStepBlockOrNull<GateResult>({
-      cwd: opts.cwd,
-      profile,
-      state,
-      executeCommands: opts.executeCommands ?? true,
-      buildBlockedData: () => ({
-        status: "blocked",
-        currentStateId: state.currentStateId,
-        currentStepId: state.currentStepId,
-        ...(relativeArtifactPath !== null ? { artifactPath: relativeArtifactPath } : {}),
-        missingRequiredSectionIds: [],
-        blockingReasons: ["readiness_not_met"],
-      }),
-      emitAudit: (message, ids) =>
-        safeAudit(
-          opts.cwd,
-          createAuditEvent(
-            baseAudit("artifact_gate_blocked", "blocked", message, {
-              status: "blocked",
-              reason: "readiness_not_met",
-              blockingCheckIds: ids,
-            }),
-          ),
-        ),
-    });
-
-  // AM-012 — Contract Backbone drift gate. Cross-cutting like readiness, but
-  // opt-in and self-limited to BUILD/VERIFY (the shared step skips otherwise).
-  // On pass it persists the projection; on a blocking drift it returns the
-  // mapped failure code. Null = skip / pass.
-  const contractDriftOrNull = async (): Promise<CommandResult<GateResult> | null> => {
-    const step = await runContractDriftStep({
-      cwd: opts.cwd,
-      stateId: state.currentStateId,
-      executeScan: opts.executeCommands ?? true,
-    });
-    if (step.kind === "skip" || step.kind === "pass") return null;
-    if (step.kind === "io_error") return blocked("ERR_IO_OR_CONFIG", step.message);
-    const result: GateResult = {
-      status: "blocked",
-      currentStateId: state.currentStateId,
-      currentStepId: state.currentStepId,
-      ...(relativeArtifactPath !== null ? { artifactPath: relativeArtifactPath } : {}),
-      missingRequiredSectionIds: [],
-      blockingReasons: [...step.blockingReasons],
-    };
-    await safeAudit(
-      opts.cwd,
-      createAuditEvent(
-        baseAudit("artifact_gate_blocked", "blocked", step.message, {
-          status: "blocked",
-          reason: step.blockingReasons[0],
-        }),
-      ),
-    );
-    return blocked(step.failureCode, step.message, result);
-  };
-
-  // SOP 0.9.0 (AM-017) P4b §C — the SHIP gate for step_release. Cross-cutting
-  // like readiness/contract, self-guarded to state_ship + a 0.9.0+ pin. Because
-  // step_release is null-artifact-only, this MUST run in the null-artifact
-  // branch (the normal-pass path never reaches it) — otherwise the runner
-  // auto-passes SHIP. On block/io_error it returns the mapped failure; else null.
-  const shipGateOrNull = async (): Promise<CommandResult<GateResult> | null> => {
-    const step = await runOutcomeShipGateStep({
-      cwd: opts.cwd,
-      profile,
-      currentStateId: state.currentStateId,
-    });
-    if (step.kind === "skip" || step.kind === "pass") return null;
-    if (step.kind === "io_error") return blocked("ERR_IO_OR_CONFIG", step.message);
-    const result: GateResult = {
-      status: "blocked",
-      currentStateId: state.currentStateId,
-      currentStepId: state.currentStepId,
-      missingRequiredSectionIds: [],
-      blockingReasons: [step.reason],
-    };
-    await safeAudit(
-      opts.cwd,
-      createAuditEvent(
-        baseAudit("artifact_gate_blocked", "blocked", step.message, {
-          status: "blocked",
-          reason: step.reason,
-        }),
-      ),
-    );
-    // A missing/corrupt ledger or integrity breach is an invalid-artifact
-    // condition (exit 2); an unmeasured/undecided outcome is a gate failure.
-    const code =
-      step.reason === "outcome_ledger_missing" || step.reason.startsWith("outcome_integrity_")
-        ? "ERR_ARTIFACT_INVALID"
-        : "ERR_GATE_FAILED";
-    return blocked(code, step.message, result);
+  // §G — the cross-cutting steps (readiness / contract drift / SHIP) share this
+  // context; each returns a mapped blocked result or null (= continue). Their
+  // bodies live in gate-cross-cutting-steps.ts.
+  const ctx: GateStepCtx = {
+    cwd: opts.cwd,
+    state,
+    profile,
+    relativeArtifactPath,
+    executeCommands: opts.executeCommands ?? true,
+    baseAudit,
   };
 
   // Step has no required artifact — readiness still applies (cross-cutting),
   // then the SHIP gate (state_ship only), then auto-pass with not_applicable.
   if (relativeArtifactPath === null) {
-    const readinessBlock = await readinessOrNull();
+    const readinessBlock = await readinessOrNull(ctx);
     if (readinessBlock !== null) return readinessBlock;
-    const contractBlock = await contractDriftOrNull();
+    const contractBlock = await contractDriftOrNull(ctx);
     if (contractBlock !== null) return contractBlock;
-    const shipBlock = await shipGateOrNull();
+    const shipBlock = await shipGateOrNull(ctx);
     if (shipBlock !== null) return shipBlock;
     const result: GateResult = {
       status: "not_applicable",
@@ -334,253 +241,26 @@ export async function runGate(opts: RunGateOptions): Promise<CommandResult<GateR
     return blocked("ERR_GATE_FAILED", message, result);
   }
 
-  // SOP 0.8.0 (AM-015 / DEC-041) — acceptance backbone gate on docs/03. Runs
-  // only after the required-section gate passes AND only for profiles that
-  // require section_acceptance_specs (0.8.0+); validates the Acceptance Spec
-  // blocks (structural defects) and, on pass, freezes the projection as the
-  // machine source of AC ids for build-plan traces.
-  if (
-    state.currentStepId === "step_acceptance_criteria" &&
-    required.some((r) => r.id === "section_acceptance_specs")
-  ) {
-    const outcome = evaluateAcceptanceSpecs(content, requiresOutcome(profile.version));
-    if (!outcome.ok) {
-      const acResult: GateResult = {
-        status: "blocked",
-        currentStateId: state.currentStateId,
-        currentStepId: state.currentStepId,
-        artifactPath: relativeArtifactPath,
-        missingRequiredSectionIds: [],
-        ...(outcome.blockingReasons !== undefined
-          ? { blockingReasons: outcome.blockingReasons }
-          : {}),
-      };
-      await safeAudit(
-        opts.cwd,
-        createAuditEvent(
-          baseAudit("artifact_gate_blocked", "blocked", outcome.message, {
-            status: "blocked",
-            reason: outcome.blockingReasons?.[0],
-            issues: outcome.issues,
-          }),
-        ),
-      );
-      return blocked("ERR_ARTIFACT_INVALID", outcome.message, acResult);
-    }
-    if (outcome.projection !== undefined) {
-      try {
-        await writeAcceptanceSpecs(opts.cwd, outcome.projection);
-        // SOP 0.9.0 (AM-017) — freeze outcome contracts as a side-effect of the
-        // acceptance gate passing (no `ocn outcome freeze` command, invariant §8).
-        // A v2 projection carries kind:outcome specs; seed/refresh the ledger so
-        // `ocn outcome check` has a frozen command hash to run + drift-check.
-        if (outcome.projection.version === 2) {
-          const prevLedger = await readOutcomeLedger(opts.cwd);
-          const nextLedger = reconcileFrozenContracts(outcome.projection.items, prevLedger);
-          if (nextLedger !== null) await writeOutcomeLedger(opts.cwd, nextLedger);
-        }
-      } catch (err) {
-        const ioMessage = msg(
-          `Failed to persist acceptance specs projection: ${(err as Error).message}`,
-          `验收规格投影写入失败：${(err as Error).message}`,
-        );
-        await safeAudit(
-          opts.cwd,
-          createAuditEvent(
-            baseAudit("artifact_gate_blocked", "blocked", ioMessage, {
-              status: "blocked",
-              reason: "acceptance_specs_write_failed",
-            }),
-          ),
-        );
-        return blocked("ERR_IO_OR_CONFIG", ioMessage);
-      }
-      // SOP 0.9.0 (AM-017) P3 §3.1 — SPEC outcome requirement (dormant <0.9.0):
-      // a passing acceptance projection must declare >=1 outcome AC or a valid
-      // no-outcome waiver. Runs after the freeze so the ledger's waiver is current.
-      const specBlock = await outcomeSpecGateBlockOrNull(
-        opts.cwd,
-        profile.version,
-        outcome.projection,
-      );
-      if (specBlock !== null) {
-        await safeAudit(
-          opts.cwd,
-          createAuditEvent(
-            baseAudit("artifact_gate_blocked", "blocked", specBlock.message, {
-              status: "blocked",
-              reason: specBlock.reason,
-            }),
-          ),
-        );
-        return blocked("ERR_GATE_FAILED", specBlock.message, {
-          status: "blocked",
-          currentStateId: state.currentStateId,
-          currentStepId: state.currentStepId,
-          artifactPath: relativeArtifactPath,
-          missingRequiredSectionIds: [],
-          blockingReasons: [specBlock.reason],
-        });
-      }
-    }
-  }
+  // §G — artifact-present gate steps (acceptance / logic / task / reflect),
+  // each self-guarded to its own step; bodies live in gate-artifact-steps.ts.
+  const acceptanceBlock = await acceptanceStepOrNull(ctx, content, required);
+  if (acceptanceBlock !== null) return acceptanceBlock;
 
-  // SOP 0.3.0 — structural gate for the logic backbone. Runs only after the
-  // required-section gate passes; validates the embedded graph (orphans,
-  // dangling refs, cycles, unbound triggers, missing roles) and, on pass,
-  // persists the normalized projection as the machine source of truth.
-  if (state.currentStepId === "step_logic_backbone") {
-    const outcome = evaluateLogicBackbone(content);
-    if (!outcome.ok) {
-      const lbResult: GateResult = {
-        status: "blocked",
-        currentStateId: state.currentStateId,
-        currentStepId: state.currentStepId,
-        artifactPath: relativeArtifactPath,
-        missingRequiredSectionIds: [],
-        ...(outcome.blockingReasons !== undefined
-          ? { blockingReasons: outcome.blockingReasons }
-          : {}),
-      };
-      await safeAudit(
-        opts.cwd,
-        createAuditEvent(
-          baseAudit("artifact_gate_blocked", "blocked", outcome.message, {
-            status: "blocked",
-            reason: outcome.blockingReasons?.[0],
-            issues: outcome.issues,
-          }),
-        ),
-      );
-      return blocked("ERR_ARTIFACT_INVALID", outcome.message, lbResult);
-    }
-    if (outcome.graph !== undefined) {
-      try {
-        await writeLogicGraphProjection(opts.cwd, outcome.graph);
-      } catch (err) {
-        const ioMessage = msg(
-          `Failed to persist logic graph projection: ${(err as Error).message}`,
-          `逻辑图投影写入失败：${(err as Error).message}`,
-        );
-        await safeAudit(
-          opts.cwd,
-          createAuditEvent(
-            baseAudit("artifact_gate_blocked", "blocked", ioMessage, {
-              status: "blocked",
-              reason: "logic_graph_projection_write_failed",
-            }),
-          ),
-        );
-        return blocked("ERR_IO_OR_CONFIG", ioMessage);
-      }
-    }
-  }
+  const logicBlock = await logicStepOrNull(ctx, content);
+  if (logicBlock !== null) return logicBlock;
 
-  // SOP 0.5.0 (AM-007 / DEC-032) — task backbone gate on the build plan. Runs
-  // only after the required-section gate passes AND only for profiles that
-  // require section_task_specs (0.5.0+); validates the Task Spec blocks (six
-  // hard defects) and, on pass, persists the ledger with verify commands
-  // hash-frozen (R4 — the referee is not on the player's write path).
-  if (
-    state.currentStepId === "step_build_plan" &&
-    required.some((r) => r.id === "section_task_specs")
-  ) {
-    const outcome = await evaluateTaskSpecs({
-      cwd: opts.cwd,
-      profile,
-      buildPlanContent: content,
-    });
-    if (!outcome.ok) {
-      const tbResult: GateResult = {
-        status: "blocked",
-        currentStateId: state.currentStateId,
-        currentStepId: state.currentStepId,
-        artifactPath: relativeArtifactPath,
-        missingRequiredSectionIds: [],
-        ...(outcome.blockingReasons !== undefined
-          ? { blockingReasons: outcome.blockingReasons }
-          : {}),
-      };
-      await safeAudit(
-        opts.cwd,
-        createAuditEvent(
-          baseAudit("artifact_gate_blocked", "blocked", outcome.message, {
-            status: "blocked",
-            reason: outcome.blockingReasons?.[0],
-            issues: outcome.issues,
-          }),
-        ),
-      );
-      return blocked("ERR_ARTIFACT_INVALID", outcome.message, tbResult);
-    }
-    if (outcome.ledger !== undefined) {
-      try {
-        await writeTaskLedger(opts.cwd, outcome.ledger);
-      } catch (err) {
-        const ioMessage = msg(
-          `Failed to persist task ledger: ${(err as Error).message}`,
-          `任务台账写入失败：${(err as Error).message}`,
-        );
-        await safeAudit(
-          opts.cwd,
-          createAuditEvent(
-            baseAudit("artifact_gate_blocked", "blocked", ioMessage, {
-              status: "blocked",
-              reason: "task_ledger_write_failed",
-            }),
-          ),
-        );
-        return blocked("ERR_IO_OR_CONFIG", ioMessage);
-      }
-    }
-  }
+  const taskBlock = await taskStepOrNull(ctx, content, required);
+  if (taskBlock !== null) return taskBlock;
 
-  // SOP 0.9.0 (AM-017) P4b §D.1 — REFLECT gate on step_evolution_report. Runs
-  // after the required-section gate passes; mechanically cross-checks the
-  // `### Outcome References` lines against the frozen ledger (self-guarded to
-  // step_evolution_report + a 0.9.0+ pin).
-  {
-    const reflect = await runOutcomeReflectGateStep({
-      cwd: opts.cwd,
-      profile,
-      currentStepId: state.currentStepId,
-      content,
-    });
-    if (reflect.kind === "io_error") return blocked("ERR_IO_OR_CONFIG", reflect.message);
-    if (reflect.kind === "blocked") {
-      const rResult: GateResult = {
-        status: "blocked",
-        currentStateId: state.currentStateId,
-        currentStepId: state.currentStepId,
-        artifactPath: relativeArtifactPath,
-        missingRequiredSectionIds: [],
-        blockingReasons: [reflect.reason],
-      };
-      await safeAudit(
-        opts.cwd,
-        createAuditEvent(
-          baseAudit("artifact_gate_blocked", "blocked", reflect.message, {
-            status: "blocked",
-            reason: reflect.reason,
-          }),
-        ),
-      );
-      // Structural defects (missing ledger, malformed reference line) → exit 2,
-      // matching acceptance/task structural defects; a ledger-mismatch (accurate
-      // structure, wrong numbers) → exit 1.
-      const structural =
-        reflect.reason === "outcome_ledger_missing" || reflect.reason === "malformed_reference";
-      const code = structural ? "ERR_ARTIFACT_INVALID" : "ERR_GATE_FAILED";
-      return blocked(code, reflect.message, rResult);
-    }
-  }
+  const reflectBlock = await reflectStepOrNull(ctx, content);
+  if (reflectBlock !== null) return reflectBlock;
 
   // SOP 0.4.0 (AM-004) — readiness gate after the section / logic gates.
-  const readinessBlock = await readinessOrNull();
+  const readinessBlock = await readinessOrNull(ctx);
   if (readinessBlock !== null) return readinessBlock;
 
   // AM-012 — contract drift gate (opt-in; BUILD/VERIFY only).
-  const contractBlock = await contractDriftOrNull();
+  const contractBlock = await contractDriftOrNull(ctx);
   if (contractBlock !== null) return contractBlock;
 
   // pass (warning state currently unused; reserved for PR #5+)
