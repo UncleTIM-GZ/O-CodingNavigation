@@ -3,6 +3,7 @@
 
 import type { TaskLedger } from "../../types/task.js";
 import type { AutomationStatusView } from "../automation/governance-text.js";
+import type { OutcomeDispatch } from "./next-prompt-outcome-dispatch.js";
 import type {
   AcceptanceParseResult,
   EvidenceMapMappingData,
@@ -39,4 +40,7 @@ export interface PromptInputs {
   /** AM-009 — auto-mode status. Absent / fully-off → legacy prompt,
    *  byte-for-byte. Active → appends the "## Automation loop" section. */
   readonly automation?: AutomationStatusView;
+  /** SOP 0.9.0 (AM-017 / DEC-043) §E.1 — a due-but-unmeasured outcome AC to
+   *  dispatch (`ocn outcome check`). Absent → legacy prompt, byte-for-byte. */
+  readonly outcomeDispatch?: OutcomeDispatch;
 }

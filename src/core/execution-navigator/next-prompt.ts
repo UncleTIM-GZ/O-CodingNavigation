@@ -16,6 +16,10 @@ import { ok } from "../result.js";
 import { msg } from "../i18n.js";
 import { loadAutomationStatus } from "../automation/governance-text.js";
 import { readTaskLedger } from "../task/task-ledger-store.js";
+import { readOutcomeLedger } from "../outcome/outcome-ledger-store.js";
+import { requiresOutcome } from "../outcome/pin.js";
+import { resolveProfileForProject } from "../sop/loader.js";
+import { resolveOutcomeDispatch } from "./next-prompt-outcome-dispatch.js";
 import { buildEvidenceContext, type EvidenceContext } from "./evidence-context.js";
 import { mapEvidence } from "./evidence-map.js";
 import { defaultGhRunner, type GhRunner } from "./github-pr-runner.js";
@@ -120,6 +124,20 @@ export async function generateNextPrompt(
   const automation =
     ctx.ocn.isOcnProject === true ? await loadAutomationStatus(opts.cwd) : undefined;
 
+  // SOP 0.9.0 (AM-017 / DEC-043) §E.1 — dispatch a due-unmeasured outcome AC.
+  // Pin-gated: <0.9.0 → requiresOutcome false → null → byte-identical prompt.
+  const pinVersion = ctx.ocn.sopProfileVersion ?? null;
+  const outcomeDispatch =
+    ctx.ocn.isOcnProject === true && pinVersion !== null && requiresOutcome(pinVersion)
+      ? resolveOutcomeDispatch({
+          requiresOutcome: true,
+          ledger: await readOutcomeLedger(opts.cwd),
+          stateOrder: resolveProfileForProject(pinVersion).stateOrder,
+          currentStateId: ctx.ocn.currentStateId ?? null,
+          taskLedger,
+        })
+      : null;
+
   const input: PromptInputs = {
     opts: {
       agent: opts.agent,
@@ -139,6 +157,7 @@ export async function generateNextPrompt(
     warnings,
     ...(taskLedger !== null ? { taskLedger } : {}),
     ...(automation !== undefined ? { automation } : {}),
+    ...(outcomeDispatch !== null ? { outcomeDispatch } : {}),
   };
 
   const { prompt, riskFlags } = assemblePrompt(input);

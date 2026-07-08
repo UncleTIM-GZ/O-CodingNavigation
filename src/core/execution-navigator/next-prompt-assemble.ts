@@ -24,6 +24,7 @@ import { automationLoopLines } from "../automation/governance-text.js";
 import type { NextPromptRiskFlag, NextPromptSummary } from "./types.js";
 import type { PromptInputs } from "./next-prompt-shapes.js";
 import { resolveTaskDispatch, taskStopCondition } from "./next-prompt-task-dispatch.js";
+import { buildOutcomeDispatchLines, outcomeStopCondition } from "./next-prompt-outcome-dispatch.js";
 
 // Re-export the shared shapes so existing imports from
 // `next-prompt-assemble` continue to resolve.
@@ -104,10 +105,14 @@ export function assemblePrompt(input: PromptInputs): AssembledPrompt {
   // SOP 0.5.0 (AM-007 / DEC-032) — a dispatched task adds its DoD/check-off
   // stop condition ahead of the standard list; no ledger → unchanged.
   const dispatch = resolveTaskDispatch(input);
-  const stopConditions =
-    dispatch !== null && dispatch.kind === "task"
-      ? [taskStopCondition(dispatch.task), ...STOP_CONDITIONS]
-      : STOP_CONDITIONS;
+  // SOP 0.9.0 (AM-017 / DEC-043) §E.1 — a due-unmeasured outcome adds its
+  // check-off stop condition (the orchestrator already applied the BUILD
+  // anti-livelock priority when computing input.outcomeDispatch).
+  const stopConditions = [
+    ...(input.outcomeDispatch !== undefined ? [outcomeStopCondition(input.outcomeDispatch)] : []),
+    ...(dispatch !== null && dispatch.kind === "task" ? [taskStopCondition(dispatch.task)] : []),
+    ...STOP_CONDITIONS,
+  ];
   const stop = stopConditions.map((s) => `- ${s}`);
   const expected = EXPECTED_COMPLETION_OUTPUT.map((s) => `- ${s}`);
 
@@ -115,6 +120,11 @@ export function assemblePrompt(input: PromptInputs): AssembledPrompt {
   if (overlay.length > 0) sections.push(overlay);
   sections.push(SECTION_HEADER);
   sections.push(buildSection("## Current objective", objective));
+  if (input.outcomeDispatch !== undefined) {
+    sections.push(
+      buildSection("## Outcome measurement", buildOutcomeDispatchLines(input.outcomeDispatch)),
+    );
+  }
   sections.push(buildSection("## Current evidence", evidence));
   sections.push(buildSection("## Acceptance evidence status", acceptance));
   sections.push(buildSection("## Blocking issues or risks", blocking));
