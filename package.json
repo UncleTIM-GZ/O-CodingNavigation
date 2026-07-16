@@ -30,9 +30,9 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
+    "test": "npm run build && vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage",
+    "test:coverage": "npm run build && vitest run --coverage",
     "prepare": "husky || true",
     "prepublishOnly": "npm run lint && npm run typecheck && npm run test:coverage && npm run build"
   },
